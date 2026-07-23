@@ -1,0 +1,887 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Source-controlled IAM Identity Center operator and least-privilege CloudFormation service roles for Renuvex review-email infrastructure. Bootstrap in eu-central-1 only after explicit approval.",
+  "Parameters": {
+    "IdentityCenterInstanceArn": {
+      "Type": "String",
+      "AllowedPattern": "^arn:aws(-[a-z]{1,5}){0,3}:sso:::instance/(sso)?ins-[a-zA-Z0-9-.]{16}$",
+      "Description": "IAM Identity Center instance ARN. Supplied only during the approved bootstrap."
+    },
+    "IdentityStoreId": {
+      "Type": "String",
+      "AllowedPattern": "^d-[0-9a-f]{10}$|^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "Description": "Identity Store identifier. Supplied only during the approved bootstrap."
+    },
+    "OperatorUserId": {
+      "Type": "String",
+      "AllowedPattern": "^([0-9a-f]{10}-|)[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$",
+      "Description": "Identity Center user identifier assigned to the operator group. Never commit the live identifier."
+    },
+    "TargetAccountId": {
+      "Type": "String",
+      "Default": "989086371563",
+      "AllowedValues": [
+        "989086371563"
+      ],
+      "Description": "Locked production AWS account for review-email infrastructure."
+    },
+    "DeploymentRegion": {
+      "Type": "String",
+      "Default": "eu-central-1",
+      "AllowedValues": [
+        "eu-central-1"
+      ],
+      "Description": "Locked AWS region for review-email infrastructure."
+    },
+    "JournalBucketName": {
+      "Type": "String",
+      "Default": "renuvex-review-email-erasure-journal-prod-989086371563-euc1",
+      "AllowedValues": [
+        "renuvex-review-email-erasure-journal-prod-989086371563-euc1"
+      ],
+      "Description": "Locked journal bucket managed by the journal CloudFormation service role."
+    }
+  },
+  "Resources": {
+    "ReviewEmailOperatorsGroup": {
+      "Type": "AWS::IdentityStore::Group",
+      "Properties": {
+        "DisplayName": "RenuvexReviewEmailOperators",
+        "Description": "Operators allowed to execute reviewed change sets for Renuvex review-email infrastructure.",
+        "IdentityStoreId": {
+          "Ref": "IdentityStoreId"
+        }
+      }
+    },
+    "ReviewEmailOperatorMembership": {
+      "Type": "AWS::IdentityStore::GroupMembership",
+      "Properties": {
+        "GroupId": {
+          "Fn::GetAtt": [
+            "ReviewEmailOperatorsGroup",
+            "GroupId"
+          ]
+        },
+        "IdentityStoreId": {
+          "Ref": "IdentityStoreId"
+        },
+        "MemberId": {
+          "UserId": {
+            "Ref": "OperatorUserId"
+          }
+        }
+      }
+    },
+    "ReviewEmailOperatorPermissionSet": {
+      "Type": "AWS::SSO::PermissionSet",
+      "Properties": {
+        "InstanceArn": {
+          "Ref": "IdentityCenterInstanceArn"
+        },
+        "Name": "RenuvexReviewEmailOperator",
+        "Description": "Change-set-only operator for the three approved Renuvex review-email stacks.",
+        "SessionDuration": "PT2H",
+        "InlinePolicy": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "ValidateAndListCloudFormation",
+              "Effect": "Allow",
+              "Action": [
+                "cloudformation:DescribeAccountLimits",
+                "cloudformation:GetTemplateSummary",
+                "cloudformation:ListStacks",
+                "cloudformation:ValidateTemplate"
+              ],
+              "Resource": "*",
+              "Condition": {
+                "StringEquals": {
+                  "aws:RequestedRegion": {
+                    "Ref": "DeploymentRegion"
+                  }
+                }
+              }
+            },
+            {
+              "Sid": "CreateFoundationChangeSetWithFoundationRole",
+              "Effect": "Allow",
+              "Action": "cloudformation:CreateChangeSet",
+              "Resource": {
+                "Fn::Sub": "arn:${AWS::Partition}:cloudformation:${DeploymentRegion}:${TargetAccountId}:stack/renuvex-review-email-foundation-prod/*"
+              },
+              "Condition": {
+                "StringEquals": {
+                  "aws:RequestedRegion": {
+                    "Ref": "DeploymentRegion"
+                  },
+                  "cloudformation:RoleArn": {
+                    "Fn::Sub": "arn:${AWS::Partition}:iam::${TargetAccountId}:role/renuvex/review-email/cloudformation/renuvex-review-email-foundation-cfn"
+                  }
+                },
+                "StringLike": {
+                  "cloudformation:ChangeSetName": "renuvex-review-email-*"
+                },
+                "Null": {
+                  "cloudformation:ImportResourceTypes": "true"
+                }
+              }
+            },
+            {
+              "Sid": "CreateJournalChangeSetWithJournalRole",
+              "Effect": "Allow",
+              "Action": "cloudformation:CreateChangeSet",
+              "Resource": {
+                "Fn::Sub": "arn:${AWS::Partition}:cloudformation:${DeploymentRegion}:${TargetAccountId}:stack/renuvex-review-email-erasure-journal-prod/*"
+              },
+              "Condition": {
+                "StringEquals": {
+                  "aws:RequestedRegion": {
+                    "Ref": "DeploymentRegion"
+                  },
+                  "cloudformation:RoleArn": {
+                    "Fn::Sub": "arn:${AWS::Partition}:iam::${TargetAccountId}:role/renuvex/review-email/cloudformation/renuvex-review-email-journal-cfn"
+                  }
+                },
+                "StringLike": {
+                  "cloudformation:ChangeSetName": "renuvex-review-email-*"
+                },
+                "Null": {
+                  "cloudformation:ImportResourceTypes": "true"
+                }
+              }
+            },
+            {
+              "Sid": "CreateJournalIamChangeSetWithJournalIamRole",
+              "Effect": "Allow",
+              "Action": "cloudformation:CreateChangeSet",
+              "Resource": {
+                "Fn::Sub": "arn:${AWS::Partition}:cloudformation:${DeploymentRegion}:${TargetAccountId}:stack/renuvex-review-email-erasure-journal-iam-prod/*"
+              },
+              "Condition": {
+                "StringEquals": {
+                  "aws:RequestedRegion": {
+                    "Ref": "DeploymentRegion"
+                  },
+                  "cloudformation:RoleArn": {
+                    "Fn::Sub": "arn:${AWS::Partition}:iam::${TargetAccountId}:role/renuvex/review-email/cloudformation/renuvex-review-email-journal-iam-cfn"
+                  }
+                },
+                "StringLike": {
+                  "cloudformation:ChangeSetName": "renuvex-review-email-*"
+                },
+                "Null": {
+                  "cloudformation:ImportResourceTypes": "true"
+                }
+              }
+            },
+            {
+              "Sid": "OperateApprovedReviewEmailChangeSets",
+              "Effect": "Allow",
+              "Action": [
+                "cloudformation:DeleteChangeSet",
+                "cloudformation:DescribeChangeSet",
+                "cloudformation:DescribeStackEvents",
+                "cloudformation:DescribeStackResource",
+                "cloudformation:DescribeStackResources",
+                "cloudformation:DescribeStacks",
+                "cloudformation:ExecuteChangeSet",
+                "cloudformation:GetStackPolicy",
+                "cloudformation:GetTemplate",
+                "cloudformation:ListChangeSets",
+                "cloudformation:ListStackResources"
+              ],
+              "Resource": [
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:cloudformation:${DeploymentRegion}:${TargetAccountId}:stack/renuvex-review-email-foundation-prod/*"
+                },
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:cloudformation:${DeploymentRegion}:${TargetAccountId}:stack/renuvex-review-email-erasure-journal-prod/*"
+                },
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:cloudformation:${DeploymentRegion}:${TargetAccountId}:stack/renuvex-review-email-erasure-journal-iam-prod/*"
+                }
+              ],
+              "Condition": {
+                "StringEquals": {
+                  "aws:RequestedRegion": {
+                    "Ref": "DeploymentRegion"
+                  }
+                }
+              }
+            },
+            {
+              "Sid": "InspectApprovedReviewEmailChangeSetEvents",
+              "Effect": "Allow",
+              "Action": "cloudformation:DescribeEvents",
+              "Resource": [
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:cloudformation:${DeploymentRegion}:${TargetAccountId}:stack/renuvex-review-email-foundation-prod/*"
+                },
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:cloudformation:${DeploymentRegion}:${TargetAccountId}:stack/renuvex-review-email-erasure-journal-prod/*"
+                },
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:cloudformation:${DeploymentRegion}:${TargetAccountId}:stack/renuvex-review-email-erasure-journal-iam-prod/*"
+                },
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:cloudformation:${DeploymentRegion}:${TargetAccountId}:changeSet/renuvex-review-email-*/*"
+                }
+              ],
+              "Condition": {
+                "StringEquals": {
+                  "aws:RequestedRegion": {
+                    "Ref": "DeploymentRegion"
+                  }
+                }
+              }
+            },
+            {
+              "Sid": "PassOnlyApprovedCloudFormationServiceRoles",
+              "Effect": "Allow",
+              "Action": "iam:PassRole",
+              "Resource": [
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:iam::${TargetAccountId}:role/renuvex/review-email/cloudformation/renuvex-review-email-foundation-cfn"
+                },
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:iam::${TargetAccountId}:role/renuvex/review-email/cloudformation/renuvex-review-email-journal-cfn"
+                },
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:iam::${TargetAccountId}:role/renuvex/review-email/cloudformation/renuvex-review-email-journal-iam-cfn"
+                }
+              ],
+              "Condition": {
+                "StringEquals": {
+                  "iam:PassedToService": "cloudformation.amazonaws.com"
+                }
+              }
+            }
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "renuvex-product-reviews"
+          },
+          {
+            "Key": "Purpose",
+            "Value": "review-email-deployment-access"
+          }
+        ]
+      }
+    },
+    "ReviewEmailOperatorAssignment": {
+      "Type": "AWS::SSO::Assignment",
+      "Properties": {
+        "InstanceArn": {
+          "Ref": "IdentityCenterInstanceArn"
+        },
+        "PermissionSetArn": {
+          "Fn::GetAtt": [
+            "ReviewEmailOperatorPermissionSet",
+            "PermissionSetArn"
+          ]
+        },
+        "PrincipalId": {
+          "Fn::GetAtt": [
+            "ReviewEmailOperatorsGroup",
+            "GroupId"
+          ]
+        },
+        "PrincipalType": "GROUP",
+        "TargetId": {
+          "Ref": "TargetAccountId"
+        },
+        "TargetType": "AWS_ACCOUNT"
+      }
+    },
+    "ReviewEmailFoundationCloudFormationRole": {
+      "Type": "AWS::IAM::Role",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "RoleName": "renuvex-review-email-foundation-cfn",
+        "Path": "/renuvex/review-email/cloudformation/",
+        "Description": "CloudFormation service role for the Renuvex review-email SES foundation stack.",
+        "MaxSessionDuration": 3600,
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "AllowCloudFormationService",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "cloudformation.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "review-email-foundation-cloudformation",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Sid": "CreateSymmetricReviewEmailKmsKey",
+                  "Effect": "Allow",
+                  "Action": "kms:CreateKey",
+                  "Resource": "*",
+                  "Condition": {
+                    "StringEquals": {
+                      "aws:RequestedRegion": {
+                        "Ref": "DeploymentRegion"
+                      },
+                      "aws:RequestTag/Project": "renuvex-product-reviews",
+                      "aws:RequestTag/Purpose": "review-request-email",
+                      "kms:KeySpec": "SYMMETRIC_DEFAULT",
+                      "kms:KeyUsage": "ENCRYPT_DECRYPT"
+                    },
+                    "Bool": {
+                      "kms:MultiRegion": "false"
+                    }
+                  }
+                },
+                {
+                  "Sid": "TagReviewEmailKmsKey",
+                  "Effect": "Allow",
+                  "Action": "kms:TagResource",
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:kms:${DeploymentRegion}:${TargetAccountId}:key/*"
+                  },
+                  "Condition": {
+                    "StringEquals": {
+                      "aws:RequestedRegion": {
+                        "Ref": "DeploymentRegion"
+                      },
+                      "aws:RequestTag/Project": "renuvex-product-reviews",
+                      "aws:RequestTag/Purpose": "review-request-email"
+                    }
+                  }
+                },
+                {
+                  "Sid": "ManageTaggedReviewEmailKmsKey",
+                  "Effect": "Allow",
+                  "Action": [
+                    "kms:DescribeKey",
+                    "kms:DisableKeyRotation",
+                    "kms:EnableKeyRotation",
+                    "kms:GetKeyPolicy",
+                    "kms:GetKeyRotationStatus",
+                    "kms:ListResourceTags",
+                    "kms:PutKeyPolicy",
+                    "kms:UntagResource",
+                    "kms:UpdateKeyDescription"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:kms:${DeploymentRegion}:${TargetAccountId}:key/*"
+                  },
+                  "Condition": {
+                    "StringEquals": {
+                      "aws:RequestedRegion": {
+                        "Ref": "DeploymentRegion"
+                      },
+                      "aws:ResourceTag/Project": "renuvex-product-reviews",
+                      "aws:ResourceTag/Purpose": "review-request-email"
+                    }
+                  }
+                },
+                {
+                  "Sid": "ManageExactReviewEmailKmsAlias",
+                  "Effect": "Allow",
+                  "Action": [
+                    "kms:CreateAlias",
+                    "kms:DeleteAlias",
+                    "kms:UpdateAlias"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:kms:${DeploymentRegion}:${TargetAccountId}:alias/renuvex-review-email-events"
+                  },
+                  "Condition": {
+                    "StringEquals": {
+                      "aws:RequestedRegion": {
+                        "Ref": "DeploymentRegion"
+                      }
+                    }
+                  }
+                },
+                {
+                  "Sid": "AssociateAliasWithTaggedReviewEmailKmsKey",
+                  "Effect": "Allow",
+                  "Action": [
+                    "kms:CreateAlias",
+                    "kms:UpdateAlias"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:kms:${DeploymentRegion}:${TargetAccountId}:key/*"
+                  },
+                  "Condition": {
+                    "StringEquals": {
+                      "aws:RequestedRegion": {
+                        "Ref": "DeploymentRegion"
+                      },
+                      "aws:ResourceTag/Project": "renuvex-product-reviews",
+                      "aws:ResourceTag/Purpose": "review-request-email"
+                    }
+                  }
+                },
+                {
+                  "Sid": "ListKmsKeysAndAliases",
+                  "Effect": "Allow",
+                  "Action": [
+                    "kms:ListAliases",
+                    "kms:ListKeys"
+                  ],
+                  "Resource": "*",
+                  "Condition": {
+                    "StringEquals": {
+                      "aws:RequestedRegion": {
+                        "Ref": "DeploymentRegion"
+                      }
+                    }
+                  }
+                },
+                {
+                  "Sid": "ManageExactReviewEmailSnsTopic",
+                  "Effect": "Allow",
+                  "Action": [
+                    "sns:CreateTopic",
+                    "sns:GetDataProtectionPolicy",
+                    "sns:GetTopicAttributes",
+                    "sns:ListSubscriptionsByTopic",
+                    "sns:ListTagsForResource",
+                    "sns:SetTopicAttributes",
+                    "sns:Subscribe",
+                    "sns:TagResource",
+                    "sns:UntagResource"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:sns:${DeploymentRegion}:${TargetAccountId}:renuvex-review-email-foundation-prod-events"
+                  },
+                  "Condition": {
+                    "StringEquals": {
+                      "aws:RequestedRegion": {
+                        "Ref": "DeploymentRegion"
+                      }
+                    }
+                  }
+                },
+                {
+                  "Sid": "ManageExactReviewEmailSnsSubscription",
+                  "Effect": "Allow",
+                  "Action": [
+                    "sns:GetSubscriptionAttributes",
+                    "sns:SetSubscriptionAttributes",
+                    "sns:Unsubscribe"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:sns:${DeploymentRegion}:${TargetAccountId}:renuvex-review-email-foundation-prod-events:*"
+                  },
+                  "Condition": {
+                    "StringEquals": {
+                      "aws:RequestedRegion": {
+                        "Ref": "DeploymentRegion"
+                      }
+                    }
+                  }
+                },
+                {
+                  "Sid": "ListSnsControlPlane",
+                  "Effect": "Allow",
+                  "Action": [
+                    "sns:ListSubscriptions",
+                    "sns:ListTopics"
+                  ],
+                  "Resource": "*",
+                  "Condition": {
+                    "StringEquals": {
+                      "aws:RequestedRegion": {
+                        "Ref": "DeploymentRegion"
+                      }
+                    }
+                  }
+                },
+                {
+                  "Sid": "ManageExactReviewEmailDlq",
+                  "Effect": "Allow",
+                  "Action": [
+                    "sqs:CreateQueue",
+                    "sqs:GetQueueAttributes",
+                    "sqs:GetQueueUrl",
+                    "sqs:ListQueueTags",
+                    "sqs:SetQueueAttributes",
+                    "sqs:TagQueue",
+                    "sqs:UntagQueue"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:sqs:${DeploymentRegion}:${TargetAccountId}:renuvex-review-email-foundation-prod-events-dlq"
+                  },
+                  "Condition": {
+                    "StringEquals": {
+                      "aws:RequestedRegion": {
+                        "Ref": "DeploymentRegion"
+                      }
+                    }
+                  }
+                },
+                {
+                  "Sid": "ListSqsControlPlane",
+                  "Effect": "Allow",
+                  "Action": "sqs:ListQueues",
+                  "Resource": "*",
+                  "Condition": {
+                    "StringEquals": {
+                      "aws:RequestedRegion": {
+                        "Ref": "DeploymentRegion"
+                      }
+                    }
+                  }
+                },
+                {
+                  "Sid": "CreateTaggedReviewEmailConfigurationSet",
+                  "Effect": "Allow",
+                  "Action": "ses:CreateConfigurationSet",
+                  "Resource": "*",
+                  "Condition": {
+                    "StringEquals": {
+                      "aws:RequestedRegion": {
+                        "Ref": "DeploymentRegion"
+                      },
+                      "aws:RequestTag/Project": "renuvex-product-reviews",
+                      "aws:RequestTag/Purpose": "review-request-email"
+                    }
+                  }
+                },
+                {
+                  "Sid": "DescribeSesConfigurationSetForCloudFormationCompatibility",
+                  "Effect": "Allow",
+                  "Action": "ses:DescribeConfigurationSet",
+                  "Resource": "*",
+                  "Condition": {
+                    "StringEquals": {
+                      "aws:RequestedRegion": {
+                        "Ref": "DeploymentRegion"
+                      }
+                    }
+                  }
+                },
+                {
+                  "Sid": "ManageExactReviewEmailConfigurationSet",
+                  "Effect": "Allow",
+                  "Action": [
+                    "ses:CreateConfigurationSetEventDestination",
+                    "ses:DeleteConfigurationSetEventDestination",
+                    "ses:GetConfigurationSet",
+                    "ses:GetConfigurationSetEventDestinations",
+                    "ses:PutConfigurationSetReputationOptions",
+                    "ses:PutConfigurationSetSendingOptions",
+                    "ses:PutConfigurationSetSuppressionOptions",
+                    "ses:TagResource",
+                    "ses:UntagResource",
+                    "ses:UpdateConfigurationSetEventDestination"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:ses:${DeploymentRegion}:${TargetAccountId}:configuration-set/renuvex-review-requests-prod"
+                  },
+                  "Condition": {
+                    "StringEquals": {
+                      "aws:RequestedRegion": {
+                        "Ref": "DeploymentRegion"
+                      }
+                    }
+                  }
+                },
+                {
+                  "Sid": "CreateTaggedReviewEmailIdentity",
+                  "Effect": "Allow",
+                  "Action": "ses:CreateEmailIdentity",
+                  "Resource": "*",
+                  "Condition": {
+                    "StringEquals": {
+                      "aws:RequestedRegion": {
+                        "Ref": "DeploymentRegion"
+                      },
+                      "aws:RequestTag/Project": "renuvex-product-reviews",
+                      "aws:RequestTag/Purpose": "review-request-email"
+                    }
+                  }
+                },
+                {
+                  "Sid": "ManageExactReviewEmailIdentity",
+                  "Effect": "Allow",
+                  "Action": [
+                    "ses:GetEmailIdentity",
+                    "ses:ListTagsForResource",
+                    "ses:PutEmailIdentityConfigurationSetAttributes",
+                    "ses:PutEmailIdentityDkimAttributes",
+                    "ses:PutEmailIdentityDkimSigningAttributes",
+                    "ses:PutEmailIdentityFeedbackAttributes",
+                    "ses:PutEmailIdentityMailFromAttributes",
+                    "ses:TagResource",
+                    "ses:UntagResource"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:ses:${DeploymentRegion}:${TargetAccountId}:identity/reviews.renuvex.app"
+                  },
+                  "Condition": {
+                    "StringEquals": {
+                      "aws:RequestedRegion": {
+                        "Ref": "DeploymentRegion"
+                      }
+                    }
+                  }
+                },
+                {
+                  "Sid": "ListSesControlPlane",
+                  "Effect": "Allow",
+                  "Action": [
+                    "ses:ListConfigurationSets",
+                    "ses:ListEmailIdentities"
+                  ],
+                  "Resource": "*",
+                  "Condition": {
+                    "StringEquals": {
+                      "aws:RequestedRegion": {
+                        "Ref": "DeploymentRegion"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "renuvex-product-reviews"
+          },
+          {
+            "Key": "Purpose",
+            "Value": "review-email-foundation-cloudformation"
+          }
+        ]
+      }
+    },
+    "ReviewEmailJournalCloudFormationRole": {
+      "Type": "AWS::IAM::Role",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "RoleName": "renuvex-review-email-journal-cfn",
+        "Path": "/renuvex/review-email/cloudformation/",
+        "Description": "CloudFormation service role for the immutable Renuvex review-email erasure journal bucket.",
+        "MaxSessionDuration": 3600,
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "AllowCloudFormationService",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "cloudformation.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "review-email-journal-cloudformation",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Sid": "ManageExactJournalBucketConfiguration",
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:CreateBucket",
+                    "s3:GetBucketAcl",
+                    "s3:GetBucketObjectLockConfiguration",
+                    "s3:GetBucketOwnershipControls",
+                    "s3:GetBucketPolicy",
+                    "s3:GetBucketPublicAccessBlock",
+                    "s3:GetBucketTagging",
+                    "s3:GetBucketVersioning",
+                    "s3:GetEncryptionConfiguration",
+                    "s3:GetLifecycleConfiguration",
+                    "s3:ListBucket",
+                    "s3:ListTagsForResource",
+                    "s3:PutBucketObjectLockConfiguration",
+                    "s3:PutBucketOwnershipControls",
+                    "s3:PutBucketPolicy",
+                    "s3:PutBucketPublicAccessBlock",
+                    "s3:PutBucketTagging",
+                    "s3:PutBucketVersioning",
+                    "s3:PutEncryptionConfiguration",
+                    "s3:PutLifecycleConfiguration",
+                    "s3:TagResource",
+                    "s3:UntagResource"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:s3:::${JournalBucketName}"
+                  }
+                },
+                {
+                  "Sid": "RemoveOnlyJournalBucketPolicyDuringDecommission",
+                  "Effect": "Allow",
+                  "Action": "s3:DeleteBucketPolicy",
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:s3:::${JournalBucketName}"
+                  }
+                },
+                {
+                  "Sid": "ListBucketsForCloudFormationReadHandler",
+                  "Effect": "Allow",
+                  "Action": "s3:ListAllMyBuckets",
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "renuvex-product-reviews"
+          },
+          {
+            "Key": "Purpose",
+            "Value": "review-email-journal-cloudformation"
+          }
+        ]
+      }
+    },
+    "ReviewEmailJournalIamCloudFormationRole": {
+      "Type": "AWS::IAM::Role",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "RoleName": "renuvex-review-email-journal-iam-cfn",
+        "Path": "/renuvex/review-email/cloudformation/",
+        "Description": "CloudFormation service role limited to the four Renuvex review-email journal runtime/operator roles.",
+        "MaxSessionDuration": 3600,
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "AllowCloudFormationService",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "cloudformation.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "review-email-journal-iam-cloudformation",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Sid": "ManageOnlyReviewEmailJournalRoles",
+                  "Effect": "Allow",
+                  "Action": [
+                    "iam:CreateRole",
+                    "iam:DeleteRole",
+                    "iam:DeleteRolePolicy",
+                    "iam:GetRole",
+                    "iam:GetRolePolicy",
+                    "iam:ListAttachedRolePolicies",
+                    "iam:ListRolePolicies",
+                    "iam:PutRolePolicy",
+                    "iam:TagRole",
+                    "iam:UntagRole",
+                    "iam:UpdateAssumeRolePolicy",
+                    "iam:UpdateRole",
+                    "iam:UpdateRoleDescription"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:iam::${TargetAccountId}:role/renuvex-review-email-journal-writer"
+                    },
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:iam::${TargetAccountId}:role/renuvex-review-email-journal-restore-reader"
+                    },
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:iam::${TargetAccountId}:role/renuvex-review-email-journal-retention-extender"
+                    },
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:iam::${TargetAccountId}:role/renuvex-review-email-journal-genesis-operator"
+                    }
+                  ]
+                },
+                {
+                  "Sid": "ListRolesForCloudFormationReadHandler",
+                  "Effect": "Allow",
+                  "Action": "iam:ListRoles",
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "renuvex-product-reviews"
+          },
+          {
+            "Key": "Purpose",
+            "Value": "review-email-journal-iam-cloudformation"
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "ReviewEmailOperatorGroupId": {
+      "Description": "Identity Center group ID for review-email operators.",
+      "Value": {
+        "Fn::GetAtt": [
+          "ReviewEmailOperatorsGroup",
+          "GroupId"
+        ]
+      }
+    },
+    "ReviewEmailOperatorPermissionSetArn": {
+      "Description": "Identity Center permission set ARN for review-email operators.",
+      "Value": {
+        "Fn::GetAtt": [
+          "ReviewEmailOperatorPermissionSet",
+          "PermissionSetArn"
+        ]
+      }
+    },
+    "ReviewEmailFoundationCloudFormationRoleArn": {
+      "Description": "CloudFormation service role ARN for the review-email foundation stack.",
+      "Value": {
+        "Fn::GetAtt": [
+          "ReviewEmailFoundationCloudFormationRole",
+          "Arn"
+        ]
+      }
+    },
+    "ReviewEmailJournalCloudFormationRoleArn": {
+      "Description": "CloudFormation service role ARN for the review-email journal bucket stack.",
+      "Value": {
+        "Fn::GetAtt": [
+          "ReviewEmailJournalCloudFormationRole",
+          "Arn"
+        ]
+      }
+    },
+    "ReviewEmailJournalIamCloudFormationRoleArn": {
+      "Description": "CloudFormation service role ARN for the review-email journal IAM stack.",
+      "Value": {
+        "Fn::GetAtt": [
+          "ReviewEmailJournalIamCloudFormationRole",
+          "Arn"
+        ]
+      }
+    }
+  }
+}

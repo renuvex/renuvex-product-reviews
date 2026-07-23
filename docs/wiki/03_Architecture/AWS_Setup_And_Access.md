@@ -3,8 +3,8 @@ type: maintenance
 project: renuvex-product-reviews
 status: active
 created: 2026-06-29
-updated: 2026-07-15
-last_verified: 2026-07-15
+updated: 2026-07-21
+last_verified: 2026-07-21
 confidence: high
 tags:
   - aws
@@ -28,6 +28,7 @@ source_files:
   - "infra/aws/media-observability.cloudformation.json"
   - "infra/aws/media-access-logs-bucket.cloudformation.json"
   - "infra/aws/media-access-logs-delivery.cloudformation.json"
+  - "infra/aws/review-email-deployment-access.cloudformation.json"
   - "infra/aws/review-email-foundation.cloudformation.json"
   - "scripts/prepare-widget-aws-canary-assets.mjs"
   - "scripts/deploy-widget-aws-canary-assets.mjs"
@@ -36,6 +37,7 @@ source_files:
   - "scripts/validate-media-observability-template.mjs"
   - "scripts/validate-media-access-logs-bucket-template.mjs"
   - "scripts/validate-media-access-logs-delivery-template.mjs"
+  - "scripts/validate-review-email-deployment-access-template.mjs"
   - ".agents/skills/aws-iam/SKILL.md"
   - ".agents/skills/aws-messaging-and-streaming/SKILL.md"
   - ".agents/skills/aws-serverless/SKILL.md"
@@ -107,6 +109,7 @@ Profiles:
 | `renuvex-readonly` | Read-only evidence gathering and audits. |
 | `renuvex-widget-canary` | Limited CloudFront/S3/CloudFormation operator for the widget CDN canary. |
 | `renuvex-review-images` | Limited review-image AWS migration/operator profile. Use only for approved review-image infrastructure work; read-only checks are allowed. |
+| `renuvex-review-email` | Planned review-email change-set operator. Source policy exists, but the permission set, assignment, and local profile are not live. |
 
 The `AdministratorAccess` permission set exists for manual emergency or console
 operations, but it is not the normal automation profile and should not be made
@@ -641,6 +644,69 @@ envelope, single-recipient attempt, opaque transport-event ids,
 the inputs for a future sender package. They do not mean SQS, Lambda,
 EventBridge, SES tenants, configuration-set associations, DNS, or outbound
 email are deployed.
+
+### Source-only deployment access bootstrap
+
+The first deployment-access checkpoint was prepared on 2026-07-21 in
+`infra/aws/review-email-deployment-access.cloudformation.json`. It is a
+source-only bootstrap package and has not been executed. Live read-only checks
+at this checkpoint found no `RenuvexReviewEmailOperator` permission set, no
+`RenuvexReviewEmailOperators` group, no `renuvex-review-email-*` CloudFormation
+service role, and no review-email CloudFormation stack. The local
+`renuvex-review-email` SSO profile therefore does not exist yet.
+
+The future bootstrap stack name is `renuvex-review-email-access-prod`. It must
+be created separately with `CAPABILITY_NAMED_IAM` by an explicitly approved
+administrator. Identity Center instance, identity-store, and operator-user IDs
+are deployment parameters and must never be committed.
+
+The source contract is:
+
+- `RenuvexReviewEmailOperators` is a dedicated Identity Center group assigned
+  to account `989086371563` through the `RenuvexReviewEmailOperator` permission
+  set with a two-hour session.
+- The operator can validate templates and create, inspect, execute, or discard
+  change sets only for `renuvex-review-email-foundation-prod`,
+  `renuvex-review-email-erasure-journal-prod`, and
+  `renuvex-review-email-erasure-journal-iam-prod`.
+- Each `CreateChangeSet` path requires its matching CloudFormation service role;
+  `iam:PassRole` is limited to those three exact role ARNs and
+  `cloudformation.amazonaws.com`. IMPORT change sets are denied.
+- Direct `CreateStack`, `UpdateStack`, `DeleteStack`, SES send, service control
+  plane, general IAM mutation, managed policy, and broad pass-role permissions
+  are absent from the human operator policy.
+- `renuvex-review-email-foundation-cfn` manages only the existing SES/KMS/SNS/SQS
+  foundation resource surface and has no send or IAM permission.
+- SES create operations and the legacy configuration-set describe action do not
+  provide a usable resource-level authorization path in IAM simulation. Those
+  exact actions alone use `Resource: "*"` inside the foundation service role;
+  create calls require the locked region plus project/purpose request tags, and
+  no SES send action is present. Other supported SES operations remain scoped
+  to the exact identity or configuration-set ARN.
+- `renuvex-review-email-journal-cfn` manages only the exact journal bucket's
+  configuration and policy. It cannot write/delete objects, change object
+  retention, or bypass governance retention.
+- `renuvex-review-email-journal-iam-cfn` manages only the four existing
+  `renuvex-review-email-journal-*` roles, inline policies, tags, and trust
+  policies. It cannot attach managed policies, create users/access keys, or
+  pass roles.
+- The three service roles use `DeletionPolicy: Retain` and
+  `UpdateReplacePolicy: Retain`; their retirement requires a separate
+  decommission decision. Permission set, group, membership, and assignment use
+  normal CloudFormation lifecycle.
+
+Source validation is:
+
+```powershell
+pnpm aws:review-email:validate-access-template
+pnpm aws:review-email:validate-templates
+pnpm aws:lint-templates:eu-central-1
+```
+
+The next access phase is a distinct mutation gate: inspect an Administrator
+change set, execute the bootstrap, verify group assignment and effective policy,
+then add the local `renuvex-review-email` SSO profile. Preparing this source does
+not approve that phase.
 
 Deferred acceptance gates remain separate:
 

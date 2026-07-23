@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-07-09
-updated: 2026-07-20
-last_verified: 2026-07-20
+updated: 2026-07-21
+last_verified: 2026-07-21
 confidence: high
 tags:
   - adr
@@ -35,6 +35,7 @@ source_files:
   - "prisma/migrations/20260716120000_add_review_email_eligibility_cutoff/migration.sql"
   - "prisma/migrations/20260720120000_align_ikas_review_email_contracts/migration.sql"
   - "config/review-email-copy-register.json"
+  - "infra/aws/review-email-deployment-access.cloudformation.json"
   - "infra/aws/review-email-erasure-journal.cloudformation.json"
   - "infra/aws/review-email-erasure-journal-iam.cloudformation.json"
   - "src/lib/ikas-installation-lifecycle.ts"
@@ -70,6 +71,7 @@ source_files:
   - "src/app/api/internal/email-events/ses/route.ts"
   - "infra/aws/review-email-foundation.cloudformation.json"
   - "scripts/validate-review-email-foundation-template.mjs"
+  - "scripts/validate-review-email-deployment-access-template.mjs"
   - "scripts/calculate-review-email-journal-retention.mjs"
   - "scripts/validate-review-email-erasure-journal-templates.mjs"
   - "scripts/initialize-review-email-journal-genesis.mjs"
@@ -534,6 +536,35 @@ Still missing:
   support rules are defined.
 
 ### Runtime credentials and IAM
+
+- Deployment access is separated from runtime access. The source-only
+  `review-email-deployment-access.cloudformation.json` package defines the
+  `RenuvexReviewEmailOperators` group, the `RenuvexReviewEmailOperator`
+  permission set, account assignment, and three retained CloudFormation service
+  roles. Identity Center instance/store/user IDs are deployment parameters.
+- The human operator can only create and execute reviewed change sets for the
+  exact foundation, erasure-journal, and erasure-journal-IAM stack names. Each
+  `CreateChangeSet` statement requires its matching service role; pass-role is
+  limited to those role ARNs and the CloudFormation service principal, and
+  resource-import change sets are denied.
+- The operator has no direct create/update/delete-stack action, SES send or
+  control-plane action, journal object/retention action, broad IAM mutation,
+  managed policy, or general pass-role permission.
+- Foundation, journal-bucket, and journal-IAM service roles are independently
+  scoped to the resource types and physical names in their existing templates.
+  They trust only `cloudformation.amazonaws.com`; sender Lambda/Scheduler IAM is
+  deliberately absent until sender IaC exists.
+- AWS actions without a usable resource-level authorization path remain exact
+  action allowlists inside service roles only. SES create calls additionally
+  require the locked region and project/purpose request tags; this exception
+  does not grant SES sending.
+- Service roles use `DeletionPolicy: Retain` and `UpdateReplacePolicy: Retain`.
+  Permission set, group, membership, and assignment use normal stack lifecycle.
+  Role retirement therefore needs a separate decommission plan.
+- This source checkpoint does not authorize the future
+  `renuvex-review-email-access-prod` bootstrap. Administrator change-set review,
+  stack execution, assignment verification, and local profile creation are a
+  separate mutation phase.
 
 - The AWS-native email worker path requires a separate Lambda execution role
   with least-privilege access to its SQS queue, SES send action, CloudWatch

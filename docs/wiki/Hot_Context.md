@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-07-20
-last_verified: 2026-07-20
+updated: 2026-07-21
+last_verified: 2026-07-21
 confidence: high
 tags:
   - hot-context
@@ -60,6 +60,9 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
+- 2026-07-21: Review-email deployment-access source and validator exist. No
+  permission set, group, role, stack, assignment, or local profile is live;
+  bootstrap remains a separate mutation gate.
 - 2026-07-20: Review-email now uses current ikas customer subscription, exact
   recipient matching, immutable delivery evidence, stable package-line grouping,
   and all four shipping methods. PR #8 deployed the disabled backend and all 59
@@ -90,11 +93,9 @@ source_files:
 - Supabase RLS/default-grants hardening is a public-launch blocker.
 - Theme adapters depend on `listStorefront.themes[].isMainTheme`; no ikas theme webhook exists.
 - Deferred gaps: unsupported-theme warning UI, authenticated dashboard smoke, Sentry post-deploy health.
-- Review-email V5/V3.2 schema and disabled backend are deployed, but outbound
-  email is not live. Activation still requires actual restore-window and
-  app-deleted verification, journal/env/report/enforce gates, SES
-  sender/templates, AWS dispatch, `reviews.renuvex.app` DNS, sandbox evidence,
-  merchant settings UI, review-center media controls, and live acceptance.
+- Review-email V5/V3.2 backend is deployed but disabled. Activation still needs
+  restore-window/app-deleted checks, journal gates, SES sender/DNS/sandbox
+  evidence, merchant UI, legal review, media controls, and live acceptance.
 
 ## Read Next
 - [[Current_Status]]
