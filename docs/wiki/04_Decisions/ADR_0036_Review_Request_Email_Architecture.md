@@ -634,6 +634,17 @@ Still missing:
   denies `Update:Delete` and `Update:Replace` for every declared logical
   resource, including the KMS alias and SES event destination; termination
   protection is enabled only after policy read-back succeeds.
+- AWS does not expose the submitted `ChangeSetType` in `DescribeChangeSet`.
+  Existing-stack updates are accepted only when the stable stack ID matches,
+  `OnStackFailure` is absent, and no import action exists. Foundation creates
+  are accepted only with the matching `REVIEW_IN_PROGRESS` placeholder,
+  `OnStackFailure=ROLLBACK`, and an all-`Add` effective resource inventory.
+- CloudFormation can surface an unchanged `AWS::SSO::Assignment` as a
+  dependency-only `Modify/Conditional` row when its in-place permission set is
+  updated. This is accepted only for the exact `PermissionSetArn`
+  `ResourceAttribute` dependency, with an unchanged assignment template and an
+  in-place permission-set update. Other conditional replacements remain
+  forbidden.
 - Source foundation safety is layered, not attributed solely to the
   configuration set: no sender role or SES send action exists, DNS is not
   configured, and `SendingEnabled=false`. A caller could explicitly select a

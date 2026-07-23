@@ -803,6 +803,18 @@ The pending source contract is:
   Finalization first proves `CREATE_COMPLETE`, canonical stack-template and
   resource inventory equality, then applies and reads back the canonical stack
   policy, and finally enables termination protection.
+- `DescribeChangeSet` does not return the `ChangeSetType` request field. The
+  verifier therefore proves an access-stack update from the existing stable
+  stack ID, absent `OnStackFailure`, and absence of import actions. A foundation
+  create is proved separately by its `REVIEW_IN_PROGRESS` placeholder,
+  `OnStackFailure=ROLLBACK`, and all-`Add` inventory.
+- Updating an `AWS::SSO::PermissionSet` can make CloudFormation report its
+  unchanged `AWS::SSO::Assignment` dependency as `Modify/Conditional`, because
+  `PermissionSetArn` is a dynamic resource attribute whose assignment property
+  requires replacement if the ARN changes. The verifier accepts only that exact
+  dependency signature, requires the assignment definition to be unchanged,
+  and requires the permission set itself to remain an in-place update. Every
+  other conditional replacement remains a stop condition.
 
 The foundation template is fail-closed at this stage:
 
@@ -842,7 +854,10 @@ Required order from this checkpoint:
 2. Create and read-only verify the access-hardening change set. It may modify
    only `ReviewEmailOperatorPermissionSet` and
    `ReviewEmailFoundationCloudFormationRole` in place, and add only the author
-   group, membership, permission set, and assignment.
+   group, membership, permission set, and assignment. CloudFormation may also
+   report the unchanged operator assignment as the exact dependency-only
+   conditional row described above; no other resource or conditional
+   replacement is accepted.
 3. Obtain separate approval and execute that access update.
 4. Create the local `renuvex-review-email-author` SSO profile, then prove both
    provisioned permission sets and all live access policies match source while

@@ -9,6 +9,8 @@ import {
   REVIEW_EMAIL_ACCOUNT_ID,
   REVIEW_EMAIL_REGION,
   canonicalJsonSha256,
+  isDependencyOnlySsoAssignmentChange,
+  isExistingStackUpdateChangeSet,
   parseJsonDocument,
   readStrictJsonFile,
 } from './lib/review-email-cloudformation-contract.mjs';
@@ -162,7 +164,10 @@ const accessChangeSet = awsJson([
 ]);
 assert(accessChangeSet.Status === 'CREATE_COMPLETE', 'Access approval change set is not complete.');
 assert(accessChangeSet.ExecutionStatus === 'AVAILABLE', 'Access approval change set is not executable.');
-assert(accessChangeSet.ChangeSetType === 'UPDATE', 'Access approval must use an UPDATE change set.');
+assert(
+  isExistingStackUpdateChangeSet(accessChangeSet, stack),
+  'Access approval lacks the evidence required for an existing-stack UPDATE change set.',
+);
 assert(
   JSON.stringify(accessChangeSet.Capabilities ?? []) === JSON.stringify(['CAPABILITY_NAMED_IAM']),
   'Access approval change set must acknowledge only CAPABILITY_NAMED_IAM.',
@@ -170,25 +175,45 @@ assert(
 const changes = accessChangeSet.Changes ?? [];
 const nameChanged = currentParameters.ApprovedFoundationChangeSetName !== target.name;
 const expiryChanged = currentParameters.FoundationExecutionApprovalExpiresAt !== target.expiry;
-const expectedLogicalIds = new Set(['ReviewEmailOperatorPermissionSet']);
-if (nameChanged) expectedLogicalIds.add('ReviewEmailAuthorPermissionSet');
+const expectedPermissionSets = new Set(['ReviewEmailOperatorPermissionSet']);
+const expectedAssignments = new Map([
+  ['ReviewEmailOperatorAssignment', 'ReviewEmailOperatorPermissionSet'],
+]);
+if (nameChanged) {
+  expectedPermissionSets.add('ReviewEmailAuthorPermissionSet');
+  expectedAssignments.set('ReviewEmailAuthorAssignment', 'ReviewEmailAuthorPermissionSet');
+}
 assert(
-  changes.length === expectedLogicalIds.size,
-  `Access approval change set must modify exactly ${expectedLogicalIds.size} permission set(s).`,
+  changes.length === expectedPermissionSets.size + expectedAssignments.size,
+  'Access approval change set has an unexpected resource count.',
 );
 for (const change of changes) {
   const resource = change?.ResourceChange;
+  if (expectedPermissionSets.has(resource?.LogicalResourceId)) {
+    assert(
+      resource.Action === 'Modify' &&
+        resource.ResourceType === 'AWS::SSO::PermissionSet' &&
+        resource.Replacement !== 'True' &&
+        resource.Replacement !== 'Conditional',
+      'Access approval change set may modify expected permission sets only in place.',
+    );
+    expectedPermissionSets.delete(resource.LogicalResourceId);
+    continue;
+  }
+  const permissionSetLogicalId = expectedAssignments.get(resource?.LogicalResourceId);
   assert(
-    resource?.Action === 'Modify' &&
-      expectedLogicalIds.has(resource.LogicalResourceId) &&
-      resource.ResourceType === 'AWS::SSO::PermissionSet' &&
-      resource.Replacement !== 'True' &&
-      resource.Replacement !== 'Conditional',
-    'Access approval change set may modify only expected permission sets in place.',
+    permissionSetLogicalId &&
+      isDependencyOnlySsoAssignmentChange(
+        resource,
+        resource.LogicalResourceId,
+        permissionSetLogicalId,
+      ),
+    'Access approval change set contains an unexpected assignment change.',
   );
-  expectedLogicalIds.delete(resource.LogicalResourceId);
+  expectedAssignments.delete(resource.LogicalResourceId);
 }
-assert(expectedLogicalIds.size === 0, 'Access approval change set omitted an expected permission-set update.');
+assert(expectedPermissionSets.size === 0, 'Access approval omitted an expected permission-set update.');
+assert(expectedAssignments.size === 0, 'Access approval omitted an expected dependency-only assignment change.');
 assert(nameChanged || expiryChanged, 'Approval update has no effective parameter change.');
 
 runAws([

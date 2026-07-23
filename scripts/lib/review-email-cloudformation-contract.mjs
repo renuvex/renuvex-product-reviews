@@ -104,6 +104,58 @@ export function parseSsoPermissionSetPhysicalId(value) {
   return { instanceArn, permissionSetArn };
 }
 
+export function isExistingStackUpdateChangeSet(changeSet, stack) {
+  const changes = changeSet?.Changes ?? [];
+  return Boolean(
+    changeSet?.StackId &&
+      changeSet.StackId === stack?.StackId &&
+      changeSet.OnStackFailure == null &&
+      changeSet.ImportExistingResources !== true &&
+      changes.every(
+        (change) =>
+          change?.ResourceChange?.Action !== 'Import' &&
+          (change?.ResourceChange?.Details ?? []).every(
+            (detail) => detail?.ChangeSource !== 'Import',
+          ),
+      ),
+  );
+}
+
+export function isDependencyOnlySsoAssignmentChange(
+  resourceChange,
+  assignmentLogicalId,
+  permissionSetLogicalId,
+) {
+  const normalized = {
+    action: resourceChange?.Action,
+    details: resourceChange?.Details ?? [],
+    logicalResourceId: resourceChange?.LogicalResourceId,
+    replacement: resourceChange?.Replacement,
+    resourceType: resourceChange?.ResourceType,
+    scope: resourceChange?.Scope ?? [],
+  };
+  const expected = {
+    action: 'Modify',
+    details: [
+      {
+        ChangeSource: 'ResourceAttribute',
+        CausingEntity: `${permissionSetLogicalId}.PermissionSetArn`,
+        Evaluation: 'Dynamic',
+        Target: {
+          Attribute: 'Properties',
+          Name: 'PermissionSetArn',
+          RequiresRecreation: 'Always',
+        },
+      },
+    ],
+    logicalResourceId: assignmentLogicalId,
+    replacement: 'Conditional',
+    resourceType: 'AWS::SSO::Assignment',
+    scope: ['Properties'],
+  };
+  return canonicalJsonSha256(normalized) === canonicalJsonSha256(expected);
+}
+
 export function declaredResourceTypes(template) {
   return [...new Set(
     Object.values(template?.Resources ?? {})

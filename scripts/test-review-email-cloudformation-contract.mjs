@@ -5,6 +5,8 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   canonicalJsonSha256,
+  isDependencyOnlySsoAssignmentChange,
+  isExistingStackUpdateChangeSet,
   parseSsoPermissionSetPhysicalId,
   parseStrictJsonBytes,
   parseStrictJsonText,
@@ -65,6 +67,73 @@ assert.deepEqual(
 assert.throws(
   () => parseSsoPermissionSetPhysicalId('arn:aws:sso:::permissionSet/invalid'),
   /two ARN components/,
+);
+
+const existingStack = { StackId: 'stack-id' };
+const updateChangeSet = {
+  Changes: [{ ResourceChange: { Action: 'Modify', Details: [] } }],
+  ImportExistingResources: false,
+  OnStackFailure: null,
+  StackId: 'stack-id',
+};
+assert.equal(isExistingStackUpdateChangeSet(updateChangeSet, existingStack), true);
+assert.equal(
+  isExistingStackUpdateChangeSet(
+    {
+      ...updateChangeSet,
+      Changes: [{ ResourceChange: { Action: 'Import', Details: [] } }],
+    },
+    existingStack,
+  ),
+  false,
+);
+assert.equal(
+  isExistingStackUpdateChangeSet({ ...updateChangeSet, OnStackFailure: 'ROLLBACK' }, existingStack),
+  false,
+);
+
+const dependencyOnlyAssignmentChange = {
+  Action: 'Modify',
+  Details: [
+    {
+      ChangeSource: 'ResourceAttribute',
+      CausingEntity: 'ReviewEmailOperatorPermissionSet.PermissionSetArn',
+      Evaluation: 'Dynamic',
+      Target: {
+        Attribute: 'Properties',
+        Name: 'PermissionSetArn',
+        RequiresRecreation: 'Always',
+      },
+    },
+  ],
+  LogicalResourceId: 'ReviewEmailOperatorAssignment',
+  Replacement: 'Conditional',
+  ResourceType: 'AWS::SSO::Assignment',
+  Scope: ['Properties'],
+};
+assert.equal(
+  isDependencyOnlySsoAssignmentChange(
+    dependencyOnlyAssignmentChange,
+    'ReviewEmailOperatorAssignment',
+    'ReviewEmailOperatorPermissionSet',
+  ),
+  true,
+);
+assert.equal(
+  isDependencyOnlySsoAssignmentChange(
+    {
+      ...dependencyOnlyAssignmentChange,
+      Details: [
+        {
+          ...dependencyOnlyAssignmentChange.Details[0],
+          CausingEntity: 'UnexpectedPermissionSet.PermissionSetArn',
+        },
+      ],
+    },
+    'ReviewEmailOperatorAssignment',
+    'ReviewEmailOperatorPermissionSet',
+  ),
+  false,
 );
 
 readStrictJsonFile(

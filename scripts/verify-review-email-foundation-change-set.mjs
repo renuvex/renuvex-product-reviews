@@ -61,7 +61,6 @@ const changeSet = awsJson([
 
 assert(changeSet.StackName === REVIEW_EMAIL_FOUNDATION_STACK_NAME, 'Change set targets the wrong stack.');
 assert(changeSet.ChangeSetName === changeSetName, 'CloudFormation returned a different change-set name.');
-assert(changeSet.ChangeSetType === 'CREATE', 'Foundation must use a CREATE change set.');
 assert(changeSet.Status === 'CREATE_COMPLETE', `Change set is not complete: ${changeSet.Status}.`);
 assert(changeSet.ExecutionStatus === 'AVAILABLE', `Change set is not executable: ${changeSet.ExecutionStatus}.`);
 assert(changeSet.RoleARN === expectedRoleArn, 'Change set uses the wrong CloudFormation service role.');
@@ -73,6 +72,17 @@ assert((changeSet.NotificationARNs ?? []).length === 0, 'Foundation change set m
 assert(
   (changeSet.RollbackConfiguration?.RollbackTriggers ?? []).length === 0,
   'Foundation change set must not add unreviewed rollback triggers.',
+);
+const pendingStack = awsJson([
+  'cloudformation',
+  'describe-stacks',
+  '--stack-name',
+  REVIEW_EMAIL_FOUNDATION_STACK_NAME,
+]).Stacks?.[0];
+assert(pendingStack?.StackId === changeSet.StackId, 'CREATE change set is not attached to its placeholder stack.');
+assert(
+  pendingStack?.StackStatus === 'REVIEW_IN_PROGRESS',
+  `Foundation placeholder stack has an unexpected status: ${pendingStack?.StackStatus ?? 'missing'}.`,
 );
 
 const expectedParameters = Object.fromEntries(

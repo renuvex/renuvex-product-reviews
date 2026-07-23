@@ -7,6 +7,8 @@ import {
   REVIEW_EMAIL_ACCOUNT_ID,
   REVIEW_EMAIL_REGION,
   canonicalJsonSha256,
+  isDependencyOnlySsoAssignmentChange,
+  isExistingStackUpdateChangeSet,
   parseJsonDocument,
   parseSsoPermissionSetPhysicalId,
   readStrictJsonFile,
@@ -54,7 +56,11 @@ const changeSet = awsJson([
   '--change-set-name',
   changeSetName,
 ]);
-assert(changeSet.ChangeSetType === 'UPDATE', 'Access hardening must use an UPDATE change set.');
+assert(changeSet.StackName === REVIEW_EMAIL_ACCESS_STACK_NAME, 'Access hardening targets the wrong stack.');
+assert(
+  isExistingStackUpdateChangeSet(changeSet, stack),
+  'Access hardening lacks the evidence required for an existing-stack UPDATE change set.',
+);
 assert(changeSet.Status === 'CREATE_COMPLETE', 'Access hardening change set is not complete.');
 assert(changeSet.ExecutionStatus === 'AVAILABLE', 'Access hardening change set is not executable.');
 assert(
@@ -65,6 +71,15 @@ assert(!changeSet.RoleARN, 'Bootstrap access stack must not gain a CloudFormatio
 assert(changeSet.IncludeNestedStacks !== true, 'Access hardening must not include nested stacks.');
 assert(changeSet.ImportExistingResources !== true, 'Access hardening must not import resources.');
 
+const live = awsJson([
+  'cloudformation',
+  'get-template',
+  '--stack-name',
+  REVIEW_EMAIL_ACCESS_STACK_NAME,
+  '--template-stage',
+  'Original',
+]);
+const liveTemplate = parseJsonDocument(live.TemplateBody, 'Original live access-stack template');
 const submitted = awsJson([
   'cloudformation',
   'get-template',
@@ -87,7 +102,11 @@ const expectedChanges = {
   ReviewEmailAuthorPermissionSet: { action: 'Add', type: 'AWS::SSO::PermissionSet' },
   ReviewEmailAuthorsGroup: { action: 'Add', type: 'AWS::IdentityStore::Group' },
   ReviewEmailFoundationCloudFormationRole: { action: 'Modify', type: 'AWS::IAM::Role' },
+  ReviewEmailOperatorAssignment: { action: 'Modify', type: 'AWS::SSO::Assignment' },
   ReviewEmailOperatorPermissionSet: { action: 'Modify', type: 'AWS::SSO::PermissionSet' },
+};
+const dependencyOnlyChanges = {
+  ReviewEmailOperatorAssignment: 'ReviewEmailOperatorPermissionSet',
 };
 const actualChanges = {};
 for (const change of changeSet.Changes ?? []) {
@@ -100,15 +119,36 @@ for (const change of changeSet.Changes ?? []) {
     `${resource.LogicalResourceId} must be ${expected.action}, received ${resource?.Action ?? 'unknown'}.`,
   );
   assert(
-    resource.Replacement !== 'True' && resource.Replacement !== 'Conditional',
-    `${resource.LogicalResourceId} must not be replaced.`,
+    resource?.ResourceType === expected.type,
+    `${resource.LogicalResourceId} must be ${expected.type}, received ${resource?.ResourceType ?? 'unknown'}.`,
   );
+  const dependencyPermissionSet = dependencyOnlyChanges[resource.LogicalResourceId];
+  if (dependencyPermissionSet) {
+    assert(
+      isDependencyOnlySsoAssignmentChange(
+        resource,
+        resource.LogicalResourceId,
+        dependencyPermissionSet,
+      ),
+      `${resource.LogicalResourceId} is not the expected dependency-only assignment change.`,
+    );
+  } else {
+    assert(
+      resource.Replacement !== 'True' && resource.Replacement !== 'Conditional',
+      `${resource.LogicalResourceId} must not be replaced.`,
+    );
+  }
   actualChanges[resource.LogicalResourceId] = {
     action: resource.Action,
     type: resource.ResourceType,
   };
 }
 assertDeepEqual(actualChanges, expectedChanges, 'Access hardening resource diff');
+assertDeepEqual(
+  liveTemplate.Resources.ReviewEmailOperatorAssignment,
+  sourceTemplate.Resources.ReviewEmailOperatorAssignment,
+  'Operator assignment source definition',
+);
 
 const changeSetParameters = Object.fromEntries(
   (changeSet.Parameters ?? []).map(({ ParameterKey, ParameterValue }) => [ParameterKey, ParameterValue]),
@@ -241,6 +281,7 @@ report({
     .filter(([, value]) => value.action === 'Modify')
     .map(([logicalId]) => logicalId)
     .sort(),
+  dependencyOnlyResources: Object.keys(dependencyOnlyChanges).sort(),
   operatorActionsRemoved: [
     'cloudformation:CreateChangeSet',
     'cloudformation:DeleteChangeSet',
