@@ -60,11 +60,11 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
-- 2026-07-24: The unexecuted foundation change set is read-only verified and
-  approval-closed.
-  CloudFormation exposes its service role on the `REVIEW_IN_PROGRESS` stack,
-  not `DescribeChangeSet`; verifier-only later commits must prove unchanged
-  tagged template/policy blobs before a separate execution approval.
+- 2026-07-24: Foundation execution reached `CREATE_COMPLETE` with nine
+  resources and closed approval; sending, sandbox, DNS, and sender gates remain
+  fail-closed. Finalization stopped before protection because CloudFormation
+  rejects condition-false logical IDs in stack policies. Source now
+  materializes effective IDs; commit/push and retry approval remain.
 - 2026-07-23: Review-email access hardening is live and read-only verified.
   The access stack is `UPDATE_COMPLETE` with termination protection; separate
   author/create-only and operator/execute-only profiles are provisioned, every

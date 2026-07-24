@@ -807,10 +807,15 @@ The live source contract is:
   destination, and SES identity. KMS deletion is limited to a key in the
   locked account/region with all three exact resource tags and a seven-day
   pending-deletion window.
-- The SNS topic uses the KMS key **ARN**, not the mutable alias. The stack policy
-  still protects all ten declared logical resources, including the alias and
-  SES event destination, against `Update:Delete` and `Update:Replace` while
-  allowing in-place updates.
+- The SNS topic uses the KMS key **ARN**, not the mutable alias. The source
+  stack policy declares protection for all ten logical resources, including
+  the conditional HTTPS subscription, alias, and SES event destination.
+  CloudFormation rejects a stack policy that names a logical ID absent from the
+  effective stack. The finalizer therefore deterministically materializes the
+  policy against the condition-resolved logical-ID inventory before applying
+  it. All nine default resources remain protected against `Update:Delete` and
+  `Update:Replace`; if the HTTPS subscription condition is enabled later, the
+  same materialization includes it.
 - Stack policy is not attached to the `REVIEW_IN_PROGRESS` placeholder.
   Finalization first proves `CREATE_COMPLETE`, canonical stack-template and
   resource inventory equality, then applies and reads back the canonical stack
@@ -896,10 +901,23 @@ Checkpoint status and required next order:
    exact `Add` resources, `OnStackFailure=ROLLBACK`, matching historical,
    current, and AWS Original template digests, and the exact service role on
    the placeholder stack.
-7. The change set remains `AVAILABLE`, its placeholder has zero resources, the
-   execution approval expiry is still `1970-01-01T00:00:00Z`, and the target
-   SES, KMS, SNS, and SQS resources remain absent. The next AWS mutation is the
-   separately approved execution wrapper; this checkpoint does not authorize it.
+7. The separately approved execution wrapper completed on 2026-07-24 with
+   `RetainExceptOnCreate=true`. The access-stack approval returned to
+   `approval-disabled` and `1970-01-01T00:00:00Z`; the foundation stack reached
+   `CREATE_COMPLETE` with the exact nine effective resources.
+8. Read-only acceptance confirms configuration-set sending is disabled, SES is
+   still in sandbox, the identity/DKIM/custom MAIL FROM states are pending DNS,
+   KMS rotation is enabled for 365 days, the fourteen-day DLQ is empty, the
+   exact seven event types are configured, and no sender role, Lambda,
+   Scheduler, tenant, or SNS subscription exists.
+9. The first finalizer call made no resource update and stopped before enabling
+   termination protection because CloudFormation rejected the absent
+   condition-false `ReviewEmailEventsHttpsSubscription` logical ID in the raw
+   stack policy. The permanent source correction materializes the declared
+   policy from the effective resource inventory. It must be committed, pushed,
+   and separately approved before finalizer retry. Until then, termination
+   protection remains disabled and full `deployed-pending-dns` verification is
+   intentionally incomplete.
 
 No command in this section authorizes an AWS mutation by itself. Each
 `--apply`, change-set execution, stack-policy write, or termination-protection

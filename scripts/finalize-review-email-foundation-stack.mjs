@@ -10,6 +10,7 @@ import {
   canonicalJsonSha256,
   effectiveResourceLogicalIds,
   gitCommitIsAncestor,
+  materializeStackPolicy,
   parseJsonDocument,
   readStrictJsonAtGitCommit,
   readStrictJsonFile,
@@ -114,6 +115,8 @@ const expectedParameters = Object.fromEntries(
   Object.entries(template.Parameters ?? {}).map(([name, definition]) => [name, definition.Default ?? '']),
 );
 const expectedLogicalIds = effectiveResourceLogicalIds(template, expectedParameters);
+const effectiveStackPolicy = materializeStackPolicy(stackPolicy, expectedLogicalIds);
+const effectiveStackPolicyDigest = canonicalJsonSha256(effectiveStackPolicy);
 const resources = awsJson([
   'cloudformation',
   'list-stack-resources',
@@ -136,6 +139,7 @@ process.stdout.write(`${JSON.stringify({
   mode: apply ? 'apply' : 'dry-run',
   sourceCommit,
   stackName: REVIEW_EMAIL_FOUNDATION_STACK_NAME,
+  effectiveStackPolicyDigest,
   stackPolicyDigest,
   templateDigest,
   terminationProtectionBefore: stack.EnableTerminationProtection === true,
@@ -155,7 +159,7 @@ runAws([
   '--stack-name',
   REVIEW_EMAIL_FOUNDATION_STACK_NAME,
   '--stack-policy-body',
-  `file://${STACK_POLICY_PATH.replaceAll('\\', '/')}`,
+  JSON.stringify(effectiveStackPolicy),
 ]);
 const livePolicyResponse = awsJson([
   'cloudformation',
@@ -164,7 +168,10 @@ const livePolicyResponse = awsJson([
   REVIEW_EMAIL_FOUNDATION_STACK_NAME,
 ]);
 const livePolicy = parseJsonDocument(livePolicyResponse.StackPolicyBody, 'Live foundation stack policy');
-assert(canonicalJsonSha256(livePolicy) === stackPolicyDigest, 'Live stack policy differs from source.');
+assert(
+  canonicalJsonSha256(livePolicy) === effectiveStackPolicyDigest,
+  'Live stack policy differs from the effective source policy.',
+);
 
 runAws([
   'cloudformation',

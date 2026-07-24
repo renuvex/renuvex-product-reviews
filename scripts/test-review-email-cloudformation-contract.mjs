@@ -5,9 +5,11 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   canonicalJsonSha256,
+  effectiveResourceLogicalIds,
   gitCommitIsAncestor,
   isDependencyOnlySsoAssignmentChange,
   isExistingStackUpdateChangeSet,
+  materializeStackPolicy,
   parseSsoPermissionSetPhysicalId,
   parseStrictJsonBytes,
   parseStrictJsonText,
@@ -152,6 +154,64 @@ readStrictJsonFile(
 readStrictJsonFile(
   new URL('../infra/aws/review-email-foundation.stack-policy.json', import.meta.url),
   'foundation stack policy',
+);
+const foundationTemplate = readStrictJsonFile(
+  new URL('../infra/aws/review-email-foundation.cloudformation.json', import.meta.url),
+  'foundation template',
+);
+const foundationStackPolicy = readStrictJsonFile(
+  new URL('../infra/aws/review-email-foundation.stack-policy.json', import.meta.url),
+  'foundation stack policy',
+);
+const defaultParameters = Object.fromEntries(
+  Object.entries(foundationTemplate.Parameters)
+    .map(([name, definition]) => [name, definition.Default ?? '']),
+);
+const defaultEffectiveIds = effectiveResourceLogicalIds(
+  foundationTemplate,
+  defaultParameters,
+);
+const defaultEffectivePolicy = materializeStackPolicy(
+  foundationStackPolicy,
+  defaultEffectiveIds,
+);
+const defaultProtectedResources = defaultEffectivePolicy.Statement
+  .flatMap((statement) => Array.isArray(statement.Resource) ? statement.Resource : [statement.Resource])
+  .filter((resource) => resource !== '*');
+assert.equal(
+  defaultProtectedResources.includes(
+    'LogicalResourceId/ReviewEmailEventsHttpsSubscription',
+  ),
+  false,
+);
+assert.deepEqual(
+  defaultProtectedResources
+    .map((resource) => resource.replace('LogicalResourceId/', ''))
+    .sort(),
+  defaultEffectiveIds,
+);
+const subscriptionEffectivePolicy = materializeStackPolicy(
+  foundationStackPolicy,
+  effectiveResourceLogicalIds(
+    foundationTemplate,
+    {
+      ...defaultParameters,
+      FeedbackEndpointUrl: 'https://app.renuvex.app/api/internal/email-events/ses',
+    },
+  ),
+);
+assert.equal(
+  subscriptionEffectivePolicy.Statement
+    .flatMap((statement) => Array.isArray(statement.Resource) ? statement.Resource : [statement.Resource])
+    .includes('LogicalResourceId/ReviewEmailEventsHttpsSubscription'),
+  true,
+);
+assert.throws(
+  () => materializeStackPolicy(
+    { Statement: [{ Effect: 'Deny', Resource: 'LogicalResourceId/Invalid*' }] },
+    defaultEffectiveIds,
+  ),
+  /Unsupported stack policy Resource/,
 );
 
 const headResult = spawnSync('git', ['rev-parse', 'HEAD'], {

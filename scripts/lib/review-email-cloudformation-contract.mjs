@@ -215,6 +215,42 @@ export function effectiveResourceLogicalIds(template, parameterValues) {
     .sort();
 }
 
+export function materializeStackPolicy(stackPolicy, effectiveLogicalIds) {
+  const effective = new Set(effectiveLogicalIds);
+  const statements = [];
+
+  for (const statement of stackPolicy?.Statement ?? []) {
+    const resources = Array.isArray(statement.Resource)
+      ? statement.Resource
+      : [statement.Resource];
+    if (resources.includes('*')) {
+      if (resources.length !== 1) {
+        throw new Error('Stack policy wildcard Resource must not be mixed with logical IDs');
+      }
+      statements.push(structuredClone(statement));
+      continue;
+    }
+
+    const filtered = resources.filter((resource) => {
+      const match = /^LogicalResourceId\/([A-Za-z0-9]+)$/.exec(resource ?? '');
+      if (!match) {
+        throw new Error(`Unsupported stack policy Resource: ${String(resource)}`);
+      }
+      return effective.has(match[1]);
+    });
+    if (filtered.length === 0) continue;
+    statements.push({
+      ...structuredClone(statement),
+      Resource: Array.isArray(statement.Resource) ? filtered : filtered[0],
+    });
+  }
+
+  if (statements.length === 0) {
+    throw new Error('Effective stack policy must contain at least one statement');
+  }
+  return { Statement: statements };
+}
+
 function evaluateConditions(conditions, parameterValues) {
   const results = {};
   const evaluate = (value) => {

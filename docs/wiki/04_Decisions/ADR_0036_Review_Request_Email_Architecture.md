@@ -635,10 +635,17 @@ Still missing:
   `RetainExceptOnCreate=true`. The operator never sends `DisableRollback`.
   Exact rollback permissions include the created SNS/SQS/SES resources and a
   seven-day, tag-scoped `kms:ScheduleKeyDeletion`.
-- The foundation stack policy is applied only after `CREATE_COMPLETE`. It
-  denies `Update:Delete` and `Update:Replace` for every declared logical
-  resource, including the KMS alias and SES event destination; termination
-  protection is enabled only after policy read-back succeeds.
+- The foundation stack policy is applied only after `CREATE_COMPLETE`. Its
+  source document declares `Update:Delete` and `Update:Replace` protection for
+  every logical resource, including the conditionally absent HTTPS
+  subscription. CloudFormation validates stack policies against the effective
+  stack and rejects absent logical IDs, so the finalizer filters the declared
+  resource list through the same condition-resolved inventory used by the
+  change-set verifier. The live verifier derives the identical effective
+  policy before comparing its canonical digest. This preserves source
+  provenance without weakening protection for any deployed resource.
+  Termination protection is enabled only after effective-policy read-back
+  succeeds.
 - AWS does not expose the submitted `ChangeSetType` in `DescribeChangeSet`.
   Existing-stack updates are accepted only when the stable stack ID matches,
   `OnStackFailure` is absent, and no import action exists. Foundation creates

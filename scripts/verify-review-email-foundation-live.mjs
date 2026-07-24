@@ -10,6 +10,7 @@ import {
   canonicalJsonSha256,
   effectiveResourceLogicalIds,
   gitCommitIsAncestor,
+  materializeStackPolicy,
   parseJsonDocument,
   readStrictJsonAtGitCommit,
   readStrictJsonFile,
@@ -37,6 +38,8 @@ const defaults = Object.fromEntries(
   Object.entries(template.Parameters ?? {}).map(([name, definition]) => [name, definition.Default ?? '']),
 );
 const expectedLogicalIds = effectiveResourceLogicalIds(template, defaults);
+const effectiveStackPolicy = materializeStackPolicy(stackPolicy, expectedLogicalIds);
+const effectiveStackPolicyDigest = canonicalJsonSha256(effectiveStackPolicy);
 
 const caller = awsJson(['sts', 'get-caller-identity']);
 assert(caller.Account === REVIEW_EMAIL_ACCOUNT_ID, 'AWS caller account is not the locked account.');
@@ -157,8 +160,8 @@ const liveStackPolicy = awsJson([
 ]);
 assert(
   canonicalJsonSha256(parseJsonDocument(liveStackPolicy.StackPolicyBody, 'Live stack policy')) ===
-    stackPolicyDigest,
-  'Deployed stack policy differs from source.',
+    effectiveStackPolicyDigest,
+  'Deployed stack policy differs from the effective source policy.',
 );
 
 const resources = awsJson([
@@ -195,6 +198,7 @@ report({
   senderResourceCount: 0,
   sesProductionAccessEnabled: false,
   sourceCommit,
+  effectiveStackPolicyDigest,
   stackPolicyDigest,
   stackStatus: stack.StackStatus,
   templateDigest,

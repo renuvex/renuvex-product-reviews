@@ -132,6 +132,12 @@ assert(
   'Finalizer must verify committed provenance after CREATE_COMPLETE before applying the stack policy.',
 );
 assert(
+  finalizerSource.includes('materializeStackPolicy(stackPolicy, expectedLogicalIds)') &&
+    finalizerSource.includes('JSON.stringify(effectiveStackPolicy)') &&
+    liveVerifierSource.includes('materializeStackPolicy(stackPolicy, expectedLogicalIds)'),
+  'Finalizer and live verifier must materialize stack policy from effective logical resources.',
+);
+assert(
   liveVerifierSource.includes("gitCommitIsAncestor(ROOT, sourceCommit, 'origin/main')") &&
     liveVerifierSource.includes('readStrictJsonAtGitCommit'),
   'Live verifier must bind deployed provenance to a committed origin/main source contract.',
