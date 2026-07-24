@@ -335,7 +335,10 @@ function verifySes(liveConfigurationSet, liveIdentity, resourceMap) {
       liveIdentity.DkimAttributes?.NextSigningKeyLength === 'RSA_2048_BIT',
     'SES Easy DKIM is not configured for RSA-2048.',
   );
-  assert(liveIdentity.FeedbackAttributes?.EmailForwardingEnabled === false, 'SES feedback forwarding is enabled.');
+  assert(
+    liveIdentity.FeedbackForwardingStatus === false,
+    'SES feedback forwarding is enabled.',
+  );
   assert(
     liveIdentity.MailFromAttributes?.BehaviorOnMxFailure === 'REJECT_MESSAGE',
     'Custom MAIL FROM must reject on MX failure.',

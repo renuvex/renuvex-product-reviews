@@ -3,8 +3,8 @@ type: log
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-07-20
-last_verified: 2026-07-20
+updated: 2026-07-24
+last_verified: 2026-07-24
 confidence: high
 tags:
   - log
@@ -26,6 +26,17 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-07-24 - rollout | Deploy review-email AWS foundation
+- Deployed `renuvex-review-email-foundation-prod` with the exact nine
+  source-verified KMS, SNS, SQS, and SES resources. The bounded execution
+  approval returned to its disabled sentinel.
+- Materialized the declared stack policy against the effective logical-resource
+  inventory after CloudFormation rejected a condition-false subscription ID;
+  policy read-back and termination protection then passed.
+- Full `deployed-pending-dns` verification passes. SES sending and production
+  access remain disabled, identity/DKIM/custom MAIL FROM remain pending DNS,
+  and no sender, tenant, Scheduler, Lambda, or SNS subscription exists.
 
 ## 2026-07-20 - rollout | Deploy disabled review-email foundation
 - Merged PR #8 as `6163fa11441092d36272da7e9e1d15697c01739e`;

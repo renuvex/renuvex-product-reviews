@@ -60,19 +60,17 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
-- 2026-07-24: Foundation execution reached `CREATE_COMPLETE` with nine
-  resources and closed approval; sending, sandbox, DNS, and sender gates remain
-  fail-closed. Finalization stopped before protection because CloudFormation
-  rejects condition-false logical IDs in stack policies. Source now
-  materializes effective IDs; commit/push and retry approval remain.
+- 2026-07-24: Foundation is `CREATE_COMPLETE` with nine resources, effective
+  stack policy, and termination protection. Full `deployed-pending-dns`
+  verification passes; sending and sandbox gates remain closed, DNS is pending,
+  and sender/subscription/tenant surfaces are absent.
 - 2026-07-23: Review-email access hardening is live and read-only verified.
   The access stack is `UPDATE_COMPLETE` with termination protection; separate
   author/create-only and operator/execute-only profiles are provisioned, every
   approval window is closed, and the temporary Administrator config is removed.
   Verification handles the absent `ChangeSetType` output and only the exact
   dependency-only SSO assignment row. Foundation resources plus journal and
-  sender stacks remain absent; the prepared foundation change set is not
-  executed. See [[AWS_Setup_And_Access]].
+  journal and sender stacks remain absent. See [[AWS_Setup_And_Access]].
 - 2026-07-20: Review-email now uses current ikas customer subscription, exact
   recipient matching, immutable delivery evidence, stable package-line grouping,
   and all four shipping methods. PR #8 deployed the disabled backend and all 59

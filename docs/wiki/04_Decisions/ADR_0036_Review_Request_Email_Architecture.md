@@ -646,6 +646,12 @@ Still missing:
   provenance without weakening protection for any deployed resource.
   Termination protection is enabled only after effective-policy read-back
   succeeds.
+- The approved foundation deployment reached `CREATE_COMPLETE` on 2026-07-24.
+  The effective nine-resource policy was read back successfully and
+  termination protection was enabled. Live SES verification uses the SES v2
+  `GetEmailIdentity.FeedbackForwardingStatus` response field; the similarly
+  named CloudFormation input
+  `FeedbackAttributes.EmailForwardingEnabled` is not a live API response path.
 - AWS does not expose the submitted `ChangeSetType` in `DescribeChangeSet`.
   Existing-stack updates are accepted only when the stable stack ID matches,
   `OnStackFailure` is absent, and no import action exists. Foundation creates

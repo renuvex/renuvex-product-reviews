@@ -914,10 +914,19 @@ Checkpoint status and required next order:
    termination protection because CloudFormation rejected the absent
    condition-false `ReviewEmailEventsHttpsSubscription` logical ID in the raw
    stack policy. The permanent source correction materializes the declared
-   policy from the effective resource inventory. It must be committed, pushed,
-   and separately approved before finalizer retry. Until then, termination
-   protection remains disabled and full `deployed-pending-dns` verification is
-   intentionally incomplete.
+   policy from the effective resource inventory. Pushed commit
+   `e142ba94f3e993e0ee263cb75271e2988d4dfa93` passed the GitHub quality gate;
+   the separately approved retry applied and read back effective policy digest
+   `278225509496c38aa7720cc5caff0ba2b074dc63c09c949eab3a0a00f8d696f3`
+   and enabled termination protection.
+10. The first full live verifier then exposed a verifier-only API projection
+    error: CloudFormation writes
+    `FeedbackAttributes.EmailForwardingEnabled`, while SES v2
+    `GetEmailIdentity` returns top-level `FeedbackForwardingStatus`. The live
+    value was already `false`; no SES mutation was needed. After correcting the
+    verifier contract, `deployed-pending-dns` acceptance passed for all nine
+    resources, live policies, tags, event types, sandbox state, absent
+    subscription/sender/tenant surfaces, and enabled termination protection.
 
 No command in this section authorizes an AWS mutation by itself. Each
 `--apply`, change-set execution, stack-policy write, or termination-protection
