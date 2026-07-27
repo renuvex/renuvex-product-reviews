@@ -3,7 +3,7 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-28
+updated: 2026-07-28
 last_verified: 2026-06-28
 tags:
   - architecture
@@ -15,6 +15,10 @@ related:
   - "[[Widget_Architecture]]"
   - "[[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]]"
 source_files:
+  - "src/app/api/oauth/authorize/ikas/route.ts"
+  - "src/app/api/oauth/callback/ikas/route.ts"
+  - "src/lib/oauth-state.ts"
+  - "src/lib/session.ts"
   - "src/widget/core/origins.js"
   - "workers/widget-delivery/src/index.ts"
   - "wrangler.widget.jsonc"
@@ -69,9 +73,17 @@ A Next.js 16 (16.2) app on Vercel (eu-central / fra1) with three primary applica
 
 ### Install
 1. Merchant clicks "install" in ikas App Store (or visits `?storeName=` on the deploy URL).
-2. `GET /api/oauth/authorize/ikas` sets CSRF state and redirects to ikas authorize URL.
-3. ikas redirects back to `GET /api/oauth/callback/ikas?code&signature&state`.
-4. Server validates HMAC signature → exchanges code → fetches merchant + authorized app → upserts `AuthToken` and `StoreSettings` → **for each storefront, creates or updates a `StorefrontJSScript` pointing to `<STOREFRONT_WIDGET_BASE_URL>/widget.js?publicApiKey=<merchantId>` and records active theme metadata** → issues 4h JWT → redirects to `/callback` (client) → ikas Admin.
+2. `GET /api/oauth/authorize/ikas` creates a browser-bound, ten-minute Redis
+   state transaction and redirects to the ikas authorize URL.
+3. ikas redirects back to
+   `GET /api/oauth/callback/ikas?code&storeName&state[&signature]`.
+4. Server atomically consumes mandatory state, validates the signature when
+   supplied, exchanges the code, fetches merchant + authorized app, upserts
+   `AuthToken` and `StoreSettings`, **creates or updates each storefront's
+   `StorefrontJSScript` pointing to
+   `<STOREFRONT_WIDGET_BASE_URL>/widget.js?publicApiKey=<merchantId>` and records
+   active theme metadata**, issues a 4h JWT, then redirects through `/callback`
+   to ikas Admin.
 
 See [[Auth_And_Installation_Flow]] for full trace.
 

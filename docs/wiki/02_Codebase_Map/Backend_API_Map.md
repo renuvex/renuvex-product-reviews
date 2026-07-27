@@ -3,8 +3,8 @@ type: api
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-15
-last_verified: 2026-07-15
+updated: 2026-07-28
+last_verified: 2026-07-28
 confidence: high
 tags:
   - api
@@ -54,6 +54,9 @@ source_files:
   - "src/app/api/internal/review-email/due-jobs/route.ts"
   - "src/app/api/internal/review-email/reconcile-orders/route.ts"
   - "src/app/api/internal/review-email/store-erasure/route.ts"
+  - "src/app/api/oauth/authorize/ikas/route.ts"
+  - "src/app/api/oauth/callback/ikas/route.ts"
+  - "src/lib/oauth-state.ts"
   - "src/app/api/public/review-request/route.ts"
   - "src/app/api/public/review-center/session/route.ts"
   - "src/app/api/public/review-center/items/route.ts"
@@ -174,8 +177,8 @@ Detail in [[Security_And_Rate_Limits]].
 
 | Method + Path | Source | Purpose |
 |---|---|---|
-| GET `/api/oauth/authorize/ikas?storeName=` | [route.ts](src/app/api/oauth/authorize/ikas/route.ts) | Set CSRF state in session, redirect to ikas authorize URL |
-| GET `/api/oauth/callback/ikas?code&state&signature` | [route.ts](src/app/api/oauth/callback/ikas/route.ts) | Validate sig+state, exchange code, fetch merchant/app, atomically activate a new installation generation and replace stale merchant tokens, **auto-inject widget script per storefront**, register product webhooks, and register order/uninstall webhooks only when global + merchant email settings are enabled; then issue JWT and redirect. `ProductSnapshot` backfill runs post-response via `after()`. |
+| GET `/api/oauth/authorize/ikas?storeName=` | [route.ts](src/app/api/oauth/authorize/ikas/route.ts) | Canonicalize the ikas store, bind a 256-bit state to the encrypted browser session, persist a hashed ten-minute Redis transaction, then redirect. Redis failure returns `503` without redirect. |
+| GET `/api/oauth/callback/ikas?code&storeName&state&signature` | [route.ts](src/app/api/oauth/callback/ikas/route.ts) | Require and atomically consume the browser-bound state before token exchange; reject expiry, replay, wrong browser/store, and validate a supplied signature before consumption. Then fetch merchant/app, atomically activate a new installation generation and replace stale merchant tokens, **auto-inject widget script per storefront**, register product webhooks, and register order/uninstall webhooks only when global + merchant email settings are enabled; issue JWT and redirect. `ProductSnapshot` backfill runs post-response via `after()`. |
 
 ## Preview iframe
 

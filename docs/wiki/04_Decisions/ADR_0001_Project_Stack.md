@@ -3,7 +3,7 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-07-28
 tags:
   - adr
   - stack
@@ -33,9 +33,11 @@ We're building a SaaS review app for ikas merchants: merchant admin (iframe insi
 - **Framework**: Next.js 16 (App Router) + React 19 + TypeScript — pinned at `16.2.1` in `package.json`. (Some legacy docs/rule files still say "Next.js 15"; treat the pinned version as authoritative.)
 - **DB**: Postgres (Supabase), Prisma ORM
 - **Styling**: Tailwind CSS v4 + shadcn/ui (Radix primitives)
-- **Sessions**: iron-session for OAuth state cookie
+- **Sessions**: iron-session for the opaque OAuth browser binding; Upstash
+  Redis owns the bounded, single-use state transaction
 - **Auth**: HS256 JWT (`jsonwebtoken`) for browser → server, signed with `CLIENT_SECRET`
-- **Rate limit**: Upstash Redis (REST API for serverless compatibility)
+- **Rate limit / ephemeral security state**: Upstash Redis (REST API for
+  serverless compatibility)
 - **Image storage**: Cloudinary with signed direct uploads
 - **Widget bundle**: vanilla JS bundled by **esbuild** (separate from Next pipeline)
 - **Codegen**: GraphQL Codegen for the ikas Admin client

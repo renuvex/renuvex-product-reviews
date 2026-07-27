@@ -1,15 +1,21 @@
 import { config } from '@/globals/config';
 import { getRedirectUri } from '@/helpers/api-helpers';
-import { getSession, setSession } from '@/lib/session';
+import {
+  createOAuthBrowserBinding,
+  ikasStoreNameSchema,
+  isOAuthBrowserBinding,
+  issueOAuthStateTransaction,
+  OAuthStateStoreError,
+} from '@/lib/oauth-state';
+import { getSession } from '@/lib/session';
 import { validateRequest } from '@/lib/validation';
 import { OAuthAPI } from '@ikas/admin-api-client';
 import { NextRequest, NextResponse } from 'next/server';
 import z from 'zod';
-import crypto from 'crypto';
 
 // Validation schemas
 const authorizeSchema = z.object({
-  storeName: z.string().min(1, 'storeName is required'),
+  storeName: ikasStoreNameSchema,
 });
 
 /**
@@ -20,7 +26,7 @@ const authorizeSchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     // Parse the request URL to extract query parameters
-    const url = new URL(request.url as string, `http://${request.headers.get('host')}`);
+    const url = new URL(request.url);
     const { searchParams } = url;
 
     // Validate the incoming request parameters (expects storeName)
@@ -34,33 +40,37 @@ export async function GET(request: NextRequest) {
     }
 
     const { storeName } = validation.data;
-
-    // Generate a cryptographically secure state string for CSRF protection
-    const state = crypto.randomBytes(32).toString('hex');
-
-    // Retrieve the current session and update it with state and storeName
-    const session = await getSession();
-    session.state = state;
-    session.storeName = storeName;
-
-    // Save the updated session before redirecting
-    await setSession(session);
-
-    // Generate the base OAuth URL for the given store
+    const host = request.headers.get('host') || url.host;
+    const redirectUri = getRedirectUri(host);
     const oauthBaseUrl = OAuthAPI.getOAuthUrl({ storeName });
 
+    // Keep one opaque browser binding while allowing multiple independent OAuth states.
+    const session = await getSession();
+    if (!isOAuthBrowserBinding(session.oauthBrowserBinding)) {
+      session.oauthBrowserBinding = createOAuthBrowserBinding();
+      await session.save();
+    }
+
+    const { state } = await issueOAuthStateTransaction({
+      browserBinding: session.oauthBrowserBinding,
+      storeName,
+      redirectUri,
+    });
+
     // Construct the full Ikas OAuth authorize URL with required query parameters
-    const authorizeUrl =
-      `${oauthBaseUrl}/authorize` +
-      `?client_id=${encodeURIComponent(config.oauth.clientId!)}` +
-      `&redirect_uri=${encodeURIComponent(getRedirectUri(request.headers.get('host')!))}` +
-      `&scope=${encodeURIComponent(config.oauth.scope)}` +
-      `&state=${encodeURIComponent(state)}`;
+    const authorizeUrl = new URL(`${oauthBaseUrl}/authorize`);
+    authorizeUrl.searchParams.set('client_id', config.oauth.clientId!);
+    authorizeUrl.searchParams.set('redirect_uri', redirectUri);
+    authorizeUrl.searchParams.set('scope', config.oauth.scope);
+    authorizeUrl.searchParams.set('state', state);
 
     return NextResponse.redirect(authorizeUrl);
   } catch (error) {
-    // Log and return a 500 error if something goes wrong
-    console.error('Authorize error:', error);
+    if (error instanceof OAuthStateStoreError) {
+      console.error('[oauth-authorize] oauth_state_store_unavailable');
+      return NextResponse.json({ error: 'Authorization temporarily unavailable' }, { status: 503 });
+    }
+    console.error('[oauth-authorize] authorization_failed');
     return NextResponse.json({ error: 'Authorization failed' }, { status: 500 });
   }
 }

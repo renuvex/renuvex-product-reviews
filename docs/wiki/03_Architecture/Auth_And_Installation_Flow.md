@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-10
-last_verified: 2026-07-10
+updated: 2026-07-28
+last_verified: 2026-07-28
 confidence: high
 tags:
   - auth
@@ -18,6 +18,8 @@ related:
 source_files:
   - "src/app/api/oauth/authorize/ikas/route.ts"
   - "src/app/api/oauth/callback/ikas/route.ts"
+  - "src/lib/oauth-state.ts"
+  - "src/lib/session.ts"
   - "src/lib/storefront-scripts.ts"
   - "src/lib/ikas-client/v1-graphql-requests.ts"
   - "src/helpers/api-helpers.ts"
@@ -26,7 +28,11 @@ source_files:
 # Auth & Installation Flow
 
 ## Summary
-ikas OAuth 2.0 with HMAC-SHA256 code signature verification. Tokens persist in Postgres (`AuthToken`) keyed by `authorizedAppId`. Frontend uses a short-lived (4h) HS256 JWT, sent as `Authorization: JWT <token>` to admin APIs.
+ikas OAuth 2.0 with a mandatory browser-bound, ten-minute, single-use `state`
+transaction. A supplied ikas HMAC-SHA256 code signature is validated as a
+separate control. Tokens persist in Postgres (`AuthToken`) keyed by
+`authorizedAppId`. Frontend uses a short-lived (4h) HS256 JWT, sent as
+`Authorization: JWT <token>` to admin APIs.
 
 ## Roles
 - **ikas** — issues OAuth tokens, hosts the merchant's admin/storefronts.
@@ -40,7 +46,9 @@ ikas OAuth 2.0 with HMAC-SHA256 code signature verification. Tokens persist in P
        │
        ▼
 2.  GET /api/oauth/authorize/ikas?storeName=foo
-       - sets session.state (CSRF)
+       - canonicalizes the ikas store DNS label
+       - persists an opaque browser binding in iron-session
+       - creates a hashed, 10-minute OAuth transaction in Redis (SET NX EX)
        - 302 → ikas OAuth authorize URL with redirect_uri & state
        │
        ▼
@@ -49,8 +57,10 @@ ikas OAuth 2.0 with HMAC-SHA256 code signature verification. Tokens persist in P
        │
        ▼
 4.  GET /api/oauth/callback/ikas
-       - validate signature: HMAC-SHA256(code, CLIENT_SECRET) === signature  (TokenHelpers.validateCodeSignature)
-       - validate state matches session.state (CSRF)
+       - require code + storeName + 256-bit state
+       - when signature is supplied, validate HMAC-SHA256(code, CLIENT_SECRET)
+       - atomically consume browser-bound state (Redis GETDEL) before token exchange
+       - require callback storeName to match the frozen transaction
        - OAuthAPI.getTokenWithAuthorizationCode → access + refresh
        - getMerchant + getAuthorizedApp via GraphQL
        - activateIkasStoreInstallation(token)
@@ -79,6 +89,8 @@ ikas OAuth 2.0 with HMAC-SHA256 code signature verification. Tokens persist in P
 Source files:
 - [src/app/api/oauth/authorize/ikas/route.ts](src/app/api/oauth/authorize/ikas/route.ts)
 - [src/app/api/oauth/callback/ikas/route.ts](src/app/api/oauth/callback/ikas/route.ts)
+- [src/lib/oauth-state.ts](src/lib/oauth-state.ts)
+- [src/lib/session.ts](src/lib/session.ts)
 - [src/lib/storefront-scripts.ts](src/lib/storefront-scripts.ts)
 - [src/lib/product-snapshots.ts](src/lib/product-snapshots.ts)
 - [src/lib/review-email/ikas-orders.ts](src/lib/review-email/ikas-orders.ts)
@@ -108,12 +120,28 @@ Source files:
 - JWT expires after 4h (`expiresIn: '4h'`). After that, AppBridge re-issues from ikas Admin.
 
 ## Session cookie
-- iron-session ([src/lib/session.ts](src/lib/session.ts)) holds `state`, `storeName`, `merchantId`, `authorizedAppId`, `expiresAt`.
-- Used during OAuth (CSRF) and as a server-side bridge between authorize and callback.
+- iron-session ([src/lib/session.ts](src/lib/session.ts)) holds an opaque
+  `oauthBrowserBinding` plus the post-install `merchantId`, `authorizedAppId`,
+  and `expiresAt`.
+- Raw OAuth state and `storeName` are not stored in the cookie. Redis stores a
+  versioned transaction under hashes of the binding and state, with a
+  ten-minute TTL.
+- Multiple pending states can coexist for one browser binding. `GETDEL`
+  permits exactly one callback to consume each state.
 - Encrypted with `SECRET_COOKIE_PASSWORD`.
 
 ## Security notes
-- HMAC-SHA256 signature on OAuth callback is the primary defense against code-injection from a malicious referrer. Don't bypass.
+- OAuth state is the login-CSRF boundary and is mandatory even when ikas sends
+  a code signature. Missing, malformed, expired, replayed, wrong-browser, or
+  wrong-store state fails before token exchange or installation writes.
+- State storage is fail-closed. Missing/unavailable Redis returns `503`; it
+  never falls back to the public rate limiter's fail-open behavior.
+- A supplied HMAC-SHA256 callback signature is validated before state
+  consumption. Making that signature mandatory or adding PKCE requires a
+  separate verified ikas contract change.
+- The transaction freezes the exact redirect URI used by both authorize and
+  token exchange. A failed token/install attempt does not restore consumed
+  state; the merchant starts a new authorization.
 - `CLIENT_SECRET` is used for **both** OAuth (with ikas) AND JWT signing. Single secret = single rotation. If we rotate `CLIENT_SECRET`, all in-flight JWTs become invalid (acceptable, JWTs are short-lived).
 - JWT signing uses `process.env.CLIENT_SECRET || ''`. Empty fallback is dangerous — add explicit env validation at boot.
 - The `/callback` client page must not log its query params — they carry the session JWT. A debug `console.log` of the params was removed. See [[Security_And_Rate_Limits]].
@@ -123,7 +151,10 @@ Source files:
 - **Product snapshot backfill is non-blocking.** The callback awaits product webhook registration (one `saveWebhooks` mutation) but runs the full `ProductSnapshot` backfill (`syncAllProductsForStore`) via Next.js `after()`, *after* the 302 response is sent. Install latency stays independent of catalog size; a backfill cut short by the serverless function timeout is recovered by product webhooks or `POST /api/admin/sync-products`. See [[ADR_0015_Canonical_Product_Identity]].
 - **Review-email webhook registration is fail-closed and feature-gated.** Product registration remains independent. OAuth attempts order/uninstall registration only when both the global feature and merchant setting are enabled. Registration state changes use the installation fence; failure records a sanitized error, forces `ReviewEmailSettings.enabled=false`, and cancels unsent work. The source is not deployed, so live ikas acceptance remains a rollout test. See [[ADR_0036_Review_Request_Email_Architecture]].
 - **Embedded vs standalone**: the app supports both — running embedded in ikas Admin (iframe + AppBridge) or standalone in a browser tab (after manual store-name entry). Production usage is iframe.
-- **OAuth scope** currently `read_orders,write_orders,read_products,read_inventories,write_inventories`. Likely template inheritance — review if write_* are needed for a review app. Tracked in [[Open_Questions]].
+- **OAuth scope** currently includes `read_orders`, `read_customers`, product
+  reads, and inherited write/inventory permissions. The customer-read scope is
+  required by the review-email consent preflight; remaining write scopes still
+  need separate least-privilege review.
 
 ## Related Source Files
 - [src/app/api/oauth/](src/app/api/oauth/)

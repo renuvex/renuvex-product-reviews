@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-15
-last_verified: 2026-07-15
+updated: 2026-07-28
+last_verified: 2026-07-28
 confidence: high
 tags:
   - security
@@ -19,6 +19,10 @@ source_files:
   - "prisma/schema.prisma"
   - "src/lib/prisma.ts"
   - "src/lib/public-rate-limit.ts"
+  - "src/lib/oauth-state.ts"
+  - "src/lib/session.ts"
+  - "src/app/api/oauth/authorize/ikas/route.ts"
+  - "src/app/api/oauth/callback/ikas/route.ts"
   - "src/app/api/public/reviews/route.ts"
   - "src/app/api/public/ratings/route.ts"
   - "src/app/api/public/ratings-by-slug/route.ts"
@@ -58,6 +62,10 @@ fail-closes journal conflicts before deletion, and gives the runtime journal
 role no object-delete, retention-change, or Governance-bypass permission.
 Journal conflicts emit only a fixed Sentry error and fixed tags; no run id,
 subject, journal payload, or provider metadata is attached.
+OAuth uses a separate fail-closed Redis transaction contract: a 256-bit state
+is browser-bound, hashed in the Redis key, expires after ten minutes, and is
+atomically consumed before token exchange. It must not reuse the fail-open
+public rate-limit helper.
 
 ## Summary
 Trust boundaries: ikas Admin (signed OAuth) -> server. Browser admin (JWT) -> admin API. Storefront (CORS-open) -> public API + IP rate limit + profanity filter. Defense in depth: input validation, length caps in DB & API, ProductSnapshot-based public review target verification, AWS S3 presigned uploads, trusted AWS media URL allowlisting, public response whitelisting, server-side cron secret.
@@ -66,7 +74,7 @@ Trust boundaries: ikas Admin (signed OAuth) -> server. Browser admin (JWT) -> ad
 
 | Surface | Trust gate | Tenant scope |
 |---|---|---|
-| `/api/oauth/callback/ikas` | HMAC-SHA256 signature on `code` (+ optional state) | merchant from token exchange |
+| `/api/oauth/callback/ikas` | Mandatory browser-bound, single-use Redis state; supplied HMAC-SHA256 code signature is an additional control | frozen ikas store context, then merchant from token exchange |
 | `/api/admin/*` | HS256 JWT (`getUserFromRequest`) | `merchantId` from JWT subject |
 | `/api/ikas/*` | HS256 JWT (same) | same |
 | Storefront `/api/public/*` | None; CORS-open where documented and write routes add per-route checks | `storeId` from query/body, verified per route where writes happen |
@@ -97,12 +105,14 @@ Trust boundaries: ikas Admin (signed OAuth) -> server. Browser admin (JWT) -> ad
 | `POST/GET /api/ikas/review-email-data-subject` | 10 combined | 60 sec | `review_email_dsr:<merchant-id-hash>` |
 | `POST /api/public/widget-error` | 30 | 60 sec | `renuvex_pr_werr_rl:<ip>` |
 
-Pattern: `INCR` then `EXPIRE` on first hit. Rating reads, video capability, and review-request exchange/session reads use [src/lib/public-rate-limit.ts](src/lib/public-rate-limit.ts) and intentionally fail open if Redis env/config is unavailable. Review-request Redis keys contain only a SHA-256 IP digest, never the raw token or session. Source: [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts), [src/app/api/public/upload/sign/route.ts](src/app/api/public/upload/sign/route.ts), [src/app/api/public/upload/register/route.ts](src/app/api/public/upload/register/route.ts), [src/app/api/public/upload/video/capability/route.ts](src/app/api/public/upload/video/capability/route.ts), [src/app/api/public/review-request/route.ts](src/app/api/public/review-request/route.ts), [src/app/api/public/ratings/route.ts](src/app/api/public/ratings/route.ts), [src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts), [src/app/api/public/widget-error/route.ts](src/app/api/public/widget-error/route.ts).
+Pattern: `INCR` then `EXPIRE` on first hit. Rating reads, video capability, and review-request exchange/session reads use [src/lib/public-rate-limit.ts](src/lib/public-rate-limit.ts) and intentionally fail open if Redis env/config is unavailable. Review-request Redis keys contain only a SHA-256 IP digest, never the raw token or session. OAuth state is not a rate limit: [src/lib/oauth-state.ts](src/lib/oauth-state.ts) uses `SET NX EX` plus atomic `GETDEL` and fails closed when Redis is unavailable. Source: [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts), [src/app/api/public/upload/sign/route.ts](src/app/api/public/upload/sign/route.ts), [src/app/api/public/upload/register/route.ts](src/app/api/public/upload/register/route.ts), [src/app/api/public/upload/video/capability/route.ts](src/app/api/public/upload/video/capability/route.ts), [src/app/api/public/review-request/route.ts](src/app/api/public/review-request/route.ts), [src/app/api/public/ratings/route.ts](src/app/api/public/ratings/route.ts), [src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts), [src/app/api/public/widget-error/route.ts](src/app/api/public/widget-error/route.ts).
 
 IP source: `x-forwarded-for` (first entry). Vercel sets this. Spoofable in theory if upstream is misconfigured — acceptable today.
 
 ## Input validation
-- **OAuth callback**: zod validates `code`, `state`, `signature`.
+- **OAuth authorize/callback**: zod canonicalizes one ikas store DNS label and
+  requires callback `code`, `storeName`, and a 64-character lowercase-hex
+  state. A supplied signature is validated before state consumption.
 - **Public review POST**: hand-rolled validation
   - `storeId`, `productId`, `author` required
   - `storeId` must exist in `StoreSettings`
@@ -158,14 +168,20 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 - `/api/admin/*` does not set CORS — same-origin (admin iframe is on the deploy URL).
 
 ## CSRF
-- OAuth callback uses `state` parameter, optionally validated against the iron-session `state`. Source: [src/app/api/oauth/callback/ikas/route.ts](src/app/api/oauth/callback/ikas/route.ts).
+- OAuth callback requires a cryptographically random state tied to an opaque
+  iron-session browser binding. Redis stores only hashed key components and a
+  bounded transaction; `GETDEL` makes callback consumption atomic and
+  single-use. Missing/expired/replayed/wrong-browser/wrong-store state stops
+  before provider or DB work.
+- Abandoned transactions expire after ten minutes. Token exchange or
+  installation failure does not reinsert a consumed state.
 - Admin API uses JWT (not cookies), so traditional CSRF doesn't apply.
 
 ## Secrets handling
 - Single secret (`CLIENT_SECRET`) for ikas OAuth + JWT. Rotation invalidates JWTs (acceptable — short-lived).
 - `SECRET_COOKIE_PASSWORD` for iron-session.
 - `REVIEW_CURSOR_SECRET` signs public review cursors (HMAC-SHA256); server-only and separate from `CLIENT_SECRET`.
-- AWS review-image private key material, `KV_REST_API_TOKEN`, `CRON_SECRET` — server-only.
+- AWS review-image private key material, `KV_REST_API_TOKEN`, `CRON_SECRET` — server-only. OAuth state uses the same Redis credentials but a dedicated fail-closed client and hashed key namespace.
 - Review-email hash/encryption secrets, versioned token key ring, and session secret are server-only. Never put raw review-request tokens, sessions, recipient email, or rendered content in logs, Sentry, Redis keys, DB event payloads, or future queue messages.
 - ⚠️ Never log secrets or full tokens. Code uses `console.error('[scope] ERROR', err)` patterns — keep err objects from leaking sensitive headers.
 - ⚠️ The `/callback` client page receives the session JWT as a URL query param. A `console.log('OAuth callback params:', params.toString())` that printed it to the browser console was removed — never re-add param logging there. See [[Auth_And_Installation_Flow]].
@@ -205,7 +221,10 @@ Official references:
 
 ## Notes
 - Treat `/api/public/reviews` POST as the **highest-risk** endpoint. Any future change here should be reviewed for abuse vectors.
-- The signature validation in OAuth callback is non-skippable — even if `signature` is missing, it's only validated when present. Consider making it required in production.
+- OAuth callback `state` is mandatory. The current ikas code signature is a
+  separate optional input: when supplied, it is validated before state
+  consumption. Making it mandatory requires a separately verified provider
+  contract and is not implied by the state hardening.
 
 ## Related Source Files
 - [src/app/api/public/](src/app/api/public/)

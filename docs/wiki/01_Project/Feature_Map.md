@@ -3,7 +3,7 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-21
+updated: 2026-07-28
 last_verified: 2026-06-21
 confidence: medium
 tags:
@@ -33,7 +33,7 @@ source_files:
 | Feature | Status | Source |
 |---|---|---|
 | OAuth authorize redirect | ✅ | [src/app/api/oauth/authorize/ikas/route.ts](src/app/api/oauth/authorize/ikas/route.ts) |
-| OAuth callback (HMAC sig validation, token exchange) | ✅ | [src/app/api/oauth/callback/ikas/route.ts](src/app/api/oauth/callback/ikas/route.ts) |
+| OAuth callback (mandatory single-use state, supplied-signature validation, token exchange) | ✅ | [src/app/api/oauth/callback/ikas/route.ts](src/app/api/oauth/callback/ikas/route.ts) |
 | AppBridge token in iframe | ✅ | [src/app/hooks/use-base-home-page.ts](src/app/hooks/use-base-home-page.ts) |
 | JWT-gated admin API | ✅ | [src/lib/auth-helpers.ts](src/lib/auth-helpers.ts) |
 | Auto refresh of expired access tokens | ✅ | [src/helpers/api-helpers.ts](src/helpers/api-helpers.ts) `onCheckToken` |

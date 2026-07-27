@@ -3,7 +3,7 @@ type: prompt
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-13
+updated: 2026-07-28
 last_verified: 2026-05-13
 confidence: medium
 tags:
@@ -68,7 +68,8 @@ Inventory of pre-existing AI/agent instruction files and ikas CLI configuration 
 - AGENTS.md: Next.js 16.2.1 App Router, React 19, TypeScript, Tailwind v4 + shadcn/ui.
 - CLAUDE.md and older generated/local docs may still say Next.js 15.
 - ikas Admin GraphQL via `@ikas/admin-api-client` with codegen.
-- iron-session for OAuth state cookie.
+- iron-session for the opaque OAuth browser-binding cookie; raw OAuth state is
+  held only in the short-lived Redis transaction.
 
 > Note: `package.json` shows `"next": "16.2.1"` and is authoritative. Generated/local files that still say "Next.js 15" need a separate rules-sync pass. See [[Open_Questions]].
 
@@ -119,8 +120,14 @@ Inventory of pre-existing AI/agent instruction files and ikas CLI configuration 
 - `getIkas` uses `onCheckToken` to auto-refresh expired tokens. Don't expose tokens in responses or logs.
 - TokenHelpers caches tokens in `sessionStorage` with expiration validation.
 - JWT carries `authorizedAppId` (aud) and `merchantId` (sub).
-- OAuth callback validates HMAC-SHA256 code signature via `TokenHelpers.validateCodeSignature(code, signature, clientSecret)`.
-- State parameter validation is optional but recommended for additional CSRF protection.
+- OAuth callback validates a supplied HMAC-SHA256 code signature via
+  `TokenHelpers.validateCodeSignature(code, signature, clientSecret)` before
+  consuming mandatory state. Signature remains optional until a separate
+  provider-contract decision changes it.
+- OAuth `state` validation is mandatory. Issue a cryptographically random,
+  browser-bound, short-lived transaction through `src/lib/oauth-state.ts` and
+  consume it atomically before token exchange. Never add a cookie-only or
+  missing-state fallback.
 
 ### Quality gates
 - `pnpm codegen` after every `graphql-requests.ts` change.

@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-28
-updated: 2026-07-24
-last_verified: 2026-07-24
+updated: 2026-07-28
+last_verified: 2026-07-28
 confidence: high
 tags:
   - testing
@@ -56,6 +56,8 @@ source_files:
   - "tests/widget-media-cross-browser.spec.ts"
   - "tests/admin-preview-smoke.spec.ts"
   - "tests/unit/public-api-routes.test.ts"
+  - "tests/unit/oauth-state.test.ts"
+  - "tests/unit/oauth-routes.test.ts"
   - "tests/unit/video-upload-routes.test.ts"
   - "tests/unit/video-upload-error.test.ts"
   - "tests/unit/media-jobs.test.ts"
@@ -156,6 +158,15 @@ Unit coverage for this layer lives in `tests/unit/widget-origin.test.ts` and `te
 | Unit/API/theme state | `pnpm test:unit` | Public API route behavior, product review summary read-model helpers, review GET filters, review POST validation/rate-limit/profanity/image-policy/approval branches, widget-error sanitization, storefront theme stable/pending/generic/fail-closed helpers, surface test contracts, popover registry lifecycle contract, stable widget asset cache headers, and the overlay shared-surface invariant (scroll-lock / focus-trap primitives live only in their shared modules — ADR_0025). Vitest runs these unit files with a single worker because the route-level tests rely on mocked module graphs and Next route imports that showed 5s timeout flakes under parallel local Windows runs; serial execution is slower but deterministic. |
 | Review-center browser | `pnpm test:review-center` | Isolated `reviews.renuvex.app`-style flow with mocked network: fragment token exchange/removal, session item reads, independent Product A submit, Product B continuation/skip, and terminal batch state. It does not send email or call AWS/Mux. |
 | Review-email DB guarantees | `pnpm test:integration:review-email` | Opt-in test against an explicitly supplied local disposable PostgreSQL DB. It refuses non-local hosts and requires `DATABASE_URL` to equal `REVIEW_EMAIL_INTEGRATION_DATABASE_URL`; it proves install/DSR/retention guarantees plus batch fingerprint/live-group races, product membership uniqueness, job target checks, cross-store composite FKs, provider-neutral event dedupe, attempt evidence retention, DSR/event lock ordering, journal replay equivalence, and disable/re-enable behavior around committed versus uncommitted attempts. Exact-identity coverage includes same-folded/different-exact collision isolation, retained-key lookup, real retention detaching an unsubscribe token from its attempt, old-link suppression without ciphertext, normal/journal DSR deletion, and legacy progress/payload compatibility. Migrations must be applied first. It is not a production/CI DB mutation gate. |
+
+OAuth state coverage is split between `oauth-state.test.ts` and
+`oauth-routes.test.ts`. The service suite pins 256-bit generation, hashed key
+material, `SET NX EX 600`, atomic `GETDEL`, wrong-browser isolation, strict
+store-name canonicalization, and fail-closed Redis behavior. Route coverage
+proves missing/malformed/expired/replayed/wrong-browser/wrong-store state cannot
+reach ikas token exchange, an invalid supplied signature does not consume state,
+parallel pending states remain independent, and logs exclude callback
+credentials.
 
 Review-email cutoff coverage pins the historical-delivery invariant separately:
 unit tests require exact delivered-line `statusUpdatedAt`, reject generic

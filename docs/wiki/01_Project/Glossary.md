@@ -3,7 +3,7 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-24
+updated: 2026-07-28
 tags:
   - glossary
 related:
@@ -39,9 +39,12 @@ related:
 
 ## Tech terms used in this project
 - **JWT** — short-lived (4h) HS256 JWT signed with `CLIENT_SECRET`; sent as `Authorization: JWT <token>` from frontend to `/api/admin/*`.
-- **Iron-session** — encrypted cookie session for OAuth state (CSRF). Wrapped in [src/lib/session.ts](src/lib/session.ts).
+- **Iron-session** — encrypted cookie session that holds the opaque browser
+  binding for OAuth state; raw state is not stored in the cookie. Wrapped in
+  [src/lib/session.ts](src/lib/session.ts).
 - **Codegen** — `pnpm codegen` regenerates [src/lib/ikas-client/generated/graphql.ts](src/lib/ikas-client/generated/graphql.ts) from operations defined in [graphql-requests.ts](src/lib/ikas-client/graphql-requests.ts).
-- **Upstash Redis** — serverless Redis used for IP rate-limit counters across Vercel instances.
+- **Upstash Redis** — serverless Redis used for IP rate-limit counters and
+  short-lived, single-use OAuth state transactions across Vercel instances.
 - **AWS image upload intent** — server endpoint creates a tenant-scoped upload intent and returns a short-lived S3 presigned POST; client uploads directly to S3 without proxying through our server.
 
 ## Obsidian Links

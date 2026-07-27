@@ -1,9 +1,16 @@
 import { config } from '@/globals/config';
-import { getSession, setSession } from '@/lib/session';
+import {
+  consumeOAuthStateTransaction,
+  ikasStoreNameSchema,
+  isOAuthBrowserBinding,
+  oauthStateSchema,
+  OAuthStateStoreError,
+} from '@/lib/oauth-state';
+import { getSession } from '@/lib/session';
 import { validateRequest } from '@/lib/validation';
 import { OAuthAPI } from '@ikas/admin-api-client';
 import moment from 'moment';
-import { getIkas, getIkasV1, getRedirectUri } from '@/helpers/api-helpers';
+import { getIkas, getIkasV1 } from '@/helpers/api-helpers';
 import { JwtHelpers } from '@/helpers/jwt-helpers';
 import { TokenHelpers } from '@/helpers/token-helpers';
 import { AuthToken } from '@/models/auth-token';
@@ -19,14 +26,15 @@ import { updateReviewEmailWebhookStateForInstallation } from '@/lib/review-email
 
 const callbackSchema = z.object({
   code: z.string().min(1, 'Authorization code is required'),
-  state: z.string().optional(),
+  storeName: ikasStoreNameSchema,
+  state: oauthStateSchema,
   signature: z.string().optional(),
 });
 
 /**
  * Handles the OAuth callback for Ikas.
- * Validates code signature, optionally validates state for CSRF protection,
- * exchanges the authorization code for tokens, updates session, and redirects.
+ * Requires and atomically consumes browser-bound state, validates a supplied
+ * code signature, exchanges the authorization code, and redirects.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -34,10 +42,11 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url as string, `http://${request.headers.get('host')}`);
     const { searchParams } = url;
 
-    // Validate the incoming request parameters (code, state, signature)
+    // Validate the incoming request parameters (code, storeName, state, signature)
     const validation = validateRequest(callbackSchema, {
       code: searchParams.get('code'),
-      state: searchParams.get('state') || undefined,
+      storeName: searchParams.get('storeName'),
+      state: searchParams.get('state'),
       signature: searchParams.get('signature') || undefined,
     });
 
@@ -46,17 +55,25 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
-    const { code, state, signature } = validation.data;
+    const { code, storeName, state, signature } = validation.data;
 
     // Validate code signature
     if (signature && !TokenHelpers.validateCodeSignature(code, signature, config.oauth.clientSecret!)) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
-    // Retrieve session and optionally check state for CSRF protection
+    // Bind the callback to the initiating browser and atomically consume state.
     const session = await getSession();
-    if (state && session.state && session.state !== state) {
-      return NextResponse.json({ error: 'Invalid state parameter' }, { status: 400 });
+    if (!isOAuthBrowserBinding(session.oauthBrowserBinding)) {
+      return NextResponse.json({ error: 'Invalid or expired OAuth state' }, { status: 400 });
+    }
+
+    const oauthTransaction = await consumeOAuthStateTransaction({
+      browserBinding: session.oauthBrowserBinding,
+      state,
+    });
+    if (!oauthTransaction || oauthTransaction.storeName !== storeName) {
+      return NextResponse.json({ error: 'Invalid or expired OAuth state' }, { status: 400 });
     }
 
     // Exchange authorization code for access/refresh tokens
@@ -65,10 +82,10 @@ export async function GET(request: NextRequest) {
         code: code as string,
         client_id: config.oauth.clientId!,
         client_secret: config.oauth.clientSecret!,
-        redirect_uri: getRedirectUri(request.headers.get('host')!),
+        redirect_uri: oauthTransaction.redirectUri,
       },
       {
-        storeName: (session.storeName || 'api') as string,
+        storeName: oauthTransaction.storeName,
       },
     );
 
@@ -200,14 +217,12 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Update session with new merchant and app IDs, clear state, and set expiration
+    // Update session with the installation identity while retaining the opaque
+    // browser binding for independent future OAuth transactions.
     session.expiresAt = new Date(Date.now() + 3600 * 1000);
     session.merchantId = merchantId;
     session.authorizedAppId = authorizedAppId;
-    delete session.state;
-
-    // Save updated session
-    await setSession(session);
+    await session.save();
 
     // Create a JWT for the merchant and authorized app
     const jwtToken = JwtHelpers.createToken(merchantId, authorizedAppId);
@@ -225,10 +240,13 @@ export async function GET(request: NextRequest) {
     callbackUrl.set('authorizedAppId', authorizedAppId);
 
     // Redirect the user to the callback URL
-    return NextResponse.redirect(new URL(`/callback?${callbackUrl.toString()}`, getRedirectUri(request.headers.get('host')!)));
+    return NextResponse.redirect(new URL(`/callback?${callbackUrl.toString()}`, oauthTransaction.redirectUri));
   } catch (error) {
-    // Log and return error response
-    console.error('Callback error:', error);
+    if (error instanceof OAuthStateStoreError) {
+      console.error('[oauth-callback] oauth_state_store_unavailable');
+      return NextResponse.json({ error: { statusCode: 503, message: 'Authorization temporarily unavailable' } }, { status: 503 });
+    }
+    console.error('[oauth-callback] callback_failed');
     return NextResponse.json({ error: { statusCode: 500, message: 'Callback failed' } }, { status: 500 });
   }
 }

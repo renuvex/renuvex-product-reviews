@@ -3,7 +3,7 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-03
+updated: 2026-07-28
 last_verified: 2026-07-03
 tags:
   - dependencies
@@ -37,13 +37,13 @@ related:
 | Package | Used for |
 |---|---|
 | `prisma` / `@prisma/client` | ORM + migrations |
-| `@upstash/redis` | Rate-limit counters (REST API, no socket — works in serverless) |
+| `@upstash/redis` | Rate-limit counters and single-use OAuth state transactions (REST API, no socket — works in serverless) |
 
 ## Auth / security
 
 | Package | Used for |
 |---|---|
-| `iron-session` | Encrypted cookie session (OAuth state CSRF) |
+| `iron-session` | Encrypted cookie session holding the opaque OAuth browser binding; raw state lives in the bounded Redis transaction |
 | `jsonwebtoken` | HS256 JWT issuance/verification |
 | `uuid` | JWT `jti`, Review IDs (default in Prisma too) |
 | `zod` | Request validation |

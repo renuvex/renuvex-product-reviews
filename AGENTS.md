@@ -149,10 +149,13 @@ export async function GET(request: NextRequest) {
 - Use `onCheckToken` in `getIkas` to auto-refresh tokens. Do not expose tokens in responses or logs.
 - TokenHelpers automatically caches tokens in sessionStorage with expiration validation.
 - JWT tokens contain `authorizedAppId` (aud) and `merchantId` (sub) for user identification.
-- **OAuth Callback Signature Validation**: The OAuth callback endpoint validates authorization codes using HMAC-SHA256 signatures.
-  - Use `TokenHelpers.validateCodeSignature(code, signature, clientSecret)` to verify code authenticity.
-  - The callback route requires a `signature` query parameter and validates it before exchanging the code for tokens.
-  - State parameter validation is optional but recommended for additional CSRF protection.
+- **OAuth Callback State and Signature Validation**:
+  - OAuth `state` is mandatory and is the login-CSRF boundary.
+  - When ikas supplies a `signature`, use `TokenHelpers.validateCodeSignature(code, signature, clientSecret)` before state consumption. Do not make it mandatory without a separately verified provider-contract decision.
+  - OAuth `state` validation is mandatory. Issue a cryptographically random,
+    browser-bound, short-lived transaction through `src/lib/oauth-state.ts`
+    and consume it atomically before token exchange. Never add a cookie-only or
+    missing-state fallback.
 
 ## Quality Gates
 - Run `pnpm codegen` when `graphql-requests.ts` changes.

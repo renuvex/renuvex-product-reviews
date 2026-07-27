@@ -3,7 +3,7 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-10
+updated: 2026-07-28
 last_verified: 2026-07-10
 tags:
   - critical-files
@@ -56,7 +56,7 @@ related:
 ## Auth / OAuth
 
 ### [src/app/api/oauth/callback/ikas/route.ts](src/app/api/oauth/callback/ikas/route.ts)
-- **What:** OAuth callback. HMAC-SHA256 signature validation → token exchange → fetch merchant + authorized app → atomically activate installation generation/replace stale tokens → upsert StoreSettings → auto-inject widget script per storefront → JWT → redirect to admin.
+- **What:** OAuth callback. Mandatory single-use state consumption → supplied HMAC-SHA256 signature validation → token exchange → fetch merchant + authorized app → atomically activate installation generation/replace stale tokens → upsert StoreSettings → auto-inject widget script per storefront → JWT → redirect to admin.
 - **Be careful:**
   - This route does a LOT (auth + side-effects). If you add work here, prefer a separate endpoint or a defensive try/catch like the existing script-injection block (it logs but doesn't fail the install).
   - Installation token writes must stay inside `activateIkasStoreInstallation()` so OAuth and uninstall share the same store-scoped generation fence. Token refresh is update-only and must not regain upsert behavior.
@@ -68,7 +68,9 @@ related:
 
 ### [src/helpers/token-helpers.ts](src/helpers/token-helpers.ts)
 - **What:** AppBridge token retrieval, `validateCodeSignature(code, signature, clientSecret)` HMAC check.
-- **Be careful:** Don't bypass the signature check in callback. It's the OAuth code-injection defense.
+- **Be careful:** State is mandatory. When ikas supplies a signature, validate it
+  before consuming state; do not silently weaken either control or make the
+  optional signature mandatory without a verified provider-contract change.
 
 ### [src/helpers/jwt-helpers.ts](src/helpers/jwt-helpers.ts)
 - **What:** Issues HS256 JWT with `merchantId` as `subject`, `authorizedAppId` as `audience`, 4h expiry, signed with `CLIENT_SECRET`.

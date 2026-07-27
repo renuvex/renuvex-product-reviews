@@ -3,8 +3,8 @@ type: ikas
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-10
-last_verified: 2026-07-10
+updated: 2026-07-28
+last_verified: 2026-07-28
 tags:
   - ikas
   - oauth
@@ -20,12 +20,23 @@ related:
 ikas-specific OAuth particulars and gotchas. The full step-by-step flow lives in [[Auth_And_Installation_Flow]] — this page captures ikas-quirks.
 
 ## Particulars
-- **Code signature**: ikas appends a `signature` query param to the callback URL: `HMAC-SHA256(code, clientSecret)` in hex. Validate before exchanging the code. See `TokenHelpers.validateCodeSignature`.
-- **State parameter**: optional but recommended. We set in the authorize step and verify in the callback when present.
-- **storeName context**: the OAuth API requires a `storeName` context for both initial token exchange and refresh. We store this in the iron-session during authorize and reuse on callback. For refresh, the SDK's docs imply `'api'` works generically — verify when you debug.
+- **Code signature**: when ikas supplies `signature`, validate
+  `HMAC-SHA256(code, clientSecret)` before consuming state. This remains a
+  separate control from OAuth login-CSRF state.
+- **State parameter**: mandatory. Authorize issues a 256-bit value, binds it to
+  an opaque iron-session browser id, and stores a versioned ten-minute
+  transaction under SHA-256 key components. Callback requires exact state and
+  consumes it atomically with Redis `GETDEL`.
+- **storeName context**: authorize canonicalizes one lowercase DNS label.
+  Callback must supply the same name as the frozen transaction. The transaction
+  also freezes the exact redirect URI used in token exchange. For refresh, the
+  SDK's docs imply `'api'` works generically — verify when you debug.
 - **Token shape**: `access_token`, `refresh_token`, `token_type`, `expires_in`, `scope`. Persist in `AuthToken` table.
 - **expireDate**: we compute as `now + expires_in` and persist; refresh re-computes.
-- **Scope**: configured in [src/globals/config.ts](src/globals/config.ts). Currently `read_orders,write_orders,read_products,read_inventories,write_inventories` — review necessity.
+- **Scope**: configured in [src/globals/config.ts](src/globals/config.ts).
+  `read_customers` supports current-consent review-email preflight. Remaining
+  inherited write/inventory scopes still need a separate least-privilege
+  review.
 
 ## Gotchas
 - **Re-install hygiene**: `activateIkasStoreInstallation()` serializes callback/uninstall work per merchant, increments generation for a new `authorizedAppId`, and replaces stale tokens in the same transaction. An erased identity cannot be reactivated by a delayed callback.
@@ -35,14 +46,20 @@ ikas-specific OAuth particulars and gotchas. The full step-by-step flow lives in
 
 ## Failure surface
 - Invalid signature → 400.
-- Mismatched state → 400.
-- Token exchange failure (network / wrong code) → 500 with generic message; see Vercel logs for ikas response.
+- Missing/malformed/expired/replayed/wrong-browser/wrong-store state → 400
+  before provider or DB work.
+- Missing or unavailable OAuth Redis → 503 with no redirect/token exchange.
+- Token exchange failure (network / wrong code) → 500 with a generic response
+  and fixed `callback_failed` log code; provider bodies and callback credentials
+  are not persisted in logs.
 - `getMerchant` / `getAuthorizedApp` fail → 403 "Unable to retrieve merchant or authorized app".
 - Script-injection block can fail silently (try/catch) — install succeeds; merchant will need manual re-inject.
 
 ## Related Source Files
 - [src/app/api/oauth/authorize/ikas/route.ts](src/app/api/oauth/authorize/ikas/route.ts)
 - [src/app/api/oauth/callback/ikas/route.ts](src/app/api/oauth/callback/ikas/route.ts)
+- [src/lib/oauth-state.ts](src/lib/oauth-state.ts)
+- [src/lib/session.ts](src/lib/session.ts)
 - [src/helpers/token-helpers.ts](src/helpers/token-helpers.ts)
 - [src/helpers/api-helpers.ts](src/helpers/api-helpers.ts)
 - [src/globals/config.ts](src/globals/config.ts)
@@ -52,3 +69,8 @@ ikas-specific OAuth particulars and gotchas. The full step-by-step flow lives in
 - [[Ikas_Platform_Notes]]
 - [[Ikas_App_Store_Requirements]]
 - [[Open_Questions]]
+
+## Official references
+- [ikas OAuth authorize API](https://builders.ikas.com/docs/app-development/admin-app/authorization/oauth-authorize-api)
+- [ikas OAuth callback API](https://builders.ikas.com/docs/app-development/admin-app/authorization/oauth-callback-api)
+- [OAuth 2.0 Security Best Current Practice, section 2.1](https://datatracker.ietf.org/doc/html/rfc9700#section-2.1)
