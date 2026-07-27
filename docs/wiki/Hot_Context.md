@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-07-24
-last_verified: 2026-07-24
+updated: 2026-07-28
+last_verified: 2026-07-28
 confidence: high
 tags:
   - hot-context
@@ -38,8 +38,8 @@ source_files:
   - "src/app/api/internal/email-events/ses/route.ts"
   - "infra/aws/review-email-deployment-access.cloudformation.json"
   - "infra/aws/review-email-foundation.cloudformation.json"
-  - "infra/aws/review-email-foundation.stack-policy.json"
-  - "scripts/verify-review-email-foundation-change-set.mjs"
+  - "config/review-email-copy-register.json"
+  - "scripts/calculate-review-email-journal-retention.mjs"
   - "scripts/verify-review-email-foundation-live.mjs"
   - "src/lib/media/providers/aws-review-image.ts"
   - "workers/widget-delivery/src/index.ts"
@@ -60,23 +60,20 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
+- 2026-07-28: Supabase CLI and Dashboard confirm Free plan, no managed backup,
+  and PITR off. Journal rollout remains blocked: upgrade to Pro, observe the
+  first backup, verify its live window, then update the copy register and rerun
+  preflight. The expected `7` days is not yet verified.
 - 2026-07-24: Foundation is `CREATE_COMPLETE` with nine resources, effective
   stack policy, and termination protection. Full `deployed-pending-dns`
   verification passes; sending and sandbox gates remain closed, DNS is pending,
   and sender/subscription/tenant surfaces are absent.
-- 2026-07-23: Review-email access hardening is live and read-only verified.
-  The access stack is `UPDATE_COMPLETE` with termination protection; separate
-  author/create-only and operator/execute-only profiles are provisioned, every
-  approval window is closed, and the temporary Administrator config is removed.
-  Verification handles the absent `ChangeSetType` output and only the exact
-  dependency-only SSO assignment row. Foundation resources plus journal and
-  journal and sender stacks remain absent. See [[AWS_Setup_And_Access]].
-- 2026-07-20: Review-email now uses current ikas customer subscription, exact
-  recipient matching, immutable delivery evidence, stable package-line grouping,
-  and all four shipping methods. PR #8 deployed the disabled backend and all 59
-  migrations. PR #9 deployed the flag-first `404` fix for a live disabled-route
-  `500`; six live route checks pass, customer lifecycle rows remain zero, and
-  the flag is absent.
+- 2026-07-23: Least-privilege review-email access hardening is live; approval
+  windows are closed and temporary Administrator config is removed. See
+  [[AWS_Setup_And_Access]].
+- 2026-07-20: Current ikas consent, immutable delivery evidence, package-line
+  grouping, and all four shipping methods are deployed but disabled; all 59
+  migrations are applied and lifecycle rows remain zero.
 - 2026-07-15: Disabled review-email Multi-Product Batch / Envelope V3.2 source
   adds one initial and at most one reminder per delivery group, independent
   product requests, guarded attempts/events, review-center access, and
@@ -97,8 +94,10 @@ source_files:
 - Theme adapters depend on `listStorefront.themes[].isMainTheme`; no ikas theme webhook exists.
 - Deferred gaps: unsupported-theme warning UI, authenticated dashboard smoke, Sentry post-deploy health.
 - Review-email V5/V3.2 backend is deployed but disabled. Activation still needs
-  restore-window/app-deleted checks, journal gates, SES sender/DNS/sandbox
-  evidence, merchant UI, legal review, media controls, and live acceptance.
+  a managed Supabase backup plus verified restore window, app-deleted checks,
+  journal gates, SES sender/DNS/sandbox evidence, merchant UI, legal review,
+  media controls, and live acceptance. Supabase Pro upgrade is pending; it is
+  not yet applied or verified.
 
 ## Read Next
 - [[Current_Status]]

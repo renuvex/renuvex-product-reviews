@@ -3,8 +3,8 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-20
-last_verified: 2026-07-20
+updated: 2026-07-28
+last_verified: 2026-07-28
 confidence: high
 source_files: []
 tags:
@@ -102,7 +102,9 @@ Active development on the production test store. Core review, image, Mux video, 
   Multi-Product Batch/Envelope V3.2 schema/backend is deployed but remains
   globally disabled: one physical initial and at most one reminder per delivery
   group, independent product submit/skip, review-center session/media ownership,
-  restore replay, and journal-first bounded uninstall. Actual DB restore-window
+  restore replay, and journal-first bounded uninstall. Read-only checks confirm
+  the production Supabase project is currently Free with no managed backup and
+  PITR disabled. Pro upgrade, first-backup evidence, actual DB restore-window
   verification, journal stack/genesis, provider-side app-deleted registration,
   AWS EventBridge/SQS/Lambda/SES dispatch, `reviews.renuvex.app`, merchant
   settings UI, review-center media controls, and live ikas acceptance remain

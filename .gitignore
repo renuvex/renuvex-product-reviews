@@ -55,6 +55,7 @@ Thumbs.db
 
 /generated/prisma
 prisma/*.db
+/supabase/.temp/
 
 .ikas
 

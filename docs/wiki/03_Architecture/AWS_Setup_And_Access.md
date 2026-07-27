@@ -3,8 +3,8 @@ type: maintenance
 project: renuvex-product-reviews
 status: active
 created: 2026-06-29
-updated: 2026-07-24
-last_verified: 2026-07-24
+updated: 2026-07-28
+last_verified: 2026-07-28
 confidence: high
 tags:
   - aws
@@ -31,6 +31,8 @@ source_files:
   - "infra/aws/review-email-deployment-access.cloudformation.json"
   - "infra/aws/review-email-foundation.cloudformation.json"
   - "infra/aws/review-email-foundation.stack-policy.json"
+  - "config/review-email-copy-register.json"
+  - "scripts/calculate-review-email-journal-retention.mjs"
   - "scripts/prepare-widget-aws-canary-assets.mjs"
   - "scripts/deploy-widget-aws-canary-assets.mjs"
   - "scripts/validate-widget-aws-canary-template.mjs"
@@ -943,6 +945,45 @@ Deferred acceptance gates remain separate:
 - Production canary: identity/custom MAIL FROM DNS, production access,
   deliverability monitoring, legal copy approval, rollback, and bounded merchant
   enablement.
+
+### Erasure-journal database restore-window gate
+
+Read-only Supabase CLI and Dashboard checks on 2026-07-24 established the
+current production state:
+
+- The organization/project is on the Free plan.
+- Scheduled backups are not included and no managed backup is available.
+- PITR is disabled; no earliest or latest recovery point exists.
+- No Supabase plan, backup, PITR, database, Vercel, or AWS mutation was made
+  during the check.
+
+`config/review-email-copy-register.json` therefore remains
+`contractStatus=approved_target` with `liveRestoreWindowVerifiedAt=null`. Its
+`30`-day restore window is an approved target, not a statement about current
+Supabase capability. It must not be changed to `verified_current`, and the
+erasure-journal stacks must not be deployed, while the live project has no
+restorable managed copy.
+
+The next approved order is:
+
+1. Upgrade the Supabase project to Pro through a separately approved billing
+   action.
+2. Wait until the first managed daily backup is visible; plan entitlement alone
+   is not restore evidence.
+3. Verify the available backup window through both Dashboard and the Supabase
+   CLI/Management API.
+4. Update the copy register to the observed maximum restore window and set its
+   verification timestamp.
+5. Rerun the copy-register validator, retention calculator, and full
+   erasure-journal preflight before any journal change set is created.
+
+The expected Pro daily-backup entitlement is seven days, but the source must
+use the observed live window rather than that expectation. If seven days is
+verified, the existing formula still yields `35` active days and `42`
+Object-Lock days: `max(35, 7 + 5) = 35`, then the seven-day version tail. If
+the product decision is to retain a roughly 30-day database restore target,
+ordinary Pro daily backups are insufficient; PITR or a higher Supabase plan
+requires a separate cost, recovery-point, and rollout decision.
 
 Status snapshot on 2026-07-09:
 
