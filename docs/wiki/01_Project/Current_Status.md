@@ -89,11 +89,10 @@ Active development on the production test store. Core review, image, Mux video, 
 - Widget-side uncaught errors forwarded to Sentry via a 637-byte (gzip) in-widget reporter and a rate-limited public endpoint (`/api/public/widget-error`). No SDK shipped to the widget bundle; storefront customer privacy and Core Web Vitals preserved. See [[ADR_0010_Widget_Error_Forwarding]].
 
 ## In Progress / Active Follow-Ups
-- Public launch security gate: Supabase Data API/RLS/default-grants source
-  hardening is locally complete and PostgreSQL 16/17 verified. Production still
-  has 17 non-RLS public tables and an enabled unused Data API until the additive
-  migration is deployed, verified, and the separate Data API disable mutation
-  is approved.
+- Supabase Data API/RLS/default-grants closure is complete. Production has all
+  60 migrations applied, zero public tables without RLS, zero effective Data
+  API-role/default-ACL drift, and the unused hosted Data API is disabled. Keep
+  `pnpm verify:supabase-data-api-surface` as a read-only release/audit gate.
 - Operational smoke gates: authenticated dashboard smoke and Sentry post-deploy health checks should be run after meaningful admin/runtime deploys.
 - Video operations: the Mux path is live and stable; periodic Mux asset reconciliation dry-run/reporting remains a deferred ops hardening item.
 - Image operations: source/runtime is AWS-only for new review images. Legacy provider DB targets are zero after the approved apply; temporary alignment scripts were removed after completion. Existing provider account assets were not copied to AWS and are outside the app runtime.
@@ -139,12 +138,10 @@ Active development on the production test store. Core review, image, Mux video, 
 - [[ADR_0015_Canonical_Product_Identity]] — `(storeId, productId)` is the canonical review product identity; slug/name are display snapshots and slug reads are fallback-only
 
 ## Next Recommended Steps
-1. Deploy and verify the additive Supabase RLS/default-grants migration, then
-   disable the unused Data API through its separate approval gate.
-2. Run authenticated dashboard smoke and Sentry post-deploy health after the next meaningful deploy.
-3. Add a periodic Mux asset reconciliation dry-run/report if video ops needs automated orphan evidence.
-4. Validate structured-data SEO on a public PDP with approved reviews.
-5. Keep the deployed V3.2 backend feature-disabled while the AWS
+1. Run authenticated dashboard smoke and Sentry post-deploy health after the next meaningful deploy.
+2. Add a periodic Mux asset reconciliation dry-run/report if video ops needs automated orphan evidence.
+3. Validate structured-data SEO on a public PDP with approved reviews.
+4. Keep the deployed V3.2 backend feature-disabled while the AWS
    dispatcher/sender, SES/DNS/env, merchant UI, journal, and live-acceptance
    packages proceed through separate gates.
 6. Decide and document Q&A widget scope before adding fields to schema (see [[Open_Questions]]).

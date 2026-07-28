@@ -27,6 +27,11 @@ source_files:
 
 # Project Log
 
+## 2026-07-28 - security | Close the unused Supabase Data API
+- Production applied all 60 migrations; the read-only surface verifier reports zero RLS-disabled public tables, zero effective Data API-role/default-ACL drift, and a compatible Prisma runtime.
+- Disabled the unused hosted Data API through the official Management API. Legacy anon, publishable, and secret-key REST/GraphQL probes produced no successful response; server-side Prisma and `app.renuvex.app` remained healthy.
+- Rollback is limited to restoring the previous exposed schema value `public,graphql_public`; no database row or application environment mutation was part of this provider change.
+
 ## 2026-07-28 - security | Prepare Supabase Data API default-deny closure
 - Management API proved the live Data API is enabled for `public,graphql_public`; read-only SQL and REST probes found no effective browser-role grants or reachable rows, but 17 public tables still lack RLS.
 - Added an additive RLS/current-grant/default-privilege hardening migration plus a read-only drift verifier. PostgreSQL 16/17 passed all 60 migrations, Supabase-like broad-grant reversal, and real Prisma read/write smoke.

@@ -206,19 +206,16 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 
 ## Supabase Data API / RLS audit
 
-2026-07-28 read-only production audit:
+2026-07-28 production audit and closure:
 - The app does not use `@supabase/supabase-js`, browser `createClient`, `NEXT_PUBLIC_SUPABASE_*`, or `SUPABASE_ANON_KEY`.
 - Runtime database access is server-side Prisma through `DATABASE_URL`; migrations use `DIRECT_URL`.
-- The Management API reports that the Data API is enabled for
-  `public,graphql_public`; this is a live configuration fact, not an inference
-  from database grants.
-- Production has 41 public tables: 24 have RLS and 17 do not. No table has
-  `FORCE ROW LEVEL SECURITY`.
+- Before closure, the Management API reported the Data API enabled for
+  `public,graphql_public`, and production had 24 RLS-enabled and 17
+  RLS-disabled public tables.
 - Effective `anon`, `authenticated`, and `service_role` schema/table/sequence/
   routine privileges are all zero. Public has no view, materialized view,
-  function, or sequence. Real REST probes with both legacy anon and publishable
-  keys return `401 / 42501` for RLS-enabled and RLS-disabled representative
-  tables. No directly reachable row surface was found.
+  function, or sequence. No directly reachable row surface was found before
+  closure.
 - The Prisma connection is the table owner and has `BYPASSRLS`, so enabling
   non-forced RLS does not change server-side Prisma authorization.
 
@@ -233,9 +230,16 @@ Decision:
 - The complete 60-migration chain, the verifier, and a real Prisma read/write
   smoke pass on disposable PostgreSQL 16 and 17 with Supabase-like roles and
   intentionally broad pre-migration grants.
-- Production remains unchanged until the migration is deployed. Disabling the
-  unused Data API is a separate Supabase configuration mutation and remains an
-  explicit approval/post-migration verification gate.
+- Production applied all 60 migrations. The read-only verifier reports zero
+  RLS-disabled public tables, zero effective Data API-role/default-ACL drift,
+  and `runtimeRlsCompatible=true`.
+- The unused hosted Data API was disabled through the official Management API.
+  Its config now returns an empty exposed-schema list. Legacy anon,
+  publishable, and secret-key probes against REST root/table and GraphQL
+  endpoints produce no `2xx`; the public table/GraphQL `503` response is the
+  documented disabled-PostgREST behavior, not an application database outage.
+- Server-side Prisma and `https://app.renuvex.app/` remained healthy after the
+  provider mutation.
 
 Official references:
 - [Supabase Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security)
@@ -255,7 +259,10 @@ Official references:
   a separately approved conditional cleanup; it must never be converted into
   an active installation merely to satisfy the gate.
 - Storefront script lifecycle deliberately avoids zero-argument `deleteStorefrontJSScript()` because active ikas contract semantics are ambiguous.
-- Most public app tables have RLS disabled. Current evidence did not show direct `anon`/`authenticated` Data API grants, but RLS/default-grants hardening remains a public-launch blocker.
+- All public tables have non-forced RLS, browser/Data API roles have no
+  effective grants, and the hosted Data API is disabled. Any future browser
+  Supabase access requires a separate ADR, explicit grants, and matching RLS
+  policies.
 
 ## Notes
 - Treat `/api/public/reviews` POST as the **highest-risk** endpoint. Any future change here should be reviewed for abuse vectors.
@@ -281,6 +288,9 @@ Official references:
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
+- 2026-07-28: Applied the additive Supabase surface migration in production,
+  verified all 60 migrations and zero RLS/grant/default-ACL drift, then disabled
+  the unused Data API through the official Management API.
 - 2026-07-28: Removed the `/callback?token=...` bearer handoff and its
   client-controlled redirect. OAuth now returns directly to the trusted ikas
   Admin target; iframe JWT bootstrap is AppBridge-only.

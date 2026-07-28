@@ -229,9 +229,12 @@ On review-request email lifecycle:
 - `pnpm verify:supabase-data-api-surface` is read-only and fails on an
   RLS-disabled public table, an effective Data API role grant, a permissive
   default ACL, or a runtime role that would be blocked by the RLS posture.
-- Source acceptance passes on PostgreSQL 16/17, but production does not gain
-  these guarantees until migration deployment. The live Data API toggle is a
-  separate Supabase configuration gate.
+- Source acceptance passes on PostgreSQL 16/17. Production applied all 60
+  migrations on 2026-07-28; the verifier reports zero RLS/grant/default-ACL
+  drift and `runtimeRlsCompatible=true`.
+- The unused hosted Data API is disabled. The Management API returns an empty
+  exposed-schema list, while direct server-side Prisma remains the only
+  application database path.
 
 On `Review` cursor pagination:
 - partial `[storeId, productId, createdAt desc, id desc] where status='approved'` - public `newest` review list/load-more.

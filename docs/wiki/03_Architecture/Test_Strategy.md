@@ -249,8 +249,11 @@ with `anon`, `authenticated`, and `service_role` plus intentionally broad
 pre-migration schema/default grants. All 60 migrations then applied. The
 read-only surface verifier reported zero RLS/grant/default-ACL drift and
 `runtimeRlsCompatible=true`; a real `StoreSettings` Prisma create/read/delete
-smoke passed on both versions. This proves source/migration compatibility, not
-production deployment or the remote Data API toggle.
+smoke passed on both versions. Production then applied all 60 migrations; the
+same verifier passed against production. After the hosted Data API was
+disabled, legacy anon, publishable, and secret-key REST/GraphQL probes produced
+no `2xx`, server-side Prisma remained compatible, and the production app
+returned HTTP `200`.
 
 `pnpm test:ci` runs the core non-media quality gate: unit tests, widget network smoke, widget runtime smoke, storefront interactions, and admin preview. `.github/workflows/widget-smoke.yml` uses Node 24 runtime action majors, installs Python 3.13 plus pinned `cfn-lint==1.52.1`, runs `pnpm aws:lint-templates` and `pnpm aws:review-email:validate-templates`, runs `pnpm prisma:generate` first so Linux CI has the generated Prisma client, then runs `pnpm build:widget`, installs Chromium, runs `pnpm test:ci`, syntax-checks generated widget assets with `pnpm check:widget-js`, then runs TypeScript, lint, and whitespace gates. The same workflow runs PR media coverage as a separate Playwright matrix so each media browser/device project gets its own Ubuntu runner and failure artifact.
 
