@@ -27,6 +27,19 @@ source_files:
 
 # Project Log
 
+## 2026-07-28 - acceptance | Close stale erasure run after reinstall
+- Verified that production runs release `d6f0f4f` with review-email sending and
+  journal environment variables absent.
+- Published one QStash-signed continuation for the only fenced production
+  candidate. Its generation-5 run reached `stale_ignored`; the generation-6
+  installation and exact token remained active.
+- Frozen counts remained unchanged: 101 reviews, 16 review-media rows, 56 video
+  upload sessions, 319 media jobs, and zero review-email batches/requests.
+  Journal fields remained empty and no cleanup job was created.
+- QStash recorded one message lifecycle whose latest state is `DELIVERED`.
+  Journal activation remains blocked until a managed Supabase backup and its
+  live restore window are verified.
+
 ## 2026-07-28 - hardening | Fence store erasure across reinstall
 - Added installation-first advisory locking and exact generation/app/status
   checks around erasure retry, journal pre/postflight, every destructive batch,

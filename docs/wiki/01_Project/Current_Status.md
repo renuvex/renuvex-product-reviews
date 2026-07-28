@@ -106,13 +106,14 @@ Active development on the production test store. Core review, image, Mux video, 
   the production Supabase project is currently Free with no managed backup and
   PITR disabled. A signed `store/app/deleted` delivery has been observed, but
   its generation-5 erasure run stopped at `journal_not_configured`; a later
-  reinstall is generation 6. The source now fences every retry/journal/batch
-  against the exact installation generation, but that correction still needs
-  a feature-disabled deploy and stale-run acceptance before journal envs can be
-  enabled. Pro upgrade, first managed-backup evidence, live restore-window
-  verification, journal stack/genesis, AWS EventBridge/SQS/Lambda/SES dispatch,
-  `reviews.renuvex.app`, merchant settings UI, review-center media controls, and
-  live ikas acceptance remain open.
+  reinstall is generation 6. Production release `d6f0f4f` now fences every
+  retry/journal/batch against the exact installation generation. One
+  QStash-signed continuation closed the old run as `stale_ignored`; the active
+  installation/token and review/media counts were unchanged, and no journal or
+  cleanup work was created. Pro upgrade, first managed-backup evidence, live
+  restore-window verification, journal stack/genesis, AWS
+  EventBridge/SQS/Lambda/SES dispatch, `reviews.renuvex.app`, merchant settings
+  UI, review-center media controls, and live ikas acceptance remain open.
 - No CSV import/export of reviews
 - No analytics dashboard (review volume over time, conversion lift, etc.)
 - No multi-language storefront UI yet. The widget is Turkish-first; source still has hardcoded Turkish visible text, `tr-TR` formatting, and Turkish accessibility labels. Scope: [[Roadmap]] and [[Open_Questions]].

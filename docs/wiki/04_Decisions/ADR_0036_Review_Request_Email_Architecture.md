@@ -1684,6 +1684,13 @@ External contract evidence:
   while preserving the derived `35/42` journal retention. This source package
   does not activate journal envs, AWS journal stacks, SES sending, or the
   production feature.
+- 2026-07-28: Deployed the generation fence as production release `d6f0f4f`
+  with journal and outbound email disabled. A single QStash-signed continuation
+  closed the old generation-5 `journal_not_configured` run as
+  `stale_ignored`. Generation 6 and its exact token remained active, all frozen
+  review/media counts stayed unchanged, and no journal or cleanup work was
+  created. Journal activation remains blocked on live managed-backup and
+  restore-window evidence.
 - 2026-07-10: Hardened the disabled V3 source after a full correctness audit.
   Added an additive install-generation lifecycle fence, stale-uninstall
   protection, disabled-store no-PII gates, canonical merchant binding,

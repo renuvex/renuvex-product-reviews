@@ -26,6 +26,7 @@ source_files:
   - "src/lib/scheduled-jobs.ts"
   - "src/lib/review-email/maintenance.ts"
   - "src/lib/review-email/erasure.ts"
+  - "src/lib/review-email/erasure-dispatcher.ts"
   - "src/lib/review-email/retention.ts"
   - "src/lib/review-email/batch-jobs.ts"
   - "src/lib/review-email/journal-coverage.ts"
@@ -34,6 +35,7 @@ source_files:
   - "src/app/api/admin/cleanup-images/route.ts"
   - "src/app/api/internal/scheduled-jobs/route.ts"
   - "src/app/api/internal/media-jobs/route.ts"
+  - "src/app/api/internal/review-email/store-erasure/route.ts"
   - "src/lib/media/outbox.ts"
   - "src/lib/media/dispatcher.ts"
   - "src/lib/media/lifecycle.ts"
@@ -151,6 +153,15 @@ closed an older failed run. Deploy it while journal and outbound-email envs
 remain disabled, then process that run once through the signed continuation
 and verify that the active installation/token and review/media counts are
 unchanged before any journal activation.
+
+Production acceptance completed on 2026-07-28 against release `d6f0f4f`.
+Exactly one QStash message reached the signed continuation and finished
+`DELIVERED`. The generation-5 run became `stale_ignored`; attempts were
+preserved, retry/error fields were cleared, generation 6 and its exact token
+remained active, all frozen review/media counts stayed unchanged, and journal
+fields remained empty. This closes the generation-fence acceptance gate. It
+does not authorize journal activation without the separately verified managed
+backup and restore-window gate.
 
 ## QStash schedules
 

@@ -35,12 +35,12 @@ source_files:
   - "src/lib/review-email/settings.ts"
   - "src/lib/review-email/ikas-orders.ts"
   - "src/lib/review-email/ikas-send-preflight.ts"
+  - "src/lib/review-email/erasure.ts"
+  - "src/lib/review-email/erasure-dispatcher.ts"
+  - "src/app/api/internal/review-email/store-erasure/route.ts"
   - "src/app/api/internal/email-events/ses/route.ts"
-  - "infra/aws/review-email-deployment-access.cloudformation.json"
   - "infra/aws/review-email-foundation.cloudformation.json"
   - "config/review-email-copy-register.json"
-  - "scripts/calculate-review-email-journal-retention.mjs"
-  - "scripts/verify-review-email-foundation-live.mjs"
   - "src/lib/media/providers/aws-review-image.ts"
   - "workers/widget-delivery/src/index.ts"
   - "scripts/build-widget.mjs"
@@ -63,9 +63,10 @@ source_files:
 - 2026-07-28: Source hardening now serializes OAuth activation and uninstall
   erasure by store, marks older nonterminal runs `stale_ignored`, and rechecks
   the exact app/generation before and after journal I/O plus every destructive
-  batch. This package is not deployed yet. Journal activation remains blocked
-  until the stale production run closes without changing generation-6 data and
-  a real managed Supabase backup is observed.
+  batch. Production release `d6f0f4f` is live. One QStash-signed continuation
+  closed the generation-5 run as `stale_ignored`; the generation-6 installation
+  and exact token remained active, review/media counts were unchanged, and no
+  journal evidence or cleanup job was created.
 - 2026-07-28: Admin auth now requires strict JWT and an exact active
   installation/token pair. Final writes repeat the fence. Production drift is
   zero after conditional removal of one expired legacy orphan credential; the
@@ -96,11 +97,10 @@ source_files:
 - Theme adapters depend on `listStorefront.themes[].isMainTheme`; no ikas theme webhook exists.
 - Deferred gaps: unsupported-theme warning UI, authenticated dashboard smoke, Sentry post-deploy health.
 - Review-email V5/V3.2 backend is deployed but disabled. Activation still needs
-  the generation-fence source deploy and stale-run acceptance, a managed
-  Supabase backup plus verified restore window, journal gates, SES
+  a managed Supabase backup plus verified restore window, journal gates, SES
   sender/DNS/sandbox evidence, product/legal gates, and live acceptance. Signed
-  app-deleted delivery is proven; safe completion and journal activation are
-  not.
+  app-deleted delivery and safe stale-run closure are proven; journal
+  activation is not.
 
 ## Read Next
 - [[Current_Status]]
