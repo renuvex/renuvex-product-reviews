@@ -3,6 +3,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 const redisMocks = vi.hoisted(() => ({
   set: vi.fn(),
   getdel: vi.fn(),
+  del: vi.fn(),
   constructor: vi.fn(),
 }));
 
@@ -12,6 +13,7 @@ vi.mock('@upstash/redis', () => ({
     return {
       set: redisMocks.set,
       getdel: redisMocks.getdel,
+      del: redisMocks.del,
     };
   }),
 }));
@@ -40,6 +42,7 @@ beforeEach(() => {
     records.delete(key);
     return value;
   });
+  redisMocks.del.mockImplementation(async (key: string) => (records.delete(key) ? 1 : 0));
 });
 
 afterAll(() => {
@@ -101,6 +104,37 @@ describe('OAuth state transaction store', () => {
     await expect(consumeOAuthStateTransaction({ browserBinding, state: issued.state })).resolves.toBeNull();
   });
 
+  it('claims one bounded dashboard bootstrap without storing raw identity values', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-28T10:00:00.000Z'));
+    const { claimOAuthDashboardBootstrap, createOAuthBrowserBinding } = await loadOAuthState();
+    const browserBinding = createOAuthBrowserBinding();
+
+    await expect(claimOAuthDashboardBootstrap({ browserBinding, storeName: 'Dev-Store' })).resolves.toBe(true);
+    await expect(claimOAuthDashboardBootstrap({ browserBinding, storeName: 'dev-store' })).resolves.toBe(false);
+
+    const [key, value, options] = redisMocks.set.mock.calls[0] as [string, unknown, unknown];
+    expect(key).toMatch(/^oauth:dashboard-bootstrap:v1:[a-f0-9]{64}:[a-f0-9]{64}$/);
+    expect(key).not.toContain(browserBinding);
+    expect(key).not.toContain('dev-store');
+    expect(JSON.stringify(value)).not.toContain(browserBinding);
+    expect(JSON.stringify(value)).not.toContain('dev-store');
+    expect(value).toEqual({ version: 1, createdAt: '2026-07-28T10:00:00.000Z' });
+    expect(options).toEqual({ nx: true, ex: 600 });
+    vi.useRealTimers();
+  });
+
+  it('clears a claimed dashboard bootstrap after a state-bearing callback', async () => {
+    const { claimOAuthDashboardBootstrap, clearOAuthDashboardBootstrap, createOAuthBrowserBinding } =
+      await loadOAuthState();
+    const browserBinding = createOAuthBrowserBinding();
+
+    await expect(claimOAuthDashboardBootstrap({ browserBinding, storeName: 'dev-store' })).resolves.toBe(true);
+    await expect(clearOAuthDashboardBootstrap({ browserBinding, storeName: 'dev-store' })).resolves.toBeUndefined();
+    await expect(claimOAuthDashboardBootstrap({ browserBinding, storeName: 'dev-store' })).resolves.toBe(true);
+    expect(redisMocks.del).toHaveBeenCalledOnce();
+  });
+
   it('does not consume the valid transaction when a different browser binding is used', async () => {
     const { consumeOAuthStateTransaction, createOAuthBrowserBinding, issueOAuthStateTransaction } = await loadOAuthState();
     const browserBinding = createOAuthBrowserBinding();
@@ -149,6 +183,14 @@ describe('OAuth state transaction store', () => {
         browserBinding: reloaded.createOAuthBrowserBinding(),
         storeName: 'dev-store',
         redirectUri: 'https://app.renuvex.app/api/oauth/callback/ikas',
+      }),
+    ).rejects.toMatchObject({ code: 'oauth_state_store_unavailable' });
+
+    redisMocks.set.mockRejectedValueOnce(new Error('network failure'));
+    await expect(
+      reloaded.claimOAuthDashboardBootstrap({
+        browserBinding: reloaded.createOAuthBrowserBinding(),
+        storeName: 'dev-store',
       }),
     ).rejects.toMatchObject({ code: 'oauth_state_store_unavailable' });
   });

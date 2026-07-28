@@ -23,10 +23,15 @@ ikas-specific OAuth particulars and gotchas. The full step-by-step flow lives in
 - **Code signature**: when ikas supplies `signature`, validate
   `HMAC-SHA256(code, clientSecret)` before consuming state. This remains a
   separate control from OAuth login-CSRF state.
-- **State parameter**: mandatory. Authorize issues a 256-bit value, binds it to
-  an opaque iron-session browser id, and stores a versioned ten-minute
-  transaction under SHA-256 key components. Callback requires exact state and
-  consumes it atomically with Redis `GETDEL`.
+- **State parameter**: mandatory for token exchange. Authorize issues a 256-bit
+  value, binds it to an opaque iron-session browser id, and stores a versioned
+  ten-minute transaction under SHA-256 key components. A state-bearing callback
+  requires an exact match and consumes it atomically with Redis `GETDEL`.
+- **Dashboard bootstrap**: a live 2026-07-28 dashboard install reached the
+  correctly configured callback with `code` and `storeName`, but no `state` or
+  `signature`. The code is discarded. One hashed browser/store `SET NX EX 600`
+  marker permits a 303 to the normal authorize route; a repeated state-less
+  return fails closed. No callback without state reaches token exchange or DB.
 - **storeName context**: authorize canonicalizes one lowercase DNS label.
   Callback must supply the same name as the frozen transaction. The transaction
   also freezes the exact redirect URI used in token exchange. For refresh, the
@@ -46,8 +51,11 @@ ikas-specific OAuth particulars and gotchas. The full step-by-step flow lives in
 
 ## Failure surface
 - Invalid signature → 400.
-- Missing/malformed/expired/replayed/wrong-browser/wrong-store state → 400
-  before provider or DB work.
+- First dashboard callback without state → unbound code discarded and one
+  no-store/no-referrer authorization restart; repeated state-less callback →
+  400 before provider or DB work.
+- Malformed/expired/replayed/wrong-browser/wrong-store state → 400 before
+  provider or DB work.
 - Missing or unavailable OAuth Redis → 503 with no redirect/token exchange.
 - Token exchange failure (network / wrong code) → 500 with a generic response
   and fixed `callback_failed` log code; provider bodies and callback credentials

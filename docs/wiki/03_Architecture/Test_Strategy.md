@@ -162,11 +162,13 @@ Unit coverage for this layer lives in `tests/unit/widget-origin.test.ts` and `te
 OAuth state coverage is split between `oauth-state.test.ts` and
 `oauth-routes.test.ts`. The service suite pins 256-bit generation, hashed key
 material, `SET NX EX 600`, atomic `GETDEL`, wrong-browser isolation, strict
-store-name canonicalization, and fail-closed Redis behavior. Route coverage
-proves missing/malformed/expired/replayed/wrong-browser/wrong-store state cannot
-reach ikas token exchange, an invalid supplied signature does not consume state,
-parallel pending states remain independent, and logs exclude callback
-credentials.
+store-name canonicalization, a hashed one-restart dashboard marker, and
+fail-closed Redis behavior. Route coverage proves a dashboard callback without
+state discards its code and restarts once without leaking it, repeated
+state-less callbacks cannot loop, malformed/expired/replayed/wrong-browser/
+wrong-store state cannot reach ikas token exchange, an invalid supplied
+signature does not consume state or claim bootstrap, parallel pending states
+remain independent, and logs exclude callback credentials.
 
 Review-email cutoff coverage pins the historical-delivery invariant separately:
 unit tests require exact delivered-line `statusUpdatedAt`, reject generic

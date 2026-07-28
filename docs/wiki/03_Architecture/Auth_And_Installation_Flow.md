@@ -28,9 +28,11 @@ source_files:
 # Auth & Installation Flow
 
 ## Summary
-ikas OAuth 2.0 with a mandatory browser-bound, ten-minute, single-use `state`
-transaction. A supplied ikas HMAC-SHA256 code signature is validated as a
-separate control. Tokens persist in Postgres (`AuthToken`) keyed by
+ikas OAuth 2.0 where token exchange requires a browser-bound, ten-minute,
+single-use `state` transaction. A supplied ikas HMAC-SHA256 code signature is
+validated as a separate control. An ikas dashboard callback that omits state
+cannot exchange its code; it may only start one bounded, fresh state-bearing
+authorization round. Tokens persist in Postgres (`AuthToken`) keyed by
 `authorizedAppId`. Frontend uses a short-lived (4h) HS256 JWT, sent as
 `Authorization: JWT <token>` to admin APIs.
 
@@ -45,6 +47,15 @@ separate control. Tokens persist in Postgres (`AuthToken`) keyed by
 1.  Browser: visits app.example.com (?storeName=foo, or in-iframe)
        │
        ▼
+1a. ikas dashboard compatibility path (when its initial callback has no state)
+       - validate code/store shape and any supplied signature
+       - discard the unbound code; never call token exchange
+       - persist an opaque browser binding if needed
+       - claim one hashed browser/store bootstrap marker (`SET NX EX 600`)
+       - 303 with no-store/no-referrer to step 2
+       - a repeated state-less callback fails closed instead of looping
+       │
+       ▼
 2.  GET /api/oauth/authorize/ikas?storeName=foo
        - canonicalizes the ikas store DNS label
        - persists an opaque browser binding in iron-session
@@ -57,7 +68,7 @@ separate control. Tokens persist in Postgres (`AuthToken`) keyed by
        │
        ▼
 4.  GET /api/oauth/callback/ikas
-       - require code + storeName + 256-bit state
+       - require code + storeName + 256-bit state for token exchange
        - when signature is supplied, validate HMAC-SHA256(code, CLIENT_SECRET)
        - atomically consume browser-bound state (Redis GETDEL) before token exchange
        - require callback storeName to match the frozen transaction
@@ -128,12 +139,19 @@ Source files:
   ten-minute TTL.
 - Multiple pending states can coexist for one browser binding. `GETDEL`
   permits exactly one callback to consume each state.
+- A state-less dashboard callback uses a separate hashed browser/store marker
+  only to bound one restart. The incoming code is neither stored nor exchanged.
+  A valid state-bearing callback clears the marker; otherwise it self-expires.
 - Encrypted with `SECRET_COOKIE_PASSWORD`.
 
 ## Security notes
-- OAuth state is the login-CSRF boundary and is mandatory even when ikas sends
-  a code signature. Missing, malformed, expired, replayed, wrong-browser, or
-  wrong-store state fails before token exchange or installation writes.
+- OAuth state is the login-CSRF boundary and remains mandatory for token
+  exchange even when ikas sends a code signature. Malformed, expired, replayed,
+  wrong-browser, or wrong-store state fails before provider or DB work.
+- On 2026-07-28 a live dashboard install reached the correctly configured
+  callback with `code` and `storeName` but without `state` or `signature`.
+  The compatibility path discards that code and starts a new state-bearing
+  round. It never treats missing state as authorization.
 - State storage is fail-closed. Missing/unavailable Redis returns `503`; it
   never falls back to the public rate limiter's fail-open behavior.
 - A supplied HMAC-SHA256 callback signature is validated before state

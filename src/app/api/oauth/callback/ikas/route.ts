@@ -1,6 +1,9 @@
 import { config } from '@/globals/config';
 import {
+  claimOAuthDashboardBootstrap,
+  clearOAuthDashboardBootstrap,
   consumeOAuthStateTransaction,
+  createOAuthBrowserBinding,
   ikasStoreNameSchema,
   isOAuthBrowserBinding,
   oauthStateSchema,
@@ -27,14 +30,14 @@ import { updateReviewEmailWebhookStateForInstallation } from '@/lib/review-email
 const callbackSchema = z.object({
   code: z.string().min(1, 'Authorization code is required'),
   storeName: ikasStoreNameSchema,
-  state: oauthStateSchema,
+  state: oauthStateSchema.optional(),
   signature: z.string().optional(),
 });
 
 /**
  * Handles the OAuth callback for Ikas.
- * Requires and atomically consumes browser-bound state, validates a supplied
- * code signature, exchanges the authorization code, and redirects.
+ * A dashboard callback without state can only bootstrap a fresh authorization
+ * round. Token exchange still requires atomically consumed browser-bound state.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -46,7 +49,7 @@ export async function GET(request: NextRequest) {
     const validation = validateRequest(callbackSchema, {
       code: searchParams.get('code'),
       storeName: searchParams.get('storeName'),
-      state: searchParams.get('state'),
+      state: searchParams.has('state') ? searchParams.get('state') : undefined,
       signature: searchParams.get('signature') || undefined,
     });
 
@@ -62,8 +65,34 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
-    // Bind the callback to the initiating browser and atomically consume state.
     const session = await getSession();
+
+    // Some ikas dashboard installs arrive at the registered callback without
+    // state. Discard that authorization code and start one bounded state-bearing
+    // round; never exchange an unbound code.
+    if (!state) {
+      if (!isOAuthBrowserBinding(session.oauthBrowserBinding)) {
+        session.oauthBrowserBinding = createOAuthBrowserBinding();
+        await session.save();
+      }
+
+      const bootstrapClaimed = await claimOAuthDashboardBootstrap({
+        browserBinding: session.oauthBrowserBinding,
+        storeName,
+      });
+      if (!bootstrapClaimed) {
+        return NextResponse.json({ error: 'Invalid or expired OAuth state' }, { status: 400 });
+      }
+
+      const authorizeUrl = new URL('/api/oauth/authorize/ikas', config.oauth.redirectUri);
+      authorizeUrl.searchParams.set('storeName', storeName);
+      const response = NextResponse.redirect(authorizeUrl, 303);
+      response.headers.set('Cache-Control', 'no-store');
+      response.headers.set('Referrer-Policy', 'no-referrer');
+      return response;
+    }
+
+    // Bind the state-bearing callback to the initiating browser and consume it.
     if (!isOAuthBrowserBinding(session.oauthBrowserBinding)) {
       return NextResponse.json({ error: 'Invalid or expired OAuth state' }, { status: 400 });
     }
@@ -74,6 +103,17 @@ export async function GET(request: NextRequest) {
     });
     if (!oauthTransaction || oauthTransaction.storeName !== storeName) {
       return NextResponse.json({ error: 'Invalid or expired OAuth state' }, { status: 400 });
+    }
+
+    try {
+      await clearOAuthDashboardBootstrap({
+        browserBinding: session.oauthBrowserBinding,
+        storeName,
+      });
+    } catch {
+      // This marker is only a bounded loop guard and self-expires. It is not an
+      // authorization source, so cleanup failure must not invalidate consumed state.
+      console.warn('[oauth-callback] dashboard_bootstrap_cleanup_failed');
     }
 
     // Exchange authorization code for access/refresh tokens

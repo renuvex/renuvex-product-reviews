@@ -60,9 +60,9 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
-- 2026-07-28: OAuth state is mandatory, browser-bound, Redis-backed for ten
-  minutes, and atomically consumed. Redis failure is fail-closed; signature and
-  PKCE remain separate provider decisions.
+- 2026-07-28: Token exchange still requires browser-bound, single-use Redis
+  state. A dashboard callback without state is discarded and receives
+  one bounded restart; repeats and Redis failure fail closed.
 - 2026-07-28: Supabase CLI and Dashboard confirm Free plan, no managed backup,
   and PITR off. Journal rollout remains blocked: upgrade to Pro, observe the
   first backup, verify its live window, then update the copy register and rerun

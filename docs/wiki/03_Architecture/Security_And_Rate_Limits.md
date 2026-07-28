@@ -74,7 +74,7 @@ Trust boundaries: ikas Admin (signed OAuth) -> server. Browser admin (JWT) -> ad
 
 | Surface | Trust gate | Tenant scope |
 |---|---|---|
-| `/api/oauth/callback/ikas` | Mandatory browser-bound, single-use Redis state; supplied HMAC-SHA256 code signature is an additional control | frozen ikas store context, then merchant from token exchange |
+| `/api/oauth/callback/ikas` | Token exchange requires browser-bound, single-use Redis state; a state-less dashboard callback can only discard its code and claim one bounded restart; supplied HMAC-SHA256 code signature is an additional control | frozen ikas store context, then merchant from token exchange |
 | `/api/admin/*` | HS256 JWT (`getUserFromRequest`) | `merchantId` from JWT subject |
 | `/api/ikas/*` | HS256 JWT (same) | same |
 | Storefront `/api/public/*` | None; CORS-open where documented and write routes add per-route checks | `storeId` from query/body, verified per route where writes happen |
@@ -171,8 +171,12 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 - OAuth callback requires a cryptographically random state tied to an opaque
   iron-session browser binding. Redis stores only hashed key components and a
   bounded transaction; `GETDEL` makes callback consumption atomic and
-  single-use. Missing/expired/replayed/wrong-browser/wrong-store state stops
-  before provider or DB work.
+  single-use. Expired/replayed/wrong-browser/wrong-store state stops before
+  provider or DB work.
+- A verified ikas dashboard install can first return without state. That
+  callback's code is discarded. `SET NX EX 600` on a hashed browser/store key
+  permits one 303 restart at the normal authorize route; repeated state-less
+  callbacks fail closed. No missing-state path can reach token exchange.
 - Abandoned transactions expire after ten minutes. Token exchange or
   installation failure does not reinsert a consumed state.
 - Admin API uses JWT (not cookies), so traditional CSRF doesn't apply.
@@ -221,10 +225,11 @@ Official references:
 
 ## Notes
 - Treat `/api/public/reviews` POST as the **highest-risk** endpoint. Any future change here should be reviewed for abuse vectors.
-- OAuth callback `state` is mandatory. The current ikas code signature is a
-  separate optional input: when supplied, it is validated before state
-  consumption. Making it mandatory requires a separately verified provider
-  contract and is not implied by the state hardening.
+- OAuth callback `state` is mandatory for token exchange. A dashboard callback
+  without state can only discard its code and request one bounded restart. The
+  current ikas code signature is a separate optional input: when supplied, it
+  is validated before state consumption or bootstrap. Making it mandatory
+  requires a separately verified provider contract.
 
 ## Related Source Files
 - [src/app/api/public/](src/app/api/public/)

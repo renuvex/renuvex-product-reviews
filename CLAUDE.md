@@ -154,8 +154,10 @@ export async function GET(request: NextRequest) {
   - When ikas supplies a `signature`, use `TokenHelpers.validateCodeSignature(code, signature, clientSecret)` before state consumption. Do not make it mandatory without a separately verified provider-contract decision.
   - OAuth `state` validation is mandatory. Issue a cryptographically random,
     browser-bound, short-lived transaction through `src/lib/oauth-state.ts`
-    and consume it atomically before token exchange. Never add a cookie-only or
-    missing-state fallback.
+    and consume it atomically before token exchange. Never exchange a code from
+    a callback without state. The only allowed dashboard compatibility path is
+    to discard that code, claim one bounded browser/store bootstrap marker, and
+    restart authorization; repeated missing-state callbacks fail closed.
 
 ## Quality Gates
 - Run `pnpm codegen` when `graphql-requests.ts` changes.

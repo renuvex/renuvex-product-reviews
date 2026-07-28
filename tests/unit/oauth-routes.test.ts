@@ -4,6 +4,7 @@ import type { NextRequest } from 'next/server';
 const mocks = vi.hoisted(() => ({
   redisSet: vi.fn(),
   redisGetDel: vi.fn(),
+  redisDel: vi.fn(),
   getSession: vi.fn(),
   sessionSave: vi.fn(),
   getOAuthUrl: vi.fn(),
@@ -35,6 +36,7 @@ vi.mock('@upstash/redis', () => ({
     return {
       set: mocks.redisSet,
       getdel: mocks.redisGetDel,
+      del: mocks.redisDel,
     };
   }),
 }));
@@ -183,6 +185,7 @@ beforeEach(() => {
     records.delete(key);
     return value;
   });
+  mocks.redisDel.mockImplementation(async (key: string) => (records.delete(key) ? 1 : 0));
 });
 
 afterAll(() => {
@@ -219,13 +222,66 @@ describe('ikas OAuth route state contract', () => {
   it.each([
     { code: undefined, storeName: 'dev-store', state: 'a'.repeat(64) },
     { code: 'code-value', storeName: undefined, state: 'a'.repeat(64) },
-    { code: 'code-value', storeName: 'dev-store', state: undefined },
     { code: 'code-value', storeName: 'dev-store', state: 'malformed' },
   ])('rejects missing or malformed callback fields before state or provider work', async (params) => {
     const response = await callback(params);
 
     expect(response.status).toBe(400);
     expect(mocks.redisGetDel).not.toHaveBeenCalled();
+    expect(mocks.getTokenWithAuthorizationCode).not.toHaveBeenCalled();
+  });
+
+  it('discards a dashboard code without state and redirects to one fresh bound authorization round', async () => {
+    const response = await callback({ code: 'discarded-code', storeName: 'Dev-Store' });
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(response.headers.get('referrer-policy')).toBe('no-referrer');
+    const location = response.headers.get('location');
+    expect(location).toBe('https://app.renuvex.app/api/oauth/authorize/ikas?storeName=dev-store');
+    expect(location).not.toContain('discarded-code');
+    expect(session.oauthBrowserBinding).toMatch(/^[a-f0-9]{64}$/);
+    expect(mocks.sessionSave).toHaveBeenCalledOnce();
+    expect(mocks.redisSet).toHaveBeenCalledOnce();
+    expect(mocks.redisGetDel).not.toHaveBeenCalled();
+    expect(mocks.getTokenWithAuthorizationCode).not.toHaveBeenCalled();
+    expect(mocks.activateInstallation).not.toHaveBeenCalled();
+    expect(mocks.storeSettingsUpsert).not.toHaveBeenCalled();
+  });
+
+  it('rejects a repeated state-less callback instead of creating a redirect loop', async () => {
+    const first = await callback({ code: 'discarded-code-1', storeName: 'dev-store' });
+    const repeated = await callback({ code: 'discarded-code-2', storeName: 'dev-store' });
+
+    expect(first.status).toBe(303);
+    expect(repeated.status).toBe(400);
+    expect(repeated.headers.get('location')).toBeNull();
+    expect(mocks.getTokenWithAuthorizationCode).not.toHaveBeenCalled();
+    expect(mocks.redisSet).toHaveBeenCalledTimes(2);
+  });
+
+  it('fails closed when dashboard bootstrap storage is unavailable', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    mocks.redisSet.mockRejectedValueOnce(new Error('discarded-code raw-provider-detail'));
+
+    const response = await callback({ code: 'discarded-code', storeName: 'dev-store' });
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get('location')).toBeNull();
+    expect(mocks.getTokenWithAuthorizationCode).not.toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalledWith('[oauth-callback] oauth_state_store_unavailable');
+    expect(JSON.stringify(consoleError.mock.calls)).not.toContain('discarded-code');
+  });
+
+  it('rejects a supplied invalid signature before claiming dashboard bootstrap', async () => {
+    const response = await callback({
+      code: 'discarded-code',
+      storeName: 'dev-store',
+      signature: 'invalid-signature',
+    });
+
+    expect(response.status).toBe(400);
+    expect(mocks.redisSet).not.toHaveBeenCalled();
     expect(mocks.getTokenWithAuthorizationCode).not.toHaveBeenCalled();
   });
 
@@ -248,6 +304,31 @@ describe('ikas OAuth route state contract', () => {
       { storeName: 'dev-store' },
     );
     expect(mocks.validateCodeSignature).not.toHaveBeenCalled();
+  });
+
+  it('clears the dashboard loop guard after a valid state-bearing callback', async () => {
+    expect((await callback({ code: 'discarded-code', storeName: 'dev-store' })).status).toBe(303);
+    const state = await authorize('dev-store');
+
+    const response = await callback({ code: 'bound-code', storeName: 'dev-store', state });
+
+    expect(response.status).toBe(500);
+    expect(mocks.redisDel).toHaveBeenCalledOnce();
+    expect(mocks.getTokenWithAuthorizationCode).toHaveBeenCalledOnce();
+    expect((await callback({ code: 'new-dashboard-code', storeName: 'dev-store' })).status).toBe(303);
+  });
+
+  it('continues a valid callback when dashboard loop-guard cleanup fails', async () => {
+    const state = await authorize('dev-store');
+    const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    mocks.redisDel.mockRejectedValueOnce(new Error('raw cleanup detail'));
+
+    const response = await callback({ code: 'bound-code', storeName: 'dev-store', state });
+
+    expect(response.status).toBe(500);
+    expect(mocks.getTokenWithAuthorizationCode).toHaveBeenCalledOnce();
+    expect(consoleWarn).toHaveBeenCalledWith('[oauth-callback] dashboard_bootstrap_cleanup_failed');
+    expect(JSON.stringify(consoleWarn.mock.calls)).not.toContain('raw cleanup detail');
   });
 
   it('rejects a missing or wrong browser binding without consuming the valid transaction', async () => {

@@ -73,12 +73,16 @@ A Next.js 16 (16.2) app on Vercel (eu-central / fra1) with three primary applica
 
 ### Install
 1. Merchant clicks "install" in ikas App Store (or visits `?storeName=` on the deploy URL).
+   A live ikas dashboard install may first call the registered callback with
+   `code` and `storeName` but no state. That unbound code is discarded; one
+   browser/store-scoped Redis marker permits a 303 restart at step 2. A second
+   state-less callback fails closed.
 2. `GET /api/oauth/authorize/ikas` creates a browser-bound, ten-minute Redis
    state transaction and redirects to the ikas authorize URL.
 3. ikas redirects back to
    `GET /api/oauth/callback/ikas?code&storeName&state[&signature]`.
-4. Server atomically consumes mandatory state, validates the signature when
-   supplied, exchanges the code, fetches merchant + authorized app, upserts
+4. Server atomically consumes state required for token exchange, validates the
+   signature when supplied, exchanges the code, fetches merchant + authorized app, upserts
    `AuthToken` and `StoreSettings`, **creates or updates each storefront's
    `StorefrontJSScript` pointing to
    `<STOREFRONT_WIDGET_BASE_URL>/widget.js?publicApiKey=<merchantId>` and records

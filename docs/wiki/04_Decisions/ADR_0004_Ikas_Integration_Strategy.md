@@ -36,6 +36,10 @@ We need to:
 - Require a browser-bound, single-use OAuth state transaction before token
   exchange. Store only hashed state/binding key components in Upstash Redis,
   expire after ten minutes, and consume atomically with `GETDEL`.
+- When the ikas dashboard first invokes the registered callback without state,
+  discard its authorization code and permit only one hashed browser/store
+  `SET NX EX 600` bootstrap redirect to the normal authorize route. A repeated
+  state-less callback fails closed; no unbound code reaches token exchange.
 - Freeze canonical `storeName` and exact redirect URI in that transaction.
   Redis failure is fail-closed; no cookie-only compatibility fallback exists.
 - Define ikas operations in [src/lib/ikas-client/graphql-requests.ts](src/lib/ikas-client/graphql-requests.ts) using `gql`.
@@ -49,6 +53,9 @@ We need to:
 - The SDK does not own the application's browser-CSRF transaction. A dedicated
   bounded Redis record supports parallel tabs and prevents two callbacks from
   exchanging the same state, which a single cookie field cannot guarantee.
+- The official state-bearing flow and the observed dashboard installation flow
+  differ. Restarting authorization preserves the state boundary without
+  accepting an unbound callback or reverting to cookie-only validation.
 - Codegen gives us autocomplete and compile-time errors when ikas schema changes (rerun `pnpm codegen`).
 - Auto-inject on install removes the most common merchant friction point. Manual re-inject covers the edge cases (script deleted manually, ikas API hiccup at install time).
 - ikas MCP introspection is available and saves round trips to docs.
@@ -61,6 +68,12 @@ We need to:
 - **Cookie-only `session.state`** — rejected because one slot overwrites
   concurrent flows, has no independent TTL, and cannot provide atomic
   single-use consumption.
+- **Exchange the dashboard callback code without state** — rejected because
+  the code is not bound to the initiating browser and would restore login-CSRF
+  and replay exposure.
+- **Unbounded redirect retry** — rejected because a provider that strips state
+  repeatedly would create a loop. The browser/store bootstrap marker allows
+  one restart only.
 - **PKCE in this phase** — deferred because current ikas support was not
   verified. Mandatory state remains required independently.
 
@@ -71,6 +84,8 @@ We need to:
 - Storefront script lifecycle now avoids zero-argument `deleteStorefrontJSScript()` and uses non-destructive create/update only. Keep that invariant until ikas exposes a targeted, verified delete/list contract.
 - OAuth installation now depends on Upstash availability and deliberately
   returns `503` instead of weakening CSRF protection.
+- The first dashboard callback may add one redirect round. Its unbound code is
+  deliberately unused, and the restart marker expires after ten minutes.
 - In-flight legacy cookie-only authorization attempts fail closed after rollout
   and must restart.
 - OAuth scope includes `read_customers` for review-email consent checks; the

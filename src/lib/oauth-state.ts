@@ -57,6 +57,10 @@ function transactionKey(browserBinding: string, state: string): string {
   return `oauth:state:v1:${sha256(browserBinding)}:${sha256(state)}`;
 }
 
+function dashboardBootstrapKey(browserBinding: string, storeName: string): string {
+  return `oauth:dashboard-bootstrap:v1:${sha256(browserBinding)}:${sha256(storeName)}`;
+}
+
 export function createOAuthBrowserBinding(): string {
   return randomBytes(32).toString('hex');
 }
@@ -108,4 +112,40 @@ export async function consumeOAuthStateTransaction(input: {
 
   const parsed = oauthStateTransactionSchema.safeParse(stored);
   return parsed.success ? parsed.data : null;
+}
+
+export async function claimOAuthDashboardBootstrap(input: {
+  browserBinding: string;
+  storeName: string;
+}): Promise<boolean> {
+  const storeName = ikasStoreNameSchema.safeParse(input.storeName);
+  if (!isOAuthBrowserBinding(input.browserBinding) || !storeName.success) return false;
+
+  try {
+    const created = await getOAuthStateRedis().set(
+      dashboardBootstrapKey(input.browserBinding, storeName.data),
+      { version: 1, createdAt: new Date().toISOString() },
+      {
+        nx: true,
+        ex: OAUTH_STATE_TTL_SECONDS,
+      },
+    );
+    return created === 'OK';
+  } catch {
+    throw new OAuthStateStoreError();
+  }
+}
+
+export async function clearOAuthDashboardBootstrap(input: {
+  browserBinding: string;
+  storeName: string;
+}): Promise<void> {
+  const storeName = ikasStoreNameSchema.safeParse(input.storeName);
+  if (!isOAuthBrowserBinding(input.browserBinding) || !storeName.success) return;
+
+  try {
+    await getOAuthStateRedis().del(dashboardBootstrapKey(input.browserBinding, storeName.data));
+  } catch {
+    throw new OAuthStateStoreError();
+  }
 }

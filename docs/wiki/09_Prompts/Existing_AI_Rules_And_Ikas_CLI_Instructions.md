@@ -126,8 +126,10 @@ Inventory of pre-existing AI/agent instruction files and ikas CLI configuration 
   provider-contract decision changes it.
 - OAuth `state` validation is mandatory. Issue a cryptographically random,
   browser-bound, short-lived transaction through `src/lib/oauth-state.ts` and
-  consume it atomically before token exchange. Never add a cookie-only or
-  missing-state fallback.
+  consume it atomically before token exchange. Never exchange a code from a
+  callback without state. The only allowed dashboard compatibility path is to
+  discard that code, claim one bounded browser/store bootstrap marker, and
+  restart authorization; repeated missing-state callbacks fail closed.
 
 ### Quality gates
 - `pnpm codegen` after every `graphql-requests.ts` change.
