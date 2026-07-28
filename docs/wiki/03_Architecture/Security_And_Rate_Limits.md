@@ -17,6 +17,9 @@ related:
 source_files:
   - ".env.example"
   - "prisma/schema.prisma"
+  - "prisma/migrations/20260728120000_harden_supabase_data_api_surface/migration.sql"
+  - "scripts/verify-supabase-data-api-surface.mjs"
+  - "scripts/lib/supabase-data-api-surface-audit.mjs"
   - "src/lib/prisma.ts"
   - "src/lib/public-rate-limit.ts"
   - "src/lib/oauth-state.ts"
@@ -203,22 +206,36 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 
 ## Supabase Data API / RLS audit
 
-2026-06-21 read-only audit:
+2026-07-28 read-only production audit:
 - The app does not use `@supabase/supabase-js`, browser `createClient`, `NEXT_PUBLIC_SUPABASE_*`, or `SUPABASE_ANON_KEY`.
 - Runtime database access is server-side Prisma through `DATABASE_URL`; migrations use `DIRECT_URL`.
-- Supabase MCP still reports RLS disabled on 16 public app tables. `VideoUploadPerformanceSample` has RLS enabled but no policies.
-- Direct SQL privilege checks did not show table access for `anon`, `authenticated`, or `service_role`: no public schema usage and no table `SELECT`, `INSERT`, `UPDATE`, or `DELETE` privileges were present in the checked grants.
-- The public schema had no views, materialized views, functions, or realtime publication tables during the audit.
-- This does not prove the Supabase Dashboard Data API exposure setting by itself; it only proves the repo and SQL surfaces checked above.
-- Review-email lifecycle/V5/V3.2 migrations enable RLS on their sensitive
-  server-only tables and conditionally revoke browser-role grants. The V3.2
-  additions are locally verified on disposable PostgreSQL; production schema
-  activation remains a separate migration/deploy gate.
+- The Management API reports that the Data API is enabled for
+  `public,graphql_public`; this is a live configuration fact, not an inference
+  from database grants.
+- Production has 41 public tables: 24 have RLS and 17 do not. No table has
+  `FORCE ROW LEVEL SECURITY`.
+- Effective `anon`, `authenticated`, and `service_role` schema/table/sequence/
+  routine privileges are all zero. Public has no view, materialized view,
+  function, or sequence. Real REST probes with both legacy anon and publishable
+  keys return `401 / 42501` for RLS-enabled and RLS-disabled representative
+  tables. No directly reachable row surface was found.
+- The Prisma connection is the table owner and has `BYPASSRLS`, so enabling
+  non-forced RLS does not change server-side Prisma authorization.
 
 Decision:
-- Do not enable RLS blindly while the schema is still changing in the test-stage app. Enabling RLS without matching policies can block intended API behavior.
-- Before public launch, make this a security hardening gate: verify Supabase Dashboard Data API exposed schemas, make role grants explicit, revoke/default-deny `anon` and `authenticated` table privileges where direct Data API access is not intended, enable RLS on app tables without `FORCE RLS`, and add policies only for deliberately exposed client-side Supabase access.
-- Keep storefront/admin flows through Next.js API routes and server-side Prisma unless a separate ADR introduces a browser Supabase client.
+- Renuvex has no Data API client, so do not add permissive RLS policies. Keep
+  storefront/admin flows behind Next.js API routes and server-side Prisma unless
+  a separate ADR introduces browser-side Supabase access.
+- Migration `20260728120000_harden_supabase_data_api_surface` enables non-forced
+  RLS on the remaining tables, revokes current browser-role access, removes
+  inherited `PUBLIC` schema/function paths, and revokes future table/sequence/
+  function defaults. The read-only verifier fails on any matching drift.
+- The complete 60-migration chain, the verifier, and a real Prisma read/write
+  smoke pass on disposable PostgreSQL 16 and 17 with Supabase-like roles and
+  intentionally broad pre-migration grants.
+- Production remains unchanged until the migration is deployed. Disabling the
+  unused Data API is a separate Supabase configuration mutation and remains an
+  explicit approval/post-migration verification gate.
 
 Official references:
 - [Supabase Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security)

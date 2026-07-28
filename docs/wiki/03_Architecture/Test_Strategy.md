@@ -34,6 +34,9 @@ source_files:
   - "scripts/measure-deployed-widget-network.mjs"
   - "scripts/measure-storefront-waterfall.mjs"
   - "scripts/verify-deployed-jsonld.mjs"
+  - "scripts/verify-supabase-data-api-surface.mjs"
+  - "tests/unit/supabase-data-api-surface-audit.test.ts"
+  - "tests/integration/supabase-data-api-surface.test.ts"
   - "tests/widget-harness.ts"
   - "tests/review-center-browser.spec.ts"
   - "tests/integration/review-email-batch-db-guarantees.test.ts"
@@ -240,6 +243,14 @@ review-email PostgreSQL integration suite passed `26/26` after all 58 migrations
 on disposable PostgreSQL 16 and independently `26/26` on PostgreSQL 17. Prisma
 generation, TypeScript, ESLint, and the Next.js webpack production build passed.
 These are local disposable-database results, not production migration evidence.
+
+2026-07-28 Supabase surface evidence: PostgreSQL 16 and 17 were bootstrapped
+with `anon`, `authenticated`, and `service_role` plus intentionally broad
+pre-migration schema/default grants. All 60 migrations then applied. The
+read-only surface verifier reported zero RLS/grant/default-ACL drift and
+`runtimeRlsCompatible=true`; a real `StoreSettings` Prisma create/read/delete
+smoke passed on both versions. This proves source/migration compatibility, not
+production deployment or the remote Data API toggle.
 
 `pnpm test:ci` runs the core non-media quality gate: unit tests, widget network smoke, widget runtime smoke, storefront interactions, and admin preview. `.github/workflows/widget-smoke.yml` uses Node 24 runtime action majors, installs Python 3.13 plus pinned `cfn-lint==1.52.1`, runs `pnpm aws:lint-templates` and `pnpm aws:review-email:validate-templates`, runs `pnpm prisma:generate` first so Linux CI has the generated Prisma client, then runs `pnpm build:widget`, installs Chromium, runs `pnpm test:ci`, syntax-checks generated widget assets with `pnpm check:widget-js`, then runs TypeScript, lint, and whitespace gates. The same workflow runs PR media coverage as a separate Playwright matrix so each media browser/device project gets its own Ubuntu runner and failure artifact.
 

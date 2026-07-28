@@ -27,6 +27,11 @@ source_files:
 
 # Project Log
 
+## 2026-07-28 - security | Prepare Supabase Data API default-deny closure
+- Management API proved the live Data API is enabled for `public,graphql_public`; read-only SQL and REST probes found no effective browser-role grants or reachable rows, but 17 public tables still lack RLS.
+- Added an additive RLS/current-grant/default-privilege hardening migration plus a read-only drift verifier. PostgreSQL 16/17 passed all 60 migrations, Supabase-like broad-grant reversal, and real Prisma read/write smoke.
+- Production migration and disabling the unused Data API remain separate approval gates.
+
 ## 2026-07-28 - acceptance | Close stale erasure run after reinstall
 - Verified that production runs release `d6f0f4f` with review-email sending and
   journal environment variables absent.

@@ -93,7 +93,10 @@ source_files:
 - Storefront is Turkish-first; future EN/DE needs real i18n, not only merchant copy.
 - Keep post-deploy smoke after runtime widget changes.
 - Worker V2 read origin: `widget.renuvex.app`; write/upload/video/lazy-sync origin: `app.renuvex.app`.
-- Supabase RLS/default-grants hardening is a public-launch blocker.
+- Supabase RLS/default-grants source hardening passes PostgreSQL 16/17, but the
+  live project still exposes `public,graphql_public` through an unused Data API
+  and has 17 pre-migration non-RLS tables. Production migration plus a separate
+  approved Data API disable/verification remain the public-launch gate.
 - Theme adapters depend on `listStorefront.themes[].isMainTheme`; no ikas theme webhook exists.
 - Deferred gaps: unsupported-theme warning UI, authenticated dashboard smoke, Sentry post-deploy health.
 - Review-email V5/V3.2 backend is deployed but disabled. Activation still needs

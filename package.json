@@ -65,6 +65,7 @@
     "verify:preview-db-isolation": "node scripts/verify-preview-db-isolation.mjs",
     "verify:auth-runtime-env": "node --env-file-if-exists=.env.local scripts/verify-ikas-auth-runtime-env.mjs",
     "verify:ikas-installation-auth": "node --env-file-if-exists=.env.local scripts/verify-ikas-installation-auth.mjs",
+    "verify:supabase-data-api-surface": "node --env-file-if-exists=.env.local scripts/verify-supabase-data-api-surface.mjs",
     "verify:video-infrastructure": "node --env-file=.env.local scripts/verify-mux-infrastructure.mjs --phase=pre-webhook --expect-disabled",
     "verify:video-infrastructure:post-webhook": "node --env-file=.env.local scripts/verify-mux-infrastructure.mjs --phase=post-webhook",
     "video:canary:ops": "node --env-file=.env.local scripts/video-canary-ops.mjs",

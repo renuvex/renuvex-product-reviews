@@ -33,6 +33,7 @@ source_files:
   - "prisma/migrations/20260715120000_add_review_email_batch_envelope_v32/migration.sql"
   - "prisma/migrations/20260716120000_add_review_email_eligibility_cutoff/migration.sql"
   - "prisma/migrations/20260720120000_align_ikas_review_email_contracts/migration.sql"
+  - "prisma/migrations/20260728120000_harden_supabase_data_api_surface/migration.sql"
   - "src/lib/ikas-installation-lifecycle.ts"
   - "src/lib/cleanup-orphan-images.ts"
   - "src/lib/review-email/"
@@ -41,6 +42,7 @@ source_files:
   - "src/lib/media/outbox.ts"
   - "src/lib/media/sessions.ts"
   - "scripts/rebuild-product-review-summaries.mjs"
+  - "scripts/verify-supabase-data-api-surface.mjs"
 ---
 
 # Database Map
@@ -212,6 +214,24 @@ On review-request email lifecycle:
 - The submit path conditionally transitions `ReviewRequest`, token, and session in the same DB transaction as `Review.create`; `Review.reviewRequestId @unique` is the final database-level one-review guarantee.
 - Reminder jobs are created only after first-send acceptance and use actual `firstSentAt + reminderDelayDays`. Each scheduled reminder extends request expiry to at least `sendAfter + 30 days`, so max-delay reminders cannot be invalidated by an earlier request deadline.
 - Reconciliation ownership uses `leaseOwner + leaseVersion` compare-and-set and persists the same window/page until completion. Email-domain tables have RLS enabled and browser roles receive no direct table access.
+
+### Server-only Supabase Data API posture
+
+- Runtime and migrations connect directly through Prisma; no browser Supabase
+  client, REST, GraphQL, publishable key, or service-role key is an application
+  dependency.
+- `20260728120000_harden_supabase_data_api_surface` enables RLS on the remaining
+  17 legacy/public tables, including `_prisma_migrations`, without `FORCE RLS`
+  or browser-facing policies.
+- Current and default privileges are revoked from `anon`, `authenticated`, and
+  `service_role`. Inherited `PUBLIC` schema usage and function execution are
+  also removed so a future object is not exposed by PostgreSQL defaults.
+- `pnpm verify:supabase-data-api-surface` is read-only and fails on an
+  RLS-disabled public table, an effective Data API role grant, a permissive
+  default ACL, or a runtime role that would be blocked by the RLS posture.
+- Source acceptance passes on PostgreSQL 16/17, but production does not gain
+  these guarantees until migration deployment. The live Data API toggle is a
+  separate Supabase configuration gate.
 
 On `Review` cursor pagination:
 - partial `[storeId, productId, createdAt desc, id desc] where status='approved'` - public `newest` review list/load-more.
