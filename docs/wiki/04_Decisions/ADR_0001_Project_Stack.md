@@ -63,7 +63,7 @@ We're building a SaaS review app for ikas merchants: merchant admin (iframe insi
 - The widget bundle is checked into git (`public/widget.js`). Every change requires `pnpm build:widget` before commit.
 - Migrations run on every deploy (`prisma migrate deploy`). Risky migrations need careful sequencing.
 - Strong coupling to ikas: the `@ikas/admin-api-client` and AppBridge are not optional.
-- `CLIENT_SECRET` does double duty (OAuth + JWT signing).
+- `CLIENT_SECRET` is used for ikas OAuth and AppBridge JWT verification.
 - Cold-start performance depends on Vercel + Supabase pooler health.
 
 ## Related Source Files

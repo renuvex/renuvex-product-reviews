@@ -182,13 +182,16 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 - Admin API uses JWT (not cookies), so traditional CSRF doesn't apply.
 
 ## Secrets handling
-- Single secret (`CLIENT_SECRET`) for ikas OAuth + JWT. Rotation invalidates JWTs (acceptable — short-lived).
+- `CLIENT_SECRET` is used for ikas OAuth and AppBridge JWT verification.
 - `SECRET_COOKIE_PASSWORD` for iron-session.
 - `REVIEW_CURSOR_SECRET` signs public review cursors (HMAC-SHA256); server-only and separate from `CLIENT_SECRET`.
 - AWS review-image private key material, `KV_REST_API_TOKEN`, `CRON_SECRET` — server-only. OAuth state uses the same Redis credentials but a dedicated fail-closed client and hashed key namespace.
 - Review-email hash/encryption secrets, versioned token key ring, and session secret are server-only. Never put raw review-request tokens, sessions, recipient email, or rendered content in logs, Sentry, Redis keys, DB event payloads, or future queue messages.
 - ⚠️ Never log secrets or full tokens. Code uses `console.error('[scope] ERROR', err)` patterns — keep err objects from leaking sensitive headers.
-- ⚠️ The `/callback` client page receives the session JWT as a URL query param. A `console.log('OAuth callback params:', params.toString())` that printed it to the browser console was removed — never re-add param logging there. See [[Auth_And_Installation_Flow]].
+- OAuth completion redirects directly to a server-built ikas Admin target with
+  `303`, `Cache-Control: no-store`, and `Referrer-Policy: no-referrer`.
+  Bearer JWTs are obtained through AppBridge and are never placed in OAuth
+  callback URLs.
 
 ## Supabase Data API / RLS audit
 
@@ -219,7 +222,7 @@ Official references:
 - IP rate limit can be circumvented with rotating IPs
 - `Access-Control-Allow-Origin: *` on POST endpoints
 - No bot detection / hCaptcha on public POST
-- JWT signing falls back to empty string if env missing
+- JWT verification falls back to an empty string if `CLIENT_SECRET` is missing
 - Storefront script lifecycle deliberately avoids zero-argument `deleteStorefrontJSScript()` because active ikas contract semantics are ambiguous.
 - Most public app tables have RLS disabled. Current evidence did not show direct `anon`/`authenticated` Data API grants, but RLS/default-grants hardening remains a public-launch blocker.
 
@@ -247,9 +250,14 @@ Official references:
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
+- 2026-07-28: Removed the `/callback?token=...` bearer handoff and its
+  client-controlled redirect. OAuth now returns directly to the trusted ikas
+  Admin target; iframe JWT bootstrap is AppBridge-only.
 - 2026-07-10: Recorded review-request fragment/session isolation, 30/min hashed-IP rate limit, browser Sentry/Replay exclusion, atomic verified-buyer submit, and source-only RLS hardening.
 - 2026-06-21: Recorded the Supabase Data API / RLS audit. Current repo uses server-side Prisma, no browser Supabase client was found, and checked SQL grants did not show direct `anon`/`authenticated` table access; RLS hardening remains a public-launch gate.
-- 2026-05-25: Removed a `console.log` in the `/callback` client page that printed the full query string (including the session JWT) to the browser console. Source: [src/app/callback/page.tsx](src/app/callback/page.tsx).
+- 2026-05-25: Removed a `console.log` in the historical callback client page
+  that printed the full query string, including the session JWT. The page and
+  query handoff were removed on 2026-07-28.
 - 2026-05-24: Namespace migration changed public Redis rate-limit prefixes from `ikr_*` to `renuvex_pr_*`. Limits and windows are unchanged.
 - 2026-05-18: D3 tenant-scoped image uploads: upload signatures required a verified `storeId` and sign `review_images/stores/<storeId>`; register/review read/write paths and widget filtering reject cross-tenant image paths.
 - 2026-05-18: Added D4 public rating API read limit: `/api/public/ratings` and `/api/public/ratings-by-slug` share a generous 300 requests/min/IP Redis fixed-window counter. 429 responses are `no-store`; Redis/config failures fail open server-side to preserve storefront rendering.

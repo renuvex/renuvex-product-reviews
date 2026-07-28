@@ -83,11 +83,12 @@ A Next.js 16 (16.2) app on Vercel (eu-central / fra1) with three primary applica
    `GET /api/oauth/callback/ikas?code&storeName&state[&signature]`.
 4. Server atomically consumes state required for token exchange, validates the
    signature when supplied, exchanges the code, fetches merchant + authorized app, upserts
-   `AuthToken` and `StoreSettings`, **creates or updates each storefront's
-   `StorefrontJSScript` pointing to
-   `<STOREFRONT_WIDGET_BASE_URL>/widget.js?publicApiKey=<merchantId>` and records
-   active theme metadata**, issues a 4h JWT, then redirects through `/callback`
-   to ikas Admin.
+    `AuthToken` and `StoreSettings`, **creates or updates each storefront's
+    `StorefrontJSScript` pointing to
+    `<STOREFRONT_WIDGET_BASE_URL>/widget.js?publicApiKey=<merchantId>` and records
+    active theme metadata**, then redirects directly to the trusted ikas Admin
+    authorized-app URL. The embedded frontend obtains its admin JWT from
+    AppBridge; the OAuth callback never places a bearer token in a URL.
 
 See [[Auth_And_Installation_Flow]] for full trace.
 

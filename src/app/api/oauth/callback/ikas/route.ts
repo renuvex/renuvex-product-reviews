@@ -14,7 +14,6 @@ import { validateRequest } from '@/lib/validation';
 import { OAuthAPI } from '@ikas/admin-api-client';
 import moment from 'moment';
 import { getIkas, getIkasV1 } from '@/helpers/api-helpers';
-import { JwtHelpers } from '@/helpers/jwt-helpers';
 import { TokenHelpers } from '@/helpers/token-helpers';
 import { AuthToken } from '@/models/auth-token';
 import { prisma } from '@/lib/prisma';
@@ -264,23 +263,17 @@ export async function GET(request: NextRequest) {
     session.authorizedAppId = authorizedAppId;
     await session.save();
 
-    // Create a JWT for the merchant and authorized app
-    const jwtToken = JwtHelpers.createToken(merchantId, authorizedAppId);
+    // Return directly to the trusted ikas admin target. The iframe obtains its
+    // short-lived admin JWT from AppBridge; bearer credentials never cross a URL.
+    const redirectUrl = new URL(config.adminUrl!.replace('{storeName}', oauthTransaction.storeName));
+    redirectUrl.pathname = `${redirectUrl.pathname.replace(/\/$/, '')}/authorized-app/${encodeURIComponent(authorizedAppId)}`;
+    redirectUrl.search = '';
+    redirectUrl.hash = '';
 
-    // Build the redirect URL for the admin panel
-    const redirectUrl = `${config.adminUrl!.replace(
-      '{storeName}',
-      merchantResponse.data.getMerchant.storeName as string,
-    )}/authorized-app/${authorizedAppId}`;
-
-    // Build the callback URL with token and redirect info
-    const callbackUrl = new URLSearchParams();
-    callbackUrl.set('token', jwtToken);
-    callbackUrl.set('redirectUrl', redirectUrl);
-    callbackUrl.set('authorizedAppId', authorizedAppId);
-
-    // Redirect the user to the callback URL
-    return NextResponse.redirect(new URL(`/callback?${callbackUrl.toString()}`, oauthTransaction.redirectUri));
+    const response = NextResponse.redirect(redirectUrl, 303);
+    response.headers.set('Cache-Control', 'no-store');
+    response.headers.set('Referrer-Policy', 'no-referrer');
+    return response;
   } catch (error) {
     if (error instanceof OAuthStateStoreError) {
       console.error('[oauth-callback] oauth_state_store_unavailable');

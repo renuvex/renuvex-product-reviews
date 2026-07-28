@@ -3,8 +3,8 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-28
-last_verified: 2026-06-28
+updated: 2026-07-28
+last_verified: 2026-07-28
 tags:
   - structure
 related:
@@ -58,7 +58,6 @@ renuvex-product-reviews/
 │  │  │  ├─ preview/             # Settings + fixture data for /preview iframe
 │  │  │  └─ public/              # CORS-open APIs called by widget.js
 │  │  ├─ authorize-store/page.tsx
-│  │  ├─ callback/page.tsx       # Receives JWT from server, stashes in sessionStorage, redirects
 │  │  ├─ dashboard/page.tsx
 │  │  ├─ hooks/use-base-home-page.ts
 │  │  ├─ globals.css             # Tailwind v4 entry
@@ -87,8 +86,8 @@ renuvex-product-reviews/
 │  │
 │  ├─ helpers/
 │  │  ├─ api-helpers.ts          # getIkas(token), onCheckToken (refresh), getRedirectUri
-│  │  ├─ jwt-helpers.ts          # JwtHelpers.createToken/verifyToken (HS256, 4h)
-│  │  └─ token-helpers.ts        # AppBridge token, validateCodeSignature (HMAC-SHA256)
+│  │  ├─ jwt-helpers.ts          # Verifies ikas AppBridge admin JWTs
+│  │  └─ token-helpers.ts        # AppBridge token cache + code-signature validation
 │  │
 │  ├─ lib/
 │  │  ├─ api-requests.ts         # Frontend → backend bridge (axios)

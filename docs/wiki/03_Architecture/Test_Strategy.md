@@ -58,6 +58,7 @@ source_files:
   - "tests/unit/public-api-routes.test.ts"
   - "tests/unit/oauth-state.test.ts"
   - "tests/unit/oauth-routes.test.ts"
+  - "tests/unit/token-helpers.test.ts"
   - "tests/unit/video-upload-routes.test.ts"
   - "tests/unit/video-upload-error.test.ts"
   - "tests/unit/media-jobs.test.ts"
@@ -169,6 +170,13 @@ state-less callbacks cannot loop, malformed/expired/replayed/wrong-browser/
 wrong-store state cannot reach ikas token exchange, an invalid supplied
 signature does not consume state or claim bootstrap, parallel pending states
 remain independent, and logs exclude callback credentials.
+`token-helpers.test.ts` pins the post-install boundary: a cold iframe obtains
+its JWT from AppBridge, valid cache entries remain authorized-app scoped,
+expired or malformed entries are replaced, base64url JWT payloads are decoded,
+missing app identity fails closed, and non-iframe pages cannot invoke AppBridge.
+Route tests additionally require the
+successful OAuth response to return directly to the frozen-store ikas Admin
+target without a query string and with `no-store`/`no-referrer`.
 
 Review-email cutoff coverage pins the historical-delivery invariant separately:
 unit tests require exact delivered-line `statusUpdatedAt`, reject generic

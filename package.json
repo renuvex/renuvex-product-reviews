@@ -131,7 +131,6 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^4.1.12",
-    "uuid": "^11.1.0",
     "zod": "^3.25.67"
   },
   "devDependencies": {
@@ -145,7 +144,6 @@
     "@types/node": "^24.3.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@types/uuid": "^9.0.0",
     "@typescript-eslint/eslint-plugin": "^8.30.1",
     "@typescript-eslint/parser": "^8.30.1",
     "esbuild": "^0.28.0",

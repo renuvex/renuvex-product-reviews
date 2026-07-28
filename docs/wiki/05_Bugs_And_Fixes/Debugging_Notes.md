@@ -3,7 +3,7 @@ type: bug
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-25
+updated: 2026-07-28
 tags:
   - debugging
   - howto
@@ -94,5 +94,11 @@ Operational reference: [[Sentry_Operations]] (org `renuvex`, project `renuvex-pr
 - [[Bug_Review_Detail_Lightbox_Risks]]
 
 ## Change Log
-- 2026-05-25: Fixed three Sentry-surfaced issues — removed the token-leaking `/callback` console.log, changed `TokenHelpers.setToken` throw→return (the throw became an `unhandledrejection`), and guarded the dashboard `HomePage` init against an unhandled `/api/admin/settings` 401. Documented the `search_issues` under-count gotcha. Sources: [src/app/callback/page.tsx](src/app/callback/page.tsx), [src/helpers/token-helpers.ts](src/helpers/token-helpers.ts), [src/components/home-page/index.tsx](src/components/home-page/index.tsx).
+- 2026-05-25: Fixed three Sentry-surfaced issues — removed token-query
+  logging from the former callback page, changed the former
+  `TokenHelpers.setToken` throw→return behavior, and guarded dashboard
+  initialization against an unhandled `/api/admin/settings` 401. The callback
+  page and query handoff were removed on 2026-07-28. Current source:
+  [src/helpers/token-helpers.ts](src/helpers/token-helpers.ts),
+  [src/components/home-page/index.tsx](src/components/home-page/index.tsx).
 - 2026-05-10: Added debugging checklist for the photo review detail lightbox and its current open risks. Related source: [src/widget/reviews-section/review-modal.js](src/widget/reviews-section/review-modal.js), related bug: [[Bug_Review_Detail_Lightbox_Risks]].

@@ -38,7 +38,9 @@ related:
 - **publicApiKey** — query param the widget reads from its own `<script src>`; equals `merchantId`. Public, non-secret.
 
 ## Tech terms used in this project
-- **JWT** — short-lived (4h) HS256 JWT signed with `CLIENT_SECRET`; sent as `Authorization: JWT <token>` from frontend to `/api/admin/*`.
+- **JWT** — short-lived ikas AppBridge admin token, cached per
+  `authorizedAppId` in the iframe and sent as `Authorization: JWT <token>` to
+  `/api/admin/*`. OAuth callbacks never transport it in a URL.
 - **Iron-session** — encrypted cookie session that holds the opaque browser
   binding for OAuth state; raw state is not stored in the cookie. Wrapped in
   [src/lib/session.ts](src/lib/session.ts).

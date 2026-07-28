@@ -3,7 +3,7 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-12
+updated: 2026-07-28
 tags:
   - quick-reference
 related:
@@ -25,9 +25,8 @@ related:
 ## OAuth + Auth
 - Authorize redirect → [src/app/api/oauth/authorize/ikas/route.ts](src/app/api/oauth/authorize/ikas/route.ts)
 - Callback (token exchange + auto inject) → [src/app/api/oauth/callback/ikas/route.ts](src/app/api/oauth/callback/ikas/route.ts)
-- Client-side callback handler → [src/app/callback/page.tsx](src/app/callback/page.tsx)
-- JWT helpers → [src/helpers/jwt-helpers.ts](src/helpers/jwt-helpers.ts)
-- ikas signature & token helpers → [src/helpers/token-helpers.ts](src/helpers/token-helpers.ts)
+- JWT verification → [src/helpers/jwt-helpers.ts](src/helpers/jwt-helpers.ts)
+- AppBridge JWT cache + ikas signature helper → [src/helpers/token-helpers.ts](src/helpers/token-helpers.ts)
 - ikas API client + token refresh → [src/helpers/api-helpers.ts](src/helpers/api-helpers.ts)
 - Session (iron-session) → [src/lib/session.ts](src/lib/session.ts)
 - JWT verification middleware → [src/lib/auth-helpers.ts](src/lib/auth-helpers.ts)

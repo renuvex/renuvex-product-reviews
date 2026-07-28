@@ -23,6 +23,7 @@ source_files:
   - "src/lib/storefront-scripts.ts"
   - "src/lib/ikas-client/v1-graphql-requests.ts"
   - "src/helpers/api-helpers.ts"
+  - "src/helpers/token-helpers.ts"
 ---
 
 # Auth & Installation Flow
@@ -33,8 +34,9 @@ single-use `state` transaction. A supplied ikas HMAC-SHA256 code signature is
 validated as a separate control. An ikas dashboard callback that omits state
 cannot exchange its code; it may only start one bounded, fresh state-bearing
 authorization round. Tokens persist in Postgres (`AuthToken`) keyed by
-`authorizedAppId`. Frontend uses a short-lived (4h) HS256 JWT, sent as
-`Authorization: JWT <token>` to admin APIs.
+`authorizedAppId`. The embedded frontend obtains its short-lived admin JWT
+from ikas AppBridge and sends it as `Authorization: JWT <token>` to admin APIs.
+OAuth callback responses never place that bearer credential in a URL.
 
 ## Roles
 - **ikas** — issues OAuth tokens, hosts the merchant's admin/storefronts.
@@ -84,16 +86,14 @@ authorization round. Tokens persist in Postgres (`AuthToken`) keyed by
        - when REVIEW_EMAIL_ENABLED=true AND merchant ReviewEmailSettings.enabled=true:
          separately register order created/updated + app-deleted webhooks;
          update verified/error state through the same installation fence and disable/cancel unsent work on failure
-       - JwtHelpers.createToken(merchantId, authorizedAppId)  [HS256, 4h]
-       - 302 → /callback?token=...&redirectUrl=<ikasAdmin>/authorized-app/<id>
        - after(response): syncAllProductsForStore → ProductSnapshot backfill (non-blocking)
+       - 303 with no-store/no-referrer directly to the server-built
+         <ikasAdmin>/authorized-app/<id> target; no JWT/query handoff
        │
        ▼
-5.  /callback (client) — sessionStorage.setItem(token, ...) → window.location = redirectUrl
-       │
-       ▼
-6.  Merchant lands inside ikas Admin → app loads in iframe → useBaseHomePage()
-       - TokenHelpers.getTokenForIframeApp() returns the JWT (via AppBridge)
+5.  Merchant lands inside ikas Admin → app loads in iframe → useBaseHomePage()
+       - TokenHelpers.getTokenForIframeApp() obtains the JWT via AppBridge
+         and caches it under the exact authorizedAppId for the browser session
        - router.push('/dashboard')
 ```
 
@@ -106,7 +106,6 @@ Source files:
 - [src/lib/product-snapshots.ts](src/lib/product-snapshots.ts)
 - [src/lib/review-email/ikas-orders.ts](src/lib/review-email/ikas-orders.ts)
 - [src/lib/ikas-installation-lifecycle.ts](src/lib/ikas-installation-lifecycle.ts)
-- [src/app/callback/page.tsx](src/app/callback/page.tsx)
 - [src/app/hooks/use-base-home-page.ts](src/app/hooks/use-base-home-page.ts)
 - [src/helpers/token-helpers.ts](src/helpers/token-helpers.ts)
 - [src/helpers/jwt-helpers.ts](src/helpers/jwt-helpers.ts)
@@ -125,10 +124,15 @@ Source files:
 - If refresh fails, returns `{ accessToken: undefined }` and the call effectively fails — current code does not surface a clear error to the UI. Consider improving observability here.
 
 ## Browser → server auth (post-install)
-- Frontend stores JWT in `sessionStorage` after step 5.
+- The iframe asks ikas AppBridge for `authorizedAppId` and an admin JWT. A
+  valid token is cached in `sessionStorage` only under
+  `token-<authorizedAppId>`; OAuth callback query parameters are not a token
+  source.
 - All `/api/admin/*` calls send `Authorization: JWT <token>`.
 - Server: `getUserFromRequest()` ([src/lib/auth-helpers.ts](src/lib/auth-helpers.ts)) verifies via `JwtHelpers.verifyToken(token)`. JWT carries `subject = merchantId` and `audience = authorizedAppId`.
-- JWT expires after 4h (`expiresIn: '4h'`). After that, AppBridge re-issues from ikas Admin.
+- Expired cached tokens are discarded and AppBridge re-issues from ikas Admin.
+- Malformed cached tokens are also discarded before one AppBridge retry; JWT
+  expiry parsing uses base64url decoding rather than assuming plain base64.
 
 ## Session cookie
 - iron-session ([src/lib/session.ts](src/lib/session.ts)) holds an opaque
@@ -160,15 +164,24 @@ Source files:
 - The transaction freezes the exact redirect URI used by both authorize and
   token exchange. A failed token/install attempt does not restore consumed
   state; the merchant starts a new authorization.
-- `CLIENT_SECRET` is used for **both** OAuth (with ikas) AND JWT signing. Single secret = single rotation. If we rotate `CLIENT_SECRET`, all in-flight JWTs become invalid (acceptable, JWTs are short-lived).
-- JWT signing uses `process.env.CLIENT_SECRET || ''`. Empty fallback is dangerous — add explicit env validation at boot.
-- The `/callback` client page must not log its query params — they carry the session JWT. A debug `console.log` of the params was removed. See [[Security_And_Rate_Limits]].
-- `TokenHelpers.setToken` **returns** after `window.location.replace(redirectUrl)` (step 5); it no longer `throw`s a `'redirectUrl-called'` sentinel. The old throw escaped the un-awaited callback IIFE as an `unhandledrejection` (logged to Sentry). The explicit `return` still skips the authorize-store fallback. Source: [src/helpers/token-helpers.ts](src/helpers/token-helpers.ts).
+- `CLIENT_SECRET` is used for ikas OAuth and AppBridge JWT verification.
+  Verification still has an empty-string environment fallback; explicit boot
+  validation remains a separate hardening item.
+- The callback target is built only from trusted admin URL configuration, the
+  frozen canonical transaction store, and provider-returned authorized app ID.
+  It clears query/fragment data and returns `303`, `no-store`, and
+  `no-referrer`.
+- The former `/callback?token=...` client handoff and arbitrary
+  `redirectUrl` execution path were removed on 2026-07-28. A future genuine
+  non-iframe client must use a separately designed single-use server exchange,
+  never a bearer token in a URL.
 
 ## Notes
 - **Product snapshot backfill is non-blocking.** The callback awaits product webhook registration (one `saveWebhooks` mutation) but runs the full `ProductSnapshot` backfill (`syncAllProductsForStore`) via Next.js `after()`, *after* the 302 response is sent. Install latency stays independent of catalog size; a backfill cut short by the serverless function timeout is recovered by product webhooks or `POST /api/admin/sync-products`. See [[ADR_0015_Canonical_Product_Identity]].
 - **Review-email webhook registration is fail-closed and feature-gated.** Product registration remains independent. OAuth attempts order/uninstall registration only when both the global feature and merchant setting are enabled. Registration state changes use the installation fence; failure records a sanitized error, forces `ReviewEmailSettings.enabled=false`, and cancels unsent work. The source is not deployed, so live ikas acceptance remains a rollout test. See [[ADR_0036_Review_Request_Email_Architecture]].
-- **Embedded vs standalone**: the app supports both — running embedded in ikas Admin (iframe + AppBridge) or standalone in a browser tab (after manual store-name entry). Production usage is iframe.
+- **Embedded vs standalone**: manual store-name entry can start authorization
+  from a browser tab, but successful installation returns to ikas Admin.
+  Authenticated production admin usage is iframe + AppBridge.
 - **OAuth scope** currently includes `read_orders`, `read_customers`, product
   reads, and inherited write/inventory permissions. The customer-read scope is
   required by the review-email consent preflight; remaining write scopes still

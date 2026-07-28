@@ -3,7 +3,7 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-08
+updated: 2026-07-28
 tags:
   - frontend
   - react
@@ -30,7 +30,6 @@ Next.js 16 (16.2), React 19, TypeScript, Tailwind CSS v4 (`@tailwindcss/postcss`
 |---|---|---|
 | `/` | [src/app/page.tsx](src/app/page.tsx) | Triggers `useBaseHomePage` → routes based on token presence |
 | `/authorize-store` | [src/app/authorize-store/page.tsx](src/app/authorize-store/page.tsx) | Manual store-name entry fallback |
-| `/callback` | [src/app/callback/page.tsx](src/app/callback/page.tsx) | Receives `?token=...&redirectUrl=...` from server callback, stashes in sessionStorage, redirects |
 | `/dashboard` | [src/app/dashboard/page.tsx](src/app/dashboard/page.tsx) | Authenticated home; renders `home-page` component |
 | `/preview` | [src/app/(preview)/preview/route.ts](src/app/(preview)/preview/route.ts) | Standalone HTML iframe — no root layout |
 
@@ -40,9 +39,13 @@ Next.js 16 (16.2), React 19, TypeScript, Tailwind CSS v4 (`@tailwindcss/postcss`
 
 ### Auth bootstrap
 - [src/app/hooks/use-base-home-page.ts](src/app/hooks/use-base-home-page.ts)
-  - In iframe: `TokenHelpers.getTokenForIframeApp()` (AppBridge) → `/dashboard`
+  - In iframe: `TokenHelpers.getTokenForIframeApp()` obtains and caches the
+    authorized-app-scoped JWT from AppBridge, then routes to `/dashboard`.
   - Out of iframe with `?storeName=`: redirect to `/api/oauth/authorize/ikas`
   - Otherwise: `/authorize-store`
+- The OAuth server callback returns directly to the trusted ikas Admin
+  authorized-app URL. There is no client callback page or bearer-token query
+  handoff.
 
 ### Mandatory iframe page pattern (from canonical rules)
 Every page that runs inside the ikas Admin iframe must follow this pattern (see [[Existing_AI_Rules_And_Ikas_CLI_Instructions]] for full text):

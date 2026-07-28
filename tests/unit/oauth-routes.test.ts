@@ -15,7 +15,6 @@ const mocks = vi.hoisted(() => ({
   getIkasV1: vi.fn(),
   activateInstallation: vi.fn(),
   after: vi.fn(),
-  createJwt: vi.fn(),
   storeSettingsUpsert: vi.fn(),
   ensureStorefrontScripts: vi.fn(),
   registerProductWebhooks: vi.fn(),
@@ -73,12 +72,6 @@ vi.mock('@/helpers/api-helpers', () => ({
 vi.mock('@/helpers/token-helpers', () => ({
   TokenHelpers: {
     validateCodeSignature: mocks.validateCodeSignature,
-  },
-}));
-
-vi.mock('@/helpers/jwt-helpers', () => ({
-  JwtHelpers: {
-    createToken: mocks.createJwt,
   },
 }));
 
@@ -172,7 +165,6 @@ beforeEach(() => {
   mocks.getRedirectUri.mockReturnValue('https://app.renuvex.app/api/oauth/callback/ikas');
   mocks.getTokenWithAuthorizationCode.mockResolvedValue({ data: null });
   mocks.validateCodeSignature.mockImplementation((_code: string, signature: string) => signature === 'valid-signature');
-  mocks.createJwt.mockReturnValue('admin-jwt');
   mocks.getIkasV1.mockReturnValue({ kind: 'v1-client' });
   mocks.isReviewEmailEnabled.mockReturnValue(false);
   mocks.redisSet.mockImplementation(async (key: string, value: unknown, options?: { nx?: boolean }) => {
@@ -408,7 +400,7 @@ describe('ikas OAuth route state contract', () => {
       queries: {
         getMerchant: vi.fn().mockResolvedValue({
           isSuccess: true,
-          data: { getMerchant: { id: 'merchant-1', storeName: 'dev-store' } },
+          data: { getMerchant: { id: 'merchant-1', storeName: 'provider-store-name-is-not-a-redirect-source' } },
         }),
         getAuthorizedApp: vi.fn().mockResolvedValue({
           isSuccess: true,
@@ -430,9 +422,13 @@ describe('ikas OAuth route state contract', () => {
 
     const response = await callback({ code: 'code-value', storeName: 'dev-store', state });
 
-    expect(response.status).toBe(307);
-    expect(response.headers.get('location')).toContain('https://app.renuvex.app/callback?');
-    expect(response.headers.get('location')).toContain('token=admin-jwt');
+    expect(response.status).toBe(303);
+    expect(response.headers.get('location')).toBe(
+      'https://admin.myikas.com/store/dev-store/authorized-app/authorized-app-1',
+    );
+    expect(new URL(response.headers.get('location')!).search).toBe('');
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(response.headers.get('referrer-policy')).toBe('no-referrer');
     expect(mocks.activateInstallation).toHaveBeenCalledOnce();
     expect(mocks.storeSettingsUpsert).toHaveBeenCalledWith({
       where: { storeId: 'merchant-1' },

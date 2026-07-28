@@ -3,7 +3,7 @@ type: prompt
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-07-28
 tags:
   - prompts
   - ai-workflow
@@ -47,7 +47,9 @@ Hard rules (canonical rules from `/CLAUDE.md` + wiki additions):
 
 Project-specific gotchas (top 3):
 - Storefront script lifecycle must stay non-destructive: source no longer calls zero-argument `deleteStorefrontJSScript()` because ikas public docs and active MCP disagree on delete/list semantics.
-- `CLIENT_SECRET` is used for both ikas OAuth AND JWT signing. Single rotation invalidates both.
+- Admin JWTs come from ikas AppBridge and must never be placed in OAuth
+  callback URLs. `CLIENT_SECRET` is used for OAuth and AppBridge JWT
+  verification.
 - `Review.images` is TEXT-stringified JSON. Keep parsing tolerant.
 
 Source-code conventions:
