@@ -1,11 +1,19 @@
 import { after, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { getUserFromRequest } from '@/lib/auth-helpers';
+import {
+  authenticateIkasAdminRequest,
+  ikasAdminAuthorizationLostResponse,
+  ikasAdminAuthenticationResponse,
+} from '@/lib/auth-helpers';
 import { getWidgetDefaults, sanitizeSettings, validateSettings } from '@/lib/widget-settings';
 import { syncStorefrontThemeForToken } from '@/lib/storefront-theme-sync';
-import { AuthTokenManager } from '@/models/auth-token/manager';
 import { getVideoFeatureAccess } from '@/lib/media/access';
+import {
+  IkasInstallationError,
+  requireActiveIkasStoreInstallationFence,
+} from '@/lib/ikas-installation-lifecycle';
+import { reportServerFailure } from '@/lib/server-failures';
 
 /**
  * GET /api/admin/settings
@@ -13,8 +21,9 @@ import { getVideoFeatureAccess } from '@/lib/media/access';
  */
 export async function GET(request: Request) {
   try {
-    const user = getUserFromRequest(request);
-    if (!user) return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 401 });
+    const auth = await authenticateIkasAdminRequest(request);
+    if (!auth.ok) return ikasAdminAuthenticationResponse(auth);
+    const user = auth.context.principal;
 
     const [rows, videoAccess] = await Promise.all([
       prisma.widgetSettings.findMany({
@@ -44,9 +53,9 @@ export async function GET(request: Request) {
         },
       },
     });
-  } catch (error) {
-    console.error('[GET] Admin Settings API error:', error);
-    return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 });
+  } catch {
+    reportServerFailure('admin_settings_read_failed');
+    return NextResponse.json({ error: 'admin_settings_read_failed' }, { status: 500 });
   }
 }
 
@@ -57,8 +66,9 @@ export async function GET(request: Request) {
  */
 export async function PUT(request: Request) {
   try {
-    const user = getUserFromRequest(request);
-    if (!user) return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 401 });
+    const auth = await authenticateIkasAdminRequest(request);
+    if (!auth.ok) return ikasAdminAuthenticationResponse(auth);
+    const { principal: user, authToken } = auth.context;
 
     const body = await request.json();
     const { widgetId, settings } = body;
@@ -78,26 +88,30 @@ export async function PUT(request: Request) {
     }
 
     const jsonSettings = cleanSettings as Prisma.InputJsonObject;
-    const updated = await prisma.widgetSettings.upsert({
-      where: { storeId_widgetId: { storeId: user.merchantId, widgetId } },
-      update: { settings: jsonSettings },
-      create: { storeId: user.merchantId, widgetId, settings: jsonSettings },
+    const updated = await prisma.$transaction(async (tx) => {
+      await requireActiveIkasStoreInstallationFence(tx, user.merchantId, user);
+      return tx.widgetSettings.upsert({
+        where: { storeId_widgetId: { storeId: user.merchantId, widgetId } },
+        update: { settings: jsonSettings },
+        create: { storeId: user.merchantId, widgetId, settings: jsonSettings },
+      });
     });
 
     after(async () => {
       try {
-        const authToken = await AuthTokenManager.get(user.authorizedAppId);
-        if (authToken) {
-          await syncStorefrontThemeForToken(authToken, { reason: 'settings_save' });
-        }
+        await syncStorefrontThemeForToken(authToken, { reason: 'settings_save' });
       } catch (error) {
-        console.warn('[settings] storefront theme sync failed:', error);
+        if (error instanceof IkasInstallationError) return;
+        reportServerFailure('storefront_theme_sync_failed');
       }
     });
 
     return NextResponse.json({ data: updated });
   } catch (error) {
-    console.error('[PUT] Admin Settings API error:', error);
-    return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 });
+    if (error instanceof IkasInstallationError) {
+      return ikasAdminAuthorizationLostResponse();
+    }
+    reportServerFailure('admin_settings_write_failed');
+    return NextResponse.json({ error: 'admin_settings_write_failed' }, { status: 500 });
   }
 }

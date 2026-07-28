@@ -1,20 +1,19 @@
 import { getIkas } from '@/helpers/api-helpers';
-import { getUserFromRequest } from '@/lib/auth-helpers';
+import {
+  authenticateIkasAdminRequest,
+  ikasAdminAuthorizationLostResponse,
+  ikasAdminAuthenticationResponse,
+} from '@/lib/auth-helpers';
 import { buildProductWebhookEndpoint, registerProductWebhooks, syncAllProductsForStore } from '@/lib/product-snapshots';
-import { AuthTokenManager } from '@/models/auth-token/manager';
 import { NextRequest, NextResponse } from 'next/server';
+import { reportServerFailure } from '@/lib/server-failures';
+import { IkasInstallationError } from '@/lib/ikas-installation-lifecycle';
 
 export async function POST(request: NextRequest) {
   try {
-    const user = getUserFromRequest(request);
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const authToken = await AuthTokenManager.get(user.authorizedAppId);
-    if (!authToken) {
-      return NextResponse.json({ error: 'Auth token not found' }, { status: 404 });
-    }
+    const auth = await authenticateIkasAdminRequest(request);
+    if (!auth.ok) return ikasAdminAuthenticationResponse(auth);
+    const { authToken, principal } = auth.context;
 
     const ikas = getIkas(authToken);
     const host = request.headers.get('host');
@@ -25,7 +24,7 @@ export async function POST(request: NextRequest) {
     const endpoint = buildProductWebhookEndpoint(host);
     const [webhooks, sync] = await Promise.all([
       registerProductWebhooks(ikas, endpoint),
-      syncAllProductsForStore(ikas, user.merchantId),
+      syncAllProductsForStore(ikas, principal.merchantId, principal),
     ]);
 
     return NextResponse.json({
@@ -36,7 +35,10 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[admin-sync-products] ERROR:', error);
-    return NextResponse.json({ error: 'Product sync failed' }, { status: 500 });
+    if (error instanceof IkasInstallationError) {
+      return ikasAdminAuthorizationLostResponse();
+    }
+    reportServerFailure('product_sync_failed');
+    return NextResponse.json({ error: 'product_sync_failed' }, { status: 500 });
   }
 }

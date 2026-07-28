@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getUserFromRequest } from '@/lib/auth-helpers';
+import {
+  authenticateIkasAdminRequest,
+  ikasAdminAuthorizationLostResponse,
+  ikasAdminAuthenticationResponse,
+} from '@/lib/auth-helpers';
 import { applyReviewSummaryRemovals, applyReviewSummaryVisibilityChange } from '@/lib/review-summary';
 import { dispatchMediaProviderJob } from '@/lib/media/jobs';
 import { MEDIA_JOB_ACTIONS, VIDEO_PROVIDER } from '@/lib/media/constants';
@@ -18,6 +22,11 @@ import {
   VideoModerationError,
 } from '@/lib/media/moderation';
 import { enqueueReviewMediaCleanup } from '@/lib/review-deletion';
+import {
+  IkasInstallationError,
+  requireActiveIkasStoreInstallationFence,
+} from '@/lib/ikas-installation-lifecycle';
+import { reportServerFailure } from '@/lib/server-failures';
 
 const REVIEW_NOT_FOUND = 'review-not-found';
 
@@ -25,8 +34,8 @@ async function compensatePublishedAwsReviewImages(manifests: unknown[], context:
   for (const manifest of manifests) {
     try {
       await revokeAwsReviewImagePublicVariants(manifest);
-    } catch (error) {
-      console.error(`${context} AWS image publish compensation failed:`, error instanceof Error ? error.message : error);
+    } catch {
+      reportServerFailure('admin_reviews_media_compensation_failed');
     }
   }
 }
@@ -37,10 +46,9 @@ async function compensatePublishedAwsReviewImages(manifests: unknown[], context:
  */
 export async function GET(request: Request) {
   try {
-    const user = getUserFromRequest(request);
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await authenticateIkasAdminRequest(request);
+    if (!auth.ok) return ikasAdminAuthenticationResponse(auth);
+    const user = auth.context.principal;
 
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
@@ -106,9 +114,9 @@ export async function GET(request: Request) {
       data: sanitizedReviews,
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     });
-  } catch (error) {
-    console.error('Error fetching reviews:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  } catch {
+    reportServerFailure('admin_reviews_list_failed');
+    return NextResponse.json({ error: 'admin_reviews_list_failed' }, { status: 500 });
   }
 }
 
@@ -117,10 +125,9 @@ export async function GET(request: Request) {
  */
 export async function DELETE(request: Request) {
   try {
-    const user = getUserFromRequest(request);
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await authenticateIkasAdminRequest(request);
+    if (!auth.ok) return ikasAdminAuthenticationResponse(auth);
+    const user = auth.context.principal;
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -130,6 +137,7 @@ export async function DELETE(request: Request) {
     }
     try {
       const jobs = await prisma.$transaction(async (tx) => {
+        await requireActiveIkasStoreInstallationFence(tx, user.merchantId, user);
         const existing = await getReviewForModerationUpdate(tx, id, user.merchantId);
         if (!existing) throw new Error(REVIEW_NOT_FOUND);
 
@@ -144,15 +152,18 @@ export async function DELETE(request: Request) {
       await Promise.all(jobs.map((job) => dispatchMediaProviderJob(job.id)));
       return NextResponse.json({ message: 'Review deleted' });
     } catch (error) {
+      if (error instanceof IkasInstallationError) {
+        return ikasAdminAuthorizationLostResponse();
+      }
       if (error instanceof Error && error.message !== REVIEW_NOT_FOUND) {
-        console.error('Error deleting review:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        reportServerFailure('admin_reviews_delete_failed');
+        return NextResponse.json({ error: 'admin_reviews_delete_failed' }, { status: 500 });
       }
       return NextResponse.json({ error: 'Review not found or unauthorized' }, { status: 404 });
     }
-  } catch (error) {
-    console.error('Error deleting review:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  } catch {
+    reportServerFailure('admin_reviews_delete_failed');
+    return NextResponse.json({ error: 'admin_reviews_delete_failed' }, { status: 500 });
   }
 }
 
@@ -161,10 +172,9 @@ export async function DELETE(request: Request) {
  */
 export async function PUT(request: Request) {
   try {
-    const user = getUserFromRequest(request);
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await authenticateIkasAdminRequest(request);
+    if (!auth.ok) return ikasAdminAuthenticationResponse(auth);
+    const user = auth.context.principal;
 
     const { id, status, merchantReply } = await request.json();
 
@@ -207,8 +217,8 @@ export async function PUT(request: Request) {
             awsImagePublishPreflightIds.add(item.id);
             awsImagePublishPreflightManifests.push(item.variantManifest);
           }
-        } catch (error) {
-          console.error('Error publishing AWS review images:', error instanceof Error ? error.message : error);
+        } catch {
+          reportServerFailure('admin_reviews_media_publish_failed');
           if (awsImagePublishPreflightManifests.length > 0) {
             await compensatePublishedAwsReviewImages(awsImagePublishPreflightManifests, 'Admin review update');
           }
@@ -219,6 +229,7 @@ export async function PUT(request: Request) {
 
     try {
       const result = await prisma.$transaction(async (tx) => {
+        await requireActiveIkasStoreInstallationFence(tx, user.merchantId, user);
         const existing = await getReviewForModerationUpdate(tx, id, user.merchantId);
         if (!existing) throw new Error(REVIEW_NOT_FOUND);
 
@@ -312,17 +323,20 @@ export async function PUT(request: Request) {
       if (awsImagePublishPreflightManifests.length > 0) {
         await compensatePublishedAwsReviewImages(awsImagePublishPreflightManifests, 'Admin review update');
       }
+      if (error instanceof IkasInstallationError) {
+        return ikasAdminAuthorizationLostResponse();
+      }
       if (error instanceof VideoModerationError) {
         return NextResponse.json({ error: 'Video henüz onaylanmaya hazır değil.' }, { status: 409 });
       }
       if (error instanceof Error && error.message !== REVIEW_NOT_FOUND) {
-        console.error('Error updating review:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        reportServerFailure('admin_reviews_update_failed');
+        return NextResponse.json({ error: 'admin_reviews_update_failed' }, { status: 500 });
       }
       return NextResponse.json({ error: 'Review not found or unauthorized' }, { status: 404 });
     }
-  } catch (error) {
-    console.error('Error updating review:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  } catch {
+    reportServerFailure('admin_reviews_update_failed');
+    return NextResponse.json({ error: 'admin_reviews_update_failed' }, { status: 500 });
   }
 }

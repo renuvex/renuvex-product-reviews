@@ -21,7 +21,7 @@ Accepted
 
 ## Date
 2026-05-05 (documenting inherited approach); amended 2026-07-28 for mandatory
-single-use OAuth state.
+single-use OAuth state and active-installation admin authorization.
 
 ## Context
 We need to:
@@ -42,6 +42,22 @@ We need to:
   state-less callback fails closed; no unbound code reaches token exchange.
 - Freeze canonical `storeName` and exact redirect URI in that transaction.
   Redis failure is fail-closed; no cookie-only compatibility fallback exists.
+- Accept admin credentials only as `Authorization: JWT <compact-token>`, verify
+  only HS256 with required scalar `aud`/`sub` and numeric `exp`/`iat`, then
+  resolve the exact active `IkasStoreInstallation` and `AuthToken` pair before
+  any admin/ikas handler proceeds.
+- Treat `CLIENT_SECRET` as required server configuration. Missing/blank secret
+  fails closed before JWT, OAuth, refresh, or webhook cryptography; production
+  build verifies presence without printing its value.
+- Carry installation generation/state version in the admin principal and
+  repeat that fence in the final local transaction after provider calls.
+  Admin authentication never creates or repairs lifecycle rows.
+- Resolve the active installation and exact OAuth token under the same
+  per-store advisory/row lock used by OAuth activation and uninstall. Persist
+  token refreshes with a refresh-token plus `updatedAt` revision
+  compare-and-set so stale in-flight refreshes cannot overwrite a newer
+  same-app reauthorization or concurrent refresh even when the provider does
+  not rotate the refresh-token value.
 - Define ikas operations in [src/lib/ikas-client/graphql-requests.ts](src/lib/ikas-client/graphql-requests.ts) using `gql`.
 - Generate typed client + types via **GraphQL Codegen** (`pnpm codegen`) into [src/lib/ikas-client/generated/graphql.ts](src/lib/ikas-client/generated/graphql.ts).
 - Wrap client construction in `getIkas(token)` ([src/helpers/api-helpers.ts](src/helpers/api-helpers.ts)) which wires `onCheckToken` for transparent refresh.
@@ -56,6 +72,12 @@ We need to:
 - The official state-bearing flow and the observed dashboard installation flow
   differ. Restarting authorization preserves the state boundary without
   accepting an unbound callback or reverting to cookie-only validation.
+- A valid signature proves only who signed the JWT. Exact active
+  installation/token lookup prevents an otherwise-valid JWT from surviving
+  uninstall or crossing a merchant/authorized-app boundary. Final transaction
+  fencing prevents provider-call races from recreating local state after
+  uninstall. The shared store lock prevents an auth context from mixing
+  lifecycle and token snapshots across a concurrent reauthorization.
 - Codegen gives us autocomplete and compile-time errors when ikas schema changes (rerun `pnpm codegen`).
 - Auto-inject on install removes the most common merchant friction point. Manual re-inject covers the edge cases (script deleted manually, ikas API hiccup at install time).
 - ikas MCP introspection is available and saves round trips to docs.
@@ -91,12 +113,28 @@ We need to:
 - OAuth scope includes `read_customers` for review-email consent checks; the
   remaining inherited write/inventory scope is still broader than this
   hardening decision and needs separate review.
+- Deploys fail before strict auth activation when the read-only exact-pair
+  verifier finds a token without its active installation or an active
+  installation without its exact token. An intended active installation that
+  has lost its token is repaired only by normal OAuth reauthorization. A
+  credential independently proven to belong to a legacy, non-target store with
+  no installation may be removed only through a separately approved,
+  conditional cleanup that preserves the intended active pair. Neither case
+  permits SQL backfill or request-time lazy activation. The verifier runs after
+  schema migrations so a clean or older database can first acquire the
+  required tables; it still gates application activation. On 2026-07-28 one
+  expired legacy orphan credential was removed under this rule and the
+  aggregate production result became zero drift.
 
 ## Related Source Files
 - [src/lib/ikas-client/](src/lib/ikas-client/)
 - [src/helpers/api-helpers.ts](src/helpers/api-helpers.ts)
 - [src/helpers/token-helpers.ts](src/helpers/token-helpers.ts)
 - [src/lib/oauth-state.ts](src/lib/oauth-state.ts)
+- [src/lib/auth-helpers.ts](src/lib/auth-helpers.ts)
+- [src/lib/ikas-client-secret.ts](src/lib/ikas-client-secret.ts)
+- [src/helpers/jwt-helpers.ts](src/helpers/jwt-helpers.ts)
+- [scripts/verify-ikas-installation-auth.mjs](scripts/verify-ikas-installation-auth.mjs)
 - [src/lib/session.ts](src/lib/session.ts)
 - [src/app/api/oauth/callback/ikas/route.ts](src/app/api/oauth/callback/ikas/route.ts)
 - [src/app/api/admin/inject-scripts/route.ts](src/app/api/admin/inject-scripts/route.ts)

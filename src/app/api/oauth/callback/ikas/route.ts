@@ -23,8 +23,15 @@ import { ensureStorefrontScripts } from '@/lib/storefront-scripts';
 import { buildProductWebhookEndpoint, registerProductWebhooks, syncAllProductsForStore } from '@/lib/product-snapshots';
 import { isReviewEmailEnabled } from '@/lib/review-email/config';
 import { buildOrderWebhookEndpoint, registerOrderWebhooks } from '@/lib/review-email/ikas-orders';
-import { activateIkasStoreInstallation } from '@/lib/ikas-installation-lifecycle';
+import {
+  activateIkasStoreInstallation,
+  requireActiveIkasStoreInstallationFence,
+} from '@/lib/ikas-installation-lifecycle';
 import { updateReviewEmailWebhookStateForInstallation } from '@/lib/review-email/settings';
+import {
+  getRequiredIkasClientSecret,
+  IkasClientSecretConfigurationError,
+} from '@/lib/ikas-client-secret';
 
 const callbackSchema = z.object({
   code: z.string().min(1, 'Authorization code is required'),
@@ -60,7 +67,8 @@ export async function GET(request: NextRequest) {
     const { code, storeName, state, signature } = validation.data;
 
     // Validate code signature
-    if (signature && !TokenHelpers.validateCodeSignature(code, signature, config.oauth.clientSecret!)) {
+    const clientSecret = getRequiredIkasClientSecret();
+    if (signature && !TokenHelpers.validateCodeSignature(code, signature, clientSecret)) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
@@ -120,7 +128,7 @@ export async function GET(request: NextRequest) {
       {
         code: code as string,
         client_id: config.oauth.clientId!,
-        client_secret: config.oauth.clientSecret!,
+        client_secret: clientSecret,
         redirect_uri: oauthTransaction.redirectUri,
       },
       {
@@ -183,18 +191,29 @@ export async function GET(request: NextRequest) {
 
     // Replace the merchant token and activate a new installation generation in
     // one transaction so stale uninstall events cannot target the new install.
-    await activateIkasStoreInstallation(token);
+    const installation = await activateIkasStoreInstallation(token);
+    const installationFence = {
+      authorizedAppId,
+      generation: installation.generation,
+      stateVersion: installation.stateVersion,
+    };
 
     // Ensure storeSettings record exists for this merchant
-    await prisma.storeSettings.upsert({
-      where: { storeId: merchantId },
-      update: {},
-      create: { storeId: merchantId },
+    await prisma.$transaction(async (tx) => {
+      await requireActiveIkasStoreInstallationFence(tx, merchantId, installationFence);
+      await tx.storeSettings.upsert({
+        where: { storeId: merchantId },
+        update: {},
+        create: { storeId: merchantId },
+      });
     });
 
     // Auto-inject widget script into all storefronts using non-destructive upsert.
     try {
-      await ensureStorefrontScripts(ikas, merchantId, 'install', { scriptListClient: getIkasV1(token) });
+      await ensureStorefrontScripts(ikas, merchantId, 'install', {
+        scriptListClient: getIkasV1(token),
+        installationFence,
+      });
     } catch (scriptError) {
       console.error('Widget script injection failed:', scriptError);
     }
@@ -250,7 +269,7 @@ export async function GET(request: NextRequest) {
     // delay or fail the install; webhooks + /api/admin/sync-products recover misses.
     after(async () => {
       try {
-        await syncAllProductsForStore(ikas, merchantId);
+        await syncAllProductsForStore(ikas, merchantId, installationFence);
       } catch (productSyncError) {
         console.error('Initial product snapshot sync failed:', productSyncError);
       }
@@ -275,6 +294,10 @@ export async function GET(request: NextRequest) {
     response.headers.set('Referrer-Policy', 'no-referrer');
     return response;
   } catch (error) {
+    if (error instanceof IkasClientSecretConfigurationError) {
+      console.error('[oauth-callback] client_secret_not_configured');
+      return NextResponse.json({ error: { statusCode: 503, message: 'Authorization temporarily unavailable' } }, { status: 503 });
+    }
     if (error instanceof OAuthStateStoreError) {
       console.error('[oauth-callback] oauth_state_store_unavailable');
       return NextResponse.json({ error: { statusCode: 503, message: 'Authorization temporarily unavailable' } }, { status: 503 });

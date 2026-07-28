@@ -88,7 +88,9 @@ Inventory of pre-existing AI/agent instruction files and ikas CLI configuration 
 - Reject PRs that introduce raw GraphQL outside `graphql-requests.ts`.
 
 ### API conventions (enforced)
-- API routes under `src/app/api/*` validate session via `getUserFromRequest` and fetch the OAuth token via `AuthTokenManager`.
+- JWT-protected routes under `src/app/api/admin/*` and `src/app/api/ikas/*` call `authenticateIkasAdminRequest`.
+- The shared boundary requires a strict AppBridge JWT, exact active installation, and exact matching OAuth token; handlers use the returned principal and token context.
+- Do not reintroduce JWT-only authorization, broad `authorizedAppId` token lookup, or request-time installation repair.
 - **Never call ikas APIs from the browser.** Always proxy through server routes.
 - Keep UI logic in `src/components/*`; avoid business logic in pages.
 - Standard response shape: `{ data: { ...yourData } }` (or `{ error }` with status).
@@ -106,9 +108,9 @@ Inventory of pre-existing AI/agent instruction files and ikas CLI configuration 
 
 #### Backend
 1. Create endpoint under `/api/ikas/*` for ikas-related operations.
-2. `getUserFromRequest(request)` to extract `authorizedAppId` and `merchantId`.
-3. `AuthTokenManager.get(authorizedAppId)` for the OAuth token.
-4. `getIkas(authToken)` to build the GraphQL client.
+2. Call `authenticateIkasAdminRequest(request)` and return its fixed failure response when authentication fails.
+3. Use `auth.context.principal` for tenant scope and `auth.context.authToken` for the exact-pair OAuth token.
+4. Call `getIkas(auth.context.authToken)` to build the GraphQL client.
 5. Return `{ data: { ...response.data } }` on success; `{ error }` with status on failure.
 
 #### Adding a new iframe endpoint
@@ -120,6 +122,9 @@ Inventory of pre-existing AI/agent instruction files and ikas CLI configuration 
 - `getIkas` uses `onCheckToken` to auto-refresh expired tokens. Don't expose tokens in responses or logs.
 - TokenHelpers caches tokens in `sessionStorage` with expiration validation.
 - JWT carries `authorizedAppId` (aud) and `merchantId` (sub).
+- JWT verification accepts only HS256 and requires scalar `aud`/`sub` plus numeric `exp`/`iat`.
+- Missing or blank `CLIENT_SECRET` fails closed through the server-only required-secret accessor.
+- A valid signature alone is not authorization: the exact installation must be active and the exact OAuth token pair must exist.
 - OAuth callback validates a supplied HMAC-SHA256 code signature via
   `TokenHelpers.validateCodeSignature(code, signature, clientSecret)` before
   consuming mandatory state. Signature remains optional until a separate

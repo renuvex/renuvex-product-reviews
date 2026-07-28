@@ -116,7 +116,7 @@ See [[Auth_And_Installation_Flow]] for full trace.
 
 ## Cross-cutting concerns
 
-- **Auth boundary** at `getUserFromRequest`. Public APIs are CORS-open and rate-limited by IP.
+- **Auth boundary** at `authenticateIkasAdminRequest`: strict HS256 AppBridge JWT plus exact active installation and matching OAuth token. Mutation paths repeat the installation generation/state fence in their final transaction. Public APIs are CORS-open and rate-limited by IP.
 - **Rate limit / abuse** via Upstash Redis (incr+expire pattern). Detail in [[Security_And_Rate_Limits]].
 - **Caching** via Vercel edge. Detail in [[Caching_And_Performance]].
 - **Image lifecycle**: client uploads directly to S3; `ReviewMedia` stores AWS variant manifests and `Review.images` is compatibility-only; daily maintenance expires abandoned pending uploads and monthly cleanup scans AWS object families from DB evidence.

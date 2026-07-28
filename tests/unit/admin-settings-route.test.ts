@@ -1,19 +1,71 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const prismaMock = vi.hoisted(() => ({
-  widgetSettings: { findMany: vi.fn() },
+  $transaction: vi.fn(),
+  widgetSettings: { findMany: vi.fn(), upsert: vi.fn() },
 }));
-const authMock = vi.hoisted(() => ({ getUserFromRequest: vi.fn() }));
+const authMock = vi.hoisted(() => ({
+  authenticateIkasAdminRequest: vi.fn(),
+  ikasAdminAuthorizationLostResponse: vi.fn(),
+  ikasAdminAuthenticationResponse: vi.fn(),
+}));
 const accessMock = vi.hoisted(() => ({ getVideoFeatureAccess: vi.fn() }));
+const lifecycleMock = vi.hoisted(() => ({ requireFence: vi.fn() }));
+const themeMock = vi.hoisted(() => ({ sync: vi.fn() }));
+const afterMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }));
 vi.mock('@/lib/auth-helpers', () => authMock);
 vi.mock('@/lib/media/access', () => accessMock);
+vi.mock('@/lib/ikas-installation-lifecycle', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/ikas-installation-lifecycle')>();
+  return {
+    ...actual,
+    requireActiveIkasStoreInstallationFence: lifecycleMock.requireFence,
+  };
+});
+vi.mock('@/lib/storefront-theme-sync', () => ({
+  syncStorefrontThemeForToken: themeMock.sync,
+}));
+vi.mock('next/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('next/server')>();
+  return { ...actual, after: afterMock };
+});
 
 beforeEach(() => {
   vi.resetModules();
   vi.clearAllMocks();
-  authMock.getUserFromRequest.mockReturnValue({ merchantId: 'store-1', authorizedAppId: 'app-1' });
+  authMock.authenticateIkasAdminRequest.mockResolvedValue({
+    ok: true,
+    context: {
+      principal: {
+        merchantId: 'store-1',
+        authorizedAppId: 'app-1',
+        generation: 1,
+        stateVersion: 1,
+      },
+      authToken: {},
+    },
+  });
+  authMock.ikasAdminAuthorizationLostResponse.mockImplementation(() => new Response(
+    JSON.stringify({ error: 'unauthorized' }),
+    { status: 401, headers: { 'content-type': 'application/json' } },
+  ));
+  prismaMock.$transaction.mockImplementation(async (callback) => callback({
+    widgetSettings: prismaMock.widgetSettings,
+  }));
+  lifecycleMock.requireFence.mockResolvedValue({
+    storeId: 'store-1',
+    authorizedAppId: 'app-1',
+    generation: 1,
+    stateVersion: 1,
+    status: 'active',
+  });
+  prismaMock.widgetSettings.upsert.mockResolvedValue({
+    storeId: 'store-1',
+    widgetId: 'reviews',
+    settings: { videoReviewsEnabled: true },
+  });
   prismaMock.widgetSettings.findMany.mockResolvedValue([
     { widgetId: 'reviews', settings: { videoReviewsEnabled: true } },
   ]);
@@ -46,5 +98,50 @@ describe('GET /api/admin/settings', () => {
       effective: false,
       reason: 'quota_exceeded',
     });
+  });
+});
+
+describe('PUT /api/admin/settings', () => {
+  it('rechecks the installation fence in the final settings transaction', async () => {
+    const { PUT } = await import('@/app/api/admin/settings/route');
+    const response = await PUT(new Request('https://app.test/api/admin/settings', {
+      method: 'PUT',
+      body: JSON.stringify({
+        widgetId: 'reviews',
+        settings: { videoReviewsEnabled: true },
+      }),
+    }));
+
+    expect(response.status).toBe(200);
+    expect(lifecycleMock.requireFence).toHaveBeenCalledWith(
+      expect.anything(),
+      'store-1',
+      expect.objectContaining({
+        authorizedAppId: 'app-1',
+        generation: 1,
+        stateVersion: 1,
+      }),
+    );
+    expect(prismaMock.widgetSettings.upsert).toHaveBeenCalledOnce();
+  });
+
+  it('returns unauthorized when uninstall wins before settings persistence', async () => {
+    const { IkasInstallationError } = await import('@/lib/ikas-installation-lifecycle');
+    lifecycleMock.requireFence.mockRejectedValueOnce(
+      new IkasInstallationError('ikas_installation_inactive'),
+    );
+    const { PUT } = await import('@/app/api/admin/settings/route');
+
+    const response = await PUT(new Request('https://app.test/api/admin/settings', {
+      method: 'PUT',
+      body: JSON.stringify({
+        widgetId: 'reviews',
+        settings: { videoReviewsEnabled: true },
+      }),
+    }));
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({ error: 'unauthorized' });
+    expect(prismaMock.widgetSettings.upsert).not.toHaveBeenCalled();
   });
 });

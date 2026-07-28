@@ -1,14 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  getUserFromRequest: vi.fn(),
+  authenticateIkasAdminRequest: vi.fn(),
   checkFixedWindowRateLimit: vi.fn(),
   createOrResume: vi.fn(),
   execute: vi.fn(),
   getRun: vi.fn(),
 }));
 
-vi.mock('@/lib/auth-helpers', () => ({ getUserFromRequest: mocks.getUserFromRequest }));
+vi.mock('@/lib/auth-helpers', () => ({
+  authenticateIkasAdminRequest: mocks.authenticateIkasAdminRequest,
+}));
 vi.mock('@/lib/public-rate-limit', () => ({ checkFixedWindowRateLimit: mocks.checkFixedWindowRateLimit }));
 vi.mock('@/lib/prisma', () => ({ prisma: {} }));
 vi.mock('@/lib/review-email/data-subject', async (importOriginal) => {
@@ -35,7 +37,18 @@ function request(body: unknown, idempotencyKey = '11111111-1111-4111-8111-111111
 describe('review email data-subject route', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.getUserFromRequest.mockReturnValue({ merchantId: 'store-1', authorizedAppId: 'app-1' });
+    mocks.authenticateIkasAdminRequest.mockResolvedValue({
+      ok: true,
+      context: {
+        principal: {
+          merchantId: 'store-1',
+          authorizedAppId: 'app-1',
+          generation: 1,
+          stateVersion: 1,
+        },
+        authToken: {},
+      },
+    });
     mocks.checkFixedWindowRateLimit.mockResolvedValue({ allowed: true, retryAfterSec: 0 });
     mocks.createOrResume.mockResolvedValue({
       run: { id: '22222222-2222-4222-8222-222222222222' },

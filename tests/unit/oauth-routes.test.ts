@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   getIkas: vi.fn(),
   getIkasV1: vi.fn(),
   activateInstallation: vi.fn(),
+  requireInstallationFence: vi.fn(),
   after: vi.fn(),
   storeSettingsUpsert: vi.fn(),
   ensureStorefrontScripts: vi.fn(),
@@ -77,6 +78,11 @@ vi.mock('@/helpers/token-helpers', () => ({
 
 vi.mock('@/lib/prisma', () => ({
   prisma: {
+    $transaction: vi.fn(async (callback: (tx: unknown) => unknown) =>
+      callback({
+        storeSettings: { upsert: mocks.storeSettingsUpsert },
+      }),
+    ),
     storeSettings: { upsert: mocks.storeSettingsUpsert },
     reviewEmailSettings: { findUnique: vi.fn() },
   },
@@ -103,6 +109,7 @@ vi.mock('@/lib/review-email/ikas-orders', () => ({
 
 vi.mock('@/lib/ikas-installation-lifecycle', () => ({
   activateIkasStoreInstallation: mocks.activateInstallation,
+  requireActiveIkasStoreInstallationFence: mocks.requireInstallationFence,
 }));
 
 vi.mock('@/lib/review-email/settings', () => ({
@@ -111,6 +118,7 @@ vi.mock('@/lib/review-email/settings', () => ({
 
 const originalRedisUrl = process.env.KV_REST_API_URL;
 const originalRedisToken = process.env.KV_REST_API_TOKEN;
+const originalClientSecret = process.env.CLIENT_SECRET;
 const records = new Map<string, unknown>();
 const session: {
   oauthBrowserBinding?: string;
@@ -159,6 +167,7 @@ beforeEach(() => {
   delete session.expiresAt;
   process.env.KV_REST_API_URL = 'https://redis.example.test';
   process.env.KV_REST_API_TOKEN = 'test-token';
+  process.env.CLIENT_SECRET = 'client-secret';
 
   mocks.getSession.mockResolvedValue(session);
   mocks.getOAuthUrl.mockImplementation(({ storeName }: { storeName: string }) => `https://${storeName}.myikas.com/api/admin/oauth`);
@@ -166,6 +175,16 @@ beforeEach(() => {
   mocks.getTokenWithAuthorizationCode.mockResolvedValue({ data: null });
   mocks.validateCodeSignature.mockImplementation((_code: string, signature: string) => signature === 'valid-signature');
   mocks.getIkasV1.mockReturnValue({ kind: 'v1-client' });
+  mocks.activateInstallation.mockResolvedValue({
+    generation: 1,
+    stateVersion: 1,
+    status: 'active',
+  });
+  mocks.requireInstallationFence.mockResolvedValue({
+    generation: 1,
+    stateVersion: 1,
+    status: 'active',
+  });
   mocks.isReviewEmailEnabled.mockReturnValue(false);
   mocks.redisSet.mockImplementation(async (key: string, value: unknown, options?: { nx?: boolean }) => {
     if (options?.nx && records.has(key)) return null;
@@ -185,6 +204,8 @@ afterAll(() => {
   else process.env.KV_REST_API_URL = originalRedisUrl;
   if (originalRedisToken === undefined) delete process.env.KV_REST_API_TOKEN;
   else process.env.KV_REST_API_TOKEN = originalRedisToken;
+  if (originalClientSecret === undefined) delete process.env.CLIENT_SECRET;
+  else process.env.CLIENT_SECRET = originalClientSecret;
 });
 
 describe('ikas OAuth route state contract', () => {

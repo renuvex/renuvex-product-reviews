@@ -9,7 +9,7 @@ const prismaMock = vi.hoisted(() => ({
   },
 }));
 
-const getUserFromRequestMock = vi.hoisted(() => vi.fn());
+const authenticateIkasAdminRequestMock = vi.hoisted(() => vi.fn());
 const signMuxPlaybackTokenMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/prisma', () => ({
@@ -17,7 +17,8 @@ vi.mock('@/lib/prisma', () => ({
 }));
 
 vi.mock('@/lib/auth-helpers', () => ({
-  getUserFromRequest: getUserFromRequestMock,
+  authenticateIkasAdminRequest: authenticateIkasAdminRequestMock,
+  ikasAdminAuthenticationResponse: vi.fn(),
 }));
 
 vi.mock('@/lib/media/providers/mux', () => ({
@@ -30,7 +31,18 @@ describe('/api/admin/reviews/video-playback', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
-    getUserFromRequestMock.mockReturnValue({ merchantId: 'store-1', authorizedAppId: 'app-1' });
+    authenticateIkasAdminRequestMock.mockResolvedValue({
+      ok: true,
+      context: {
+        principal: {
+          merchantId: 'store-1',
+          authorizedAppId: 'app-1',
+          generation: 1,
+          stateVersion: 1,
+        },
+        authToken: {},
+      },
+    });
   });
 
   it('returns Mux Player signed playback attributes without caching', async () => {

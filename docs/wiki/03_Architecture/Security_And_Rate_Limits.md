@@ -20,6 +20,9 @@ source_files:
   - "src/lib/prisma.ts"
   - "src/lib/public-rate-limit.ts"
   - "src/lib/oauth-state.ts"
+  - "src/lib/auth-helpers.ts"
+  - "src/lib/ikas-client-secret.ts"
+  - "src/lib/server-failures.ts"
   - "src/lib/session.ts"
   - "src/app/api/oauth/authorize/ikas/route.ts"
   - "src/app/api/oauth/callback/ikas/route.ts"
@@ -75,8 +78,8 @@ Trust boundaries: ikas Admin (signed OAuth) -> server. Browser admin (JWT) -> ad
 | Surface | Trust gate | Tenant scope |
 |---|---|---|
 | `/api/oauth/callback/ikas` | Token exchange requires browser-bound, single-use Redis state; a state-less dashboard callback can only discard its code and claim one bounded restart; supplied HMAC-SHA256 code signature is an additional control | frozen ikas store context, then merchant from token exchange |
-| `/api/admin/*` | HS256 JWT (`getUserFromRequest`) | `merchantId` from JWT subject |
-| `/api/ikas/*` | HS256 JWT (same) | same |
+| `/api/admin/*` | Exact `JWT` header, HS256 + required claims, exact active installation/OAuth-token pair | `sub`, `aud`, installation and token must all agree |
+| JWT-gated `/api/ikas/*` | Same active-admin principal; lifecycle callbacks/webhooks remain separate boundaries | same exact pair and installation generation |
 | Storefront `/api/public/*` | None; CORS-open where documented and write routes add per-route checks | `storeId` from query/body, verified per route where writes happen |
 | `/request` + `/api/public/review-request` | One-time fragment token -> host-only HttpOnly session; isolated review host | Request/token/session tenant ids are server-owned; query tokens are rejected |
 | `/request` + `/api/public/review-center/*` | Batch fragment token, exact host, private/no-store responses, HttpOnly session; session/submit/skip require same origin while one-click unsubscribe is opaque-token scoped | Batch/session membership owns tenant, product item, and media scope; body/query cannot override store/product |
@@ -182,12 +185,17 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 - Admin API uses JWT (not cookies), so traditional CSRF doesn't apply.
 
 ## Secrets handling
-- `CLIENT_SECRET` is used for ikas OAuth and AppBridge JWT verification.
+- `CLIENT_SECRET` is required through one server accessor for ikas OAuth,
+  AppBridge JWT verification, refresh, and webhook signatures. Blank/missing
+  configuration fails closed; production build checks presence before DB
+  migration and never prints the value.
 - `SECRET_COOKIE_PASSWORD` for iron-session.
 - `REVIEW_CURSOR_SECRET` signs public review cursors (HMAC-SHA256); server-only and separate from `CLIENT_SECRET`.
 - AWS review-image private key material, `KV_REST_API_TOKEN`, `CRON_SECRET` — server-only. OAuth state uses the same Redis credentials but a dedicated fail-closed client and hashed key namespace.
 - Review-email hash/encryption secrets, versioned token key ring, and session secret are server-only. Never put raw review-request tokens, sessions, recipient email, or rendered content in logs, Sentry, Redis keys, DB event payloads, or future queue messages.
-- ⚠️ Never log secrets or full tokens. Code uses `console.error('[scope] ERROR', err)` patterns — keep err objects from leaking sensitive headers.
+- Never log secrets or full tokens. Auth and public-review GET/POST failure paths report
+  only allowlisted synthetic error codes and static tags; raw exceptions do
+  not enter responses, console, or Sentry.
 - OAuth completion redirects directly to a server-built ikas Admin target with
   `303`, `Cache-Control: no-store`, and `Referrer-Policy: no-referrer`.
   Bearer JWTs are obtained through AppBridge and are never placed in OAuth
@@ -222,7 +230,13 @@ Official references:
 - IP rate limit can be circumvented with rotating IPs
 - `Access-Control-Allow-Origin: *` on POST endpoints
 - No bot detection / hCaptcha on public POST
-- JWT verification falls back to an empty string if `CLIENT_SECRET` is missing
+- Strict admin auth activation remains gated by the aggregate exact
+  installation/token verifier. The production gate currently returns zero
+  drift. A target active installation that has lost its token is repaired by
+  normal OAuth reauthorization. A credential independently proven to belong
+  to a legacy, non-target store with no installation may instead be removed by
+  a separately approved conditional cleanup; it must never be converted into
+  an active installation merely to satisfy the gate.
 - Storefront script lifecycle deliberately avoids zero-argument `deleteStorefrontJSScript()` because active ikas contract semantics are ambiguous.
 - Most public app tables have RLS disabled. Current evidence did not show direct `anon`/`authenticated` Data API grants, but RLS/default-grants hardening remains a public-launch blocker.
 

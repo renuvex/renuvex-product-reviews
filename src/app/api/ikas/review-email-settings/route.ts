@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromRequest } from '@/lib/auth-helpers';
+import {
+  authenticateIkasAdminRequest,
+  ikasAdminAuthenticationResponse,
+} from '@/lib/auth-helpers';
 import { prisma } from '@/lib/prisma';
 import {
   buildReviewEmailSettingsWrite,
@@ -9,30 +12,31 @@ import {
   ReviewEmailSettingsError,
   serializeReviewEmailSettings,
 } from '@/lib/review-email/settings';
-import { AuthTokenManager } from '@/models/auth-token/manager';
 import { getIkas } from '@/helpers/api-helpers';
 import { buildOrderWebhookEndpoint, registerOrderWebhooks } from '@/lib/review-email/ikas-orders';
-import { ensureActiveIkasStoreInstallation, IkasInstallationError } from '@/lib/ikas-installation-lifecycle';
+import { IkasInstallationError } from '@/lib/ikas-installation-lifecycle';
 import { normalizeReviewEmailFailure, reportReviewEmailFailure } from '@/lib/review-email/failures';
+import { reportServerFailure } from '@/lib/server-failures';
 
 export async function GET(request: NextRequest) {
-  const user = getUserFromRequest(request);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    const auth = await authenticateIkasAdminRequest(request);
+    if (!auth.ok) return ikasAdminAuthenticationResponse(auth);
+    const user = auth.context.principal;
 
-  const settings = await getEffectiveReviewEmailSettings(prisma, user.merchantId);
-  return NextResponse.json({ data: serializeReviewEmailSettings(settings) });
+    const settings = await getEffectiveReviewEmailSettings(prisma, user.merchantId);
+    return NextResponse.json({ data: serializeReviewEmailSettings(settings) });
+  } catch {
+    reportServerFailure('review_email_settings_read_failed');
+    return NextResponse.json({ error: 'review_email_settings_read_failed' }, { status: 500 });
+  }
 }
 
 export async function PUT(request: NextRequest) {
   try {
-    const user = getUserFromRequest(request);
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    const authToken = await AuthTokenManager.get(user.authorizedAppId);
-    if (!authToken) {
-      throw new ReviewEmailSettingsError('auth_token_not_found', 'Auth token not found', 409);
-    }
-    await ensureActiveIkasStoreInstallation(user.merchantId, user.authorizedAppId);
+    const auth = await authenticateIkasAdminRequest(request);
+    if (!auth.ok) return ikasAdminAuthenticationResponse(auth);
+    const { principal: user, authToken } = auth.context;
 
     const body = await request.json();
     const data = buildReviewEmailSettingsWrite(body);

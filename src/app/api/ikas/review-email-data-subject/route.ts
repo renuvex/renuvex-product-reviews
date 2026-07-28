@@ -1,7 +1,9 @@
 import { createHash } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getUserFromRequest } from '@/lib/auth-helpers';
+import {
+  authenticateIkasAdminRequest,
+} from '@/lib/auth-helpers';
 import { prisma } from '@/lib/prisma';
 import { checkFixedWindowRateLimit } from '@/lib/public-rate-limit';
 import { IkasInstallationError } from '@/lib/ikas-installation-lifecycle';
@@ -62,8 +64,9 @@ function errorResponse(error: unknown): NextResponse {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = getUserFromRequest(request);
-    if (!user) return privateResponse({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await authenticateIkasAdminRequest(request);
+    if (!auth.ok) return privateResponse({ error: auth.code }, { status: auth.status });
+    const user = auth.context.principal;
     const limited = await enforceMerchantRateLimit(user.merchantId);
     if (limited) return limited;
 
@@ -89,8 +92,9 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const user = getUserFromRequest(request);
-    if (!user) return privateResponse({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await authenticateIkasAdminRequest(request);
+    if (!auth.ok) return privateResponse({ error: auth.code }, { status: auth.status });
+    const user = auth.context.principal;
     const limited = await enforceMerchantRateLimit(user.merchantId);
     if (limited) return limited;
     const runId = new URL(request.url).searchParams.get('runId')?.trim() ?? '';

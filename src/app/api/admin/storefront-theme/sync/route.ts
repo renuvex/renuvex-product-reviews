@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
-import { getUserFromRequest } from '@/lib/auth-helpers';
+import {
+  authenticateIkasAdminRequest,
+  ikasAdminAuthorizationLostResponse,
+  ikasAdminAuthenticationResponse,
+} from '@/lib/auth-helpers';
 import { syncStorefrontThemeForToken, type StorefrontThemeSyncOptions } from '@/lib/storefront-theme-sync';
-import { AuthTokenManager } from '@/models/auth-token/manager';
+import { reportServerFailure } from '@/lib/server-failures';
+import { IkasInstallationError } from '@/lib/ikas-installation-lifecycle';
 
 type SyncRequestBody = {
   reason?: StorefrontThemeSyncOptions['reason'];
@@ -16,23 +21,27 @@ function getReason(value: unknown): StorefrontThemeSyncOptions['reason'] {
 
 export async function POST(request: Request) {
   try {
-    const user = getUserFromRequest(request);
-    if (!user) return NextResponse.json({ error: 'Yetkisiz erisim' }, { status: 401 });
-
-    const authToken = await AuthTokenManager.get(user.authorizedAppId);
-    if (!authToken) return NextResponse.json({ error: 'Auth token bulunamadi' }, { status: 404 });
+    const auth = await authenticateIkasAdminRequest(request);
+    if (!auth.ok) return ikasAdminAuthenticationResponse(auth);
+    const { authToken, principal } = auth.context;
 
     const body = (await request.json().catch(() => ({}))) as SyncRequestBody;
-    const result = await syncStorefrontThemeForToken(authToken, {
-      reason: getReason(body.reason),
-      promotePending: body.forceVerify === true,
-      persistUnchangedCheck: false,
-    });
+    const result = await syncStorefrontThemeForToken(
+      authToken,
+      {
+        reason: getReason(body.reason),
+        promotePending: body.forceVerify === true,
+        persistUnchangedCheck: false,
+      },
+      principal,
+    );
 
     return NextResponse.json({ data: result });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'unknown';
-    console.error('[storefront-theme-sync] ERROR:', error);
-    return NextResponse.json({ error: message }, { status: 500 });
+    if (error instanceof IkasInstallationError) {
+      return ikasAdminAuthorizationLostResponse();
+    }
+    reportServerFailure('storefront_theme_sync_failed');
+    return NextResponse.json({ error: 'storefront_theme_sync_failed' }, { status: 500 });
   }
 }

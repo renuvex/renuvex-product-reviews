@@ -1,18 +1,20 @@
-import { config } from '@/globals/config';
 import { getIkas } from '@/helpers/api-helpers';
 import { AuthTokenManager } from '@/models/auth-token/manager';
+import { prisma } from '@/lib/prisma';
 import { getProductIdFromWebhookData, PRODUCT_WEBHOOK_SCOPES, syncSingleProductForStore, type ProductLike } from '@/lib/product-snapshots';
 import { getParsedIkasWebhookData, validateIkasWebhookSignature, type IkasWebhook } from '@ikas/admin-api-client';
 import { NextResponse } from 'next/server';
+import {
+  getRequiredIkasClientSecret,
+  IkasClientSecretConfigurationError,
+} from '@/lib/ikas-client-secret';
+import { resolveActiveIkasInstallationTokenPair } from '@/lib/ikas-installation-lifecycle';
 
 const PRODUCT_WEBHOOK_SCOPE_SET = new Set<string>(PRODUCT_WEBHOOK_SCOPES);
 
 export async function POST(request: Request) {
   try {
-    if (!config.oauth.clientSecret) {
-      console.error('[ikas-product-webhook] Missing CLIENT_SECRET');
-      return NextResponse.json({ error: 'Webhook validation is not configured' }, { status: 500 });
-    }
+    const clientSecret = getRequiredIkasClientSecret();
 
     const rawBody = await request.text();
     let webhook: IkasWebhook;
@@ -22,7 +24,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
     }
 
-    if (!validateIkasWebhookSignature(webhook, config.oauth.clientSecret)) {
+    if (!validateIkasWebhookSignature(webhook, clientSecret)) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
@@ -30,25 +32,47 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, ignored: true });
     }
 
-    const parsedData = getParsedIkasWebhookData(webhook, config.oauth.clientSecret);
+    const parsedData = getParsedIkasWebhookData(webhook, clientSecret);
     const productId = getProductIdFromWebhookData(parsedData);
     if (!productId) {
       console.warn('[ikas-product-webhook] Missing product id', { scope: webhook.scope, merchantId: webhook.merchantId });
       return NextResponse.json({ ok: true, skipped: 'missing_product_id' });
     }
 
-    const authToken = await AuthTokenManager.get(webhook.authorizedAppId);
-    if (!authToken) {
-      console.warn('[ikas-product-webhook] Auth token not found', { merchantId: webhook.merchantId, authorizedAppId: webhook.authorizedAppId });
+    const pair = await prisma.$transaction((tx) => resolveActiveIkasInstallationTokenPair(
+      tx,
+      webhook.merchantId,
+      webhook.authorizedAppId,
+    ));
+    if (pair.status === 'reauthorization_required') {
       return NextResponse.json({ ok: true, skipped: 'auth_token_not_found' });
     }
+    if (pair.status !== 'active') {
+      return NextResponse.json({ ok: true, skipped: 'ikas_installation_inactive' });
+    }
+    const authToken = AuthTokenManager.fromDatabaseRow(pair.authToken);
+    const installationFence = {
+      authorizedAppId: pair.installation.authorizedAppId,
+      generation: pair.installation.generation,
+      stateVersion: pair.installation.stateVersion,
+    };
 
     const ikas = getIkas(authToken);
-    await syncSingleProductForStore(ikas, webhook.merchantId, productId, parsedData as ProductLike);
+    await syncSingleProductForStore(
+      ikas,
+      webhook.merchantId,
+      productId,
+      parsedData as ProductLike,
+      installationFence,
+    );
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error('[ikas-product-webhook] ERROR:', error);
+    if (error instanceof IkasClientSecretConfigurationError) {
+      console.error('[ikas-product-webhook] client_secret_not_configured');
+      return NextResponse.json({ error: 'Webhook validation is not configured' }, { status: 503 });
+    }
+    console.error('[ikas-product-webhook] processing_failed');
     return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 });
   }
 }

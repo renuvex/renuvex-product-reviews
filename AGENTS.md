@@ -46,7 +46,10 @@
 5) For a query, call `ikasClient.queries.<YourQuery>()`; for a mutation, call `ikasClient.mutations.<YourMutation>(variables)`.
 
 ## Project Conventions
-- API routes under `src/app/api/*` must validate session and fetch the token via `getUserFromRequest` and `AuthTokenManager`.
+- JWT-gated admin/ikas routes must use `authenticateIkasAdminRequest()`.
+  Do not decode claims or fetch `AuthToken` independently: the shared boundary
+  verifies HS256 claims, the active installation generation, and the exact
+  `(authorizedAppId, merchantId)` OAuth token pair.
 - Do not call ikas APIs from the browser; always go through server routes.
 - Keep UI logic in components under `src/components/*`; avoid business logic in pages.
 
@@ -106,19 +109,18 @@ function MyIframePage() {
 
 ### Server-Side Pattern (Backend API)
 1. **Create API endpoint under `/api/ikas/*`** for ikas-related operations.
-2. **Validate JWT token** using `getUserFromRequest(request)` to extract `authorizedAppId` and `merchantId`.
-3. **Fetch OAuth token** from `AuthTokenManager.get(authorizedAppId)`.
-4. **Call ikas API** using `getIkas(authToken)` client.
-5. **Return data in standard format**: `{ data: { ...yourData } }`.
+2. **Authenticate the active installation** with `await authenticateIkasAdminRequest(request)`.
+3. **Use the returned exact OAuth token**; never perform a second app-only token lookup.
+4. **Call ikas API** using `getIkas(authToken)` and verify tenant identity in provider responses where available.
+5. **Fence final local writes** with `requireActiveIkasStoreInstallationFence()` after provider work.
+6. **Return data in standard format**: `{ data: { ...yourData } }`.
 
 ### Example Pattern:
 ```typescript
 export async function GET(request: NextRequest) {
-  const user = getUserFromRequest(request);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const authToken = await AuthTokenManager.get(user.authorizedAppId);
-  if (!authToken) return NextResponse.json({ error: 'Auth token not found' }, { status: 404 });
+  const auth = await authenticateIkasAdminRequest(request);
+  if (!auth.ok) return ikasAdminAuthenticationResponse(auth);
+  const { principal, authToken } = auth.context;
 
   const ikasClient = getIkas(authToken);
   const response = await ikasClient.queries.someQuery();
@@ -149,6 +151,13 @@ export async function GET(request: NextRequest) {
 - Use `onCheckToken` in `getIkas` to auto-refresh tokens. Do not expose tokens in responses or logs.
 - TokenHelpers automatically caches tokens in sessionStorage with expiration validation.
 - JWT tokens contain `authorizedAppId` (aud) and `merchantId` (sub) for user identification.
+- Admin JWT verification accepts only `Authorization: JWT <compact-token>` and
+  `HS256`, requires scalar `aud`/`sub` plus numeric `exp`/`iat`, and then
+  resolves an exact active installation/token pair. Missing `CLIENT_SECRET`
+  is a fail-closed configuration error; never restore empty-secret fallback.
+- Development identity bypass requires both dev identifiers and bypasses only
+  cryptographic verification. It never bypasses active installation/token
+  lookup.
 - **OAuth Callback State and Signature Validation**:
   - OAuth `state` is mandatory and is the login-CSRF boundary.
   - When ikas supplies a `signature`, use `TokenHelpers.validateCodeSignature(code, signature, clientSecret)` before state consumption. Do not make it mandatory without a separately verified provider-contract decision.

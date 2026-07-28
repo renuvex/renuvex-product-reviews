@@ -3,7 +3,7 @@ type: api
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-10
+updated: 2026-07-28
 tags:
   - api
   - design
@@ -23,7 +23,8 @@ Next.js App Router route handlers, partitioned by trust level: `/api/admin/*` (J
 ## Conventions
 
 ### Auth
-- Admin routes: first line `const user = getUserFromRequest(request); if (!user) return 401`. Tenant scoping uses `user.merchantId` (treated as `storeId`).
+- Admin and ikas routes call `authenticateIkasAdminRequest(request)`. Authentication requires a strict `Authorization: JWT <token>` header, an HS256 AppBridge JWT with scalar `aud`/`sub` and numeric `exp`/`iat`, an exact active `(authorizedAppId, storeId)` installation, and the matching OAuth token row. Tenant scoping uses the returned principal's `merchantId` (treated as `storeId`).
+- Invalid credentials and inactive or mismatched installations return the same `401 unauthorized`; a missing OAuth token for an otherwise active installation returns `409 reauthorization_required`; secret or auth-store failure returns `503 authentication_unavailable`.
 - Public routes: no JWT. Tenant identified by `storeId` query param (which equals `merchantId`, but is **not** secret — public knowledge from injected widget script). Don't ever trust client-supplied storeId for authorization decisions; only for read scoping.
 
 ### Response shape
@@ -51,7 +52,10 @@ See [[Backend_API_Map]] for the full list with descriptions.
 - `POST /api/public/reviews` is **not** idempotent — each call creates a new row. Rate limit and human friction are the only de-duplication.
 
 ## Error handling
-Server errors logged via `console.error('[scope] ERROR:', err)` and return `{ error: 'Sunucu hatası' }`. Don't leak stack traces to public clients.
+Public and admin routes return route-specific, fixed error codes. Unexpected failures pass through the fixed-code server reporter, which emits no raw exception, credential, SQL text, or connection detail to responses, console output, or Sentry. Don't add dynamic `error.message` responses or raw-exception logging.
+
+## Change Log
+- **2026-07-28** — Replaced the JWT-only route convention with the exact active-installation/token principal boundary and fixed-code failure reporting.
 
 ## Open patterns
 - **No request-id correlation header.** Useful to add when debugging cross-service incidents.

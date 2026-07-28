@@ -66,7 +66,9 @@ const redisMock = vi.hoisted(() => ({
   expire: vi.fn(),
 }));
 const sentryCaptureExceptionMock = vi.hoisted(() => vi.fn());
-const getUserFromRequestMock = vi.hoisted(() => vi.fn());
+const authenticateIkasAdminRequestMock = vi.hoisted(() => vi.fn());
+const ikasAdminAuthorizationLostResponseMock = vi.hoisted(() => vi.fn());
+const requireActiveInstallationFenceMock = vi.hoisted(() => vi.fn());
 const awsImageMock = vi.hoisted(() => ({
   AWS_REVIEW_IMAGE_PROVIDER: 'aws_s3',
   buildAwsReviewImagePublicId: (storeId: string, assetId: string) => `aws_s3:${storeId}:${assetId}`,
@@ -137,8 +139,18 @@ vi.mock('@/lib/prisma', () => ({
 }));
 
 vi.mock('@/lib/auth-helpers', () => ({
-  getUserFromRequest: getUserFromRequestMock,
+  authenticateIkasAdminRequest: authenticateIkasAdminRequestMock,
+  ikasAdminAuthorizationLostResponse: ikasAdminAuthorizationLostResponseMock,
+  ikasAdminAuthenticationResponse: vi.fn(),
 }));
+
+vi.mock('@/lib/ikas-installation-lifecycle', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/ikas-installation-lifecycle')>();
+  return {
+    ...actual,
+    requireActiveIkasStoreInstallationFence: requireActiveInstallationFenceMock,
+  };
+});
 
 vi.mock('@/lib/storefront-theme-sync', () => ({
   syncStorefrontThemeForToken: syncStorefrontThemeForTokenMock,
@@ -176,6 +188,30 @@ const AWS_IMAGE_CHECKSUM = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
 const AWS_REVIEW_IMAGE_URL = `https://media.renuvex.app/reviews/${AWS_IMAGE_ASSET_ID}/w1200.jpeg`;
 const SECOND_AWS_REVIEW_IMAGE_URL = `https://media.renuvex.app/reviews/${SECOND_AWS_IMAGE_ASSET_ID}/w1200.jpeg`;
 const AWS_REVIEW_IMAGE_THUMB_URL = `https://media.renuvex.app/reviews/${AWS_IMAGE_ASSET_ID}/thumb_320x427.webp`;
+
+function activeAdminAuth() {
+  return {
+    ok: true as const,
+    context: {
+      principal: {
+        merchantId: 'store-1',
+        authorizedAppId: 'app-1',
+        generation: 1,
+        stateVersion: 1,
+      },
+      authToken: {
+        merchantId: 'store-1',
+        authorizedAppId: 'app-1',
+        salesChannelId: null,
+        accessToken: 'access-token',
+        tokenType: 'Bearer',
+        expiresIn: 3600,
+        expireDate: '2026-07-28T12:00:00.000Z',
+        refreshToken: 'refresh-token',
+      },
+    },
+  };
+}
 
 function awsImageRef(overrides: Record<string, unknown> = {}) {
   return {
@@ -376,7 +412,26 @@ beforeEach(() => {
   redisMock.incr.mockReset();
   redisMock.expire.mockReset();
   sentryCaptureExceptionMock.mockReset();
-  getUserFromRequestMock.mockReset();
+  authenticateIkasAdminRequestMock.mockReset();
+  ikasAdminAuthorizationLostResponseMock.mockReset();
+  ikasAdminAuthorizationLostResponseMock.mockImplementation(() => new Response(
+    JSON.stringify({ error: 'unauthorized' }),
+    {
+      status: 401,
+      headers: {
+        'content-type': 'application/json',
+        'cache-control': 'private, no-store',
+      },
+    },
+  ));
+  requireActiveInstallationFenceMock.mockReset();
+  requireActiveInstallationFenceMock.mockResolvedValue({
+    storeId: 'store-1',
+    authorizedAppId: 'app-1',
+    generation: 1,
+    stateVersion: 1,
+    status: 'active',
+  });
   awsImageMock.createAwsReviewImageUploadIntent.mockReset();
   awsImageMock.validateAwsReviewImageOriginal.mockReset();
   awsImageMock.validateAwsReviewImageOriginal.mockResolvedValue(Buffer.from('image'));
@@ -866,6 +921,68 @@ describe('/api/public/reviews', () => {
     expect(prismaMock.review.count).not.toHaveBeenCalled();
     expect(prismaMock.review.groupBy).not.toHaveBeenCalled();
     expect(prismaMock.productReviewSummary.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('does not expose an unexpected storage failure in response, console, or Sentry', async () => {
+    const canary = 'postgres://user:secret@example.invalid/private';
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    prismaMock.review.findMany.mockRejectedValue(new Error(canary));
+    const { GET } = await import('@/app/api/public/reviews/route');
+
+    const response = await GET(new Request(
+      'https://app.test/api/public/reviews?storeId=store-1&productId=product-1',
+    ));
+    const body = await response.json();
+    const consoleOutput = JSON.stringify(consoleError.mock.calls);
+    const sentryOutput = JSON.stringify(sentryCaptureExceptionMock.mock.calls);
+
+    expect(response.status).toBe(500);
+    expect(response.headers.get('Cache-Control')).toBe('no-store');
+    expect(body).toEqual({ error: 'reviews_fetch_failed' });
+    expect(JSON.stringify(body)).not.toContain(canary);
+    expect(consoleOutput).not.toContain(canary);
+    expect(sentryOutput).not.toContain(canary);
+    expect(sentryCaptureExceptionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'public_reviews_fetch_failed' }),
+      expect.objectContaining({
+        tags: {
+          source: 'public-api',
+          route: 'reviews',
+          operation: 'list',
+        },
+      }),
+    );
+    consoleError.mockRestore();
+  });
+
+  it('does not expose an unexpected submit failure even when console reporting throws', async () => {
+    const canary = 'submit-storage-credential-canary';
+    setupVerifiedReviewTarget('manual');
+    prismaMock.$transaction.mockRejectedValue(new Error(canary));
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {
+      throw new Error('console-transport-failed');
+    });
+
+    const response = await postPublicReview(validReviewPayload());
+    const body = await response.json();
+    const sentryOutput = JSON.stringify(sentryCaptureExceptionMock.mock.calls);
+
+    expect(response.status).toBe(500);
+    expect(response.headers.get('Cache-Control')).toBe('no-store');
+    expect(body).toEqual({ error: 'reviews_submit_failed' });
+    expect(JSON.stringify(body)).not.toContain(canary);
+    expect(sentryOutput).not.toContain(canary);
+    expect(sentryCaptureExceptionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'public_reviews_submit_failed' }),
+      expect.objectContaining({
+        tags: {
+          source: 'public-api',
+          route: 'reviews',
+          operation: 'submit',
+        },
+      }),
+    );
+    consoleError.mockRestore();
   });
 
   it('returns approved reviews with rating distribution and pagination', async () => {
@@ -1701,7 +1818,7 @@ describe('/api/public/reviews', () => {
 
 describe('/api/admin/reviews', () => {
   it('updates product summary when a review becomes approved', async () => {
-    getUserFromRequestMock.mockReturnValue({ authorizedAppId: 'app-1', merchantId: 'store-1' });
+    authenticateIkasAdminRequestMock.mockResolvedValue(activeAdminAuth());
     prismaMock.review.findFirst.mockResolvedValue({
       id: 'review-1',
       storeId: 'store-1',
@@ -1737,6 +1854,15 @@ describe('/api/admin/reviews', () => {
     }));
 
     expect(response.status).toBe(200);
+    expect(requireActiveInstallationFenceMock).toHaveBeenCalledWith(
+      expect.anything(),
+      'store-1',
+      expect.objectContaining({
+        authorizedAppId: 'app-1',
+        generation: 1,
+        stateVersion: 1,
+      }),
+    );
     expect(prismaMock.reviewMedia.updateMany).toHaveBeenCalledWith({
       where: { reviewId: 'review-1' },
       data: { visible: true },
@@ -1760,7 +1886,7 @@ describe('/api/admin/reviews', () => {
   });
 
   it('does not touch product summary for merchant reply only updates', async () => {
-    getUserFromRequestMock.mockReturnValue({ authorizedAppId: 'app-1', merchantId: 'store-1' });
+    authenticateIkasAdminRequestMock.mockResolvedValue(activeAdminAuth());
     const review = {
       id: 'review-1',
       storeId: 'store-1',
@@ -1794,8 +1920,32 @@ describe('/api/admin/reviews', () => {
     expect(prismaMock.reviewMedia.updateMany).not.toHaveBeenCalled();
   });
 
+  it('returns unauthorized when uninstall wins before the final review mutation fence', async () => {
+    authenticateIkasAdminRequestMock.mockResolvedValue(activeAdminAuth());
+    const { IkasInstallationError } = await import('@/lib/ikas-installation-lifecycle');
+    requireActiveInstallationFenceMock.mockRejectedValueOnce(
+      new IkasInstallationError('ikas_installation_inactive'),
+    );
+    prismaMock.$transaction.mockImplementation(async (callback) => callback({
+      $queryRaw: prismaMock.$queryRaw,
+      review: prismaMock.review,
+      reviewMedia: prismaMock.reviewMedia,
+      productReviewSummary: prismaMock.productReviewSummary,
+    }));
+    const { PUT } = await import('@/app/api/admin/reviews/route');
+
+    const response = await PUT(new Request('https://app.test/api/admin/reviews', {
+      method: 'PUT',
+      body: JSON.stringify({ id: 'review-1', merchantReply: 'Thanks' }),
+    }));
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({ error: 'unauthorized' });
+    expect(prismaMock.review.update).not.toHaveBeenCalled();
+  });
+
   it('refuses to approve a video review while Mux processing is incomplete', async () => {
-    getUserFromRequestMock.mockReturnValue({ authorizedAppId: 'app-1', merchantId: 'store-1' });
+    authenticateIkasAdminRequestMock.mockResolvedValue(activeAdminAuth());
     prismaMock.review.findFirst.mockResolvedValue({
       id: 'review-video-1',
       storeId: 'store-1',
@@ -1835,7 +1985,7 @@ describe('/api/admin/reviews', () => {
   });
 
   it('queues Mux publish instead of immediately approving a ready video review', async () => {
-    getUserFromRequestMock.mockReturnValue({ authorizedAppId: 'app-1', merchantId: 'store-1' });
+    authenticateIkasAdminRequestMock.mockResolvedValue(activeAdminAuth());
     prismaMock.review.findFirst.mockResolvedValue({
       id: 'review-video-1',
       storeId: 'store-1',

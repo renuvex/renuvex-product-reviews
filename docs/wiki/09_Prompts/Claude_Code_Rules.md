@@ -66,9 +66,10 @@ Conventional Commits — `<type>(<scope>): <summary>` (max 72 chars, imperative)
 3. Did `product-title.js` find an anchor? Add log.
 
 ## Investigation order for token-related bugs
-1. Is `AuthToken` row present for the merchant?
-2. Is `expireDate` past? `onCheckToken` should refresh — log it.
-3. Is `CLIENT_SECRET` set in env? JWT empty-key fallback is a real risk.
+1. Does an exact active `(authorizedAppId, storeId)` installation exist?
+2. Does the exact matching `AuthToken` row exist for the same pair?
+3. Is `expireDate` past? `onCheckToken` should refresh without logging token material.
+4. Does the required-secret gate pass? Missing or blank `CLIENT_SECRET` must fail closed; no empty-key fallback exists.
 
 ## Tools
 - shadcn MCP for new UI primitives → `src/components/ui/*`

@@ -80,7 +80,8 @@ state.
 
 ## Summary
 Main API route groups:
-- **`/api/admin/*`** — gated by JWT (`getUserFromRequest`), called by the merchant admin UI.
+- **`/api/admin/*`** — gated by the shared active-installation JWT principal,
+  called by the merchant admin UI.
 - **`/api/public/*`** — storefront/widget endpoints are CORS-open where documented; review-center endpoints are host-isolated and session scoped. Public writes are rate-limited via Upstash Redis.
 - **`/api/oauth/*`** — install / callback flow.
 - **`/api/preview/*`** — settings + fixtures for the admin live-preview iframe.
@@ -112,7 +113,19 @@ Main API route groups:
 | POST/GET `/api/ikas/review-email-data-subject` | [route.ts](src/app/api/ikas/review-email-data-subject/route.ts) | JWT-tenant-scoped exact-email DSR erase/status API. POST requires explicit confirmation and a UUID `Idempotency-Key`; the DB uniquely scopes its hash to the store, digest mismatch returns `409`, folded identity never deletes, and responses are private/no-store. Journal verification must succeed before destructive erasure begins. |
 
 ### Auth gate
-All admin routes start with `getUserFromRequest(request)` from [src/lib/auth-helpers.ts](src/lib/auth-helpers.ts) — verifies JWT, returns `{ merchantId, authorizedAppId }`. Returns 401 if missing/invalid.
+All JWT-gated admin/ikas handlers call `authenticateIkasAdminRequest(request)`
+from [src/lib/auth-helpers.ts](src/lib/auth-helpers.ts). It accepts only the
+exact `JWT` header form, verifies HS256 and required claims, then requires an
+active `IkasStoreInstallation` and exact `(authorizedAppId, merchantId)`
+`AuthToken`. The context includes the OAuth token plus
+`merchantId/authorizedAppId/generation/stateVersion`; provider routes must not
+perform a second app-only token lookup. The pair is resolved under the
+per-store lifecycle lock, preventing mixed old-fence/new-token snapshots.
+Invalid/inactive/mismatched identity is
+`401`, active installation without token is `409`, and configuration/storage
+failure is `503`, all no-store. Writes that follow provider calls repeat the
+installation version fence in the final transaction; losing that race returns
+`401` and cannot recreate local state.
 
 ## Public (CORS-open, no auth)
 
@@ -120,7 +133,7 @@ All admin routes start with `getUserFromRequest(request)` from [src/lib/auth-hel
 |---|---|---|
 | OPTIONS `/api/public/*` | each route | CORS preflight via `corsOptions()` |
 | GET `/api/public/reviews?storeId&productId&page&orderBy&rating&hasImages&hasMedia&limit&cursor` | [route.ts](src/app/api/public/reviews/route.ts) | Approved review rows + `ProductReviewSummary` distribution/average/count with explicit public field whitelist. Exact `totalCount` / `totalPages` for unfiltered/rating/photo/media filters come from summary buckets; `hasMedia=true` means approved `(hasImages OR hasVideo)`. Legacy `page/limit` remains supported; responses include signed `nextCursor` and cursor requests use keyset pagination without `skip`. Tampered, unsigned, or context-mismatched cursors return `400`. `hasImages=true` uses indexed `Review.hasImages`; `hasMedia=true` is used by the media gallery and by the public `Fotoğraf ve Video` filter when summary counts prove the product has approved video media, and cannot be combined with `hasImages`. Response `images` remains image-only; additive `media[]` exposes `{ type, url, posterUrl, thumbnailUrl, durationMs, width, height, position }` without provider ids. Additive `photoReviewCount` and `mediaReviewCount` expose read-model counts so the widget can separate existing video display from new upload capability. |
-| POST `/api/public/reviews` body | same | Submit review (validation + StoreSettings/ProductSnapshot target verification + profanity + rate-limit + AWS image refs or video token + auto-approve). Writes `Review`, compatibility `Review.images` only for render-ready public AWS URLs, `Review.hasImages`, `Review.hasVideo`, `ReviewMedia`, pending media cleanup, and summary update transactionally. On the isolated review-request host, an active HttpOnly session is atomically consumed in the same transaction; DB uniqueness on `Review.reviewRequestId` prevents parallel duplicate verified reviews. Tokenless storefront submissions remain unchanged. |
+| POST `/api/public/reviews` body | same | Submit review (validation + StoreSettings/ProductSnapshot target verification + profanity + rate-limit + AWS image refs or video token + auto-approve). Writes `Review`, compatibility `Review.images` only for render-ready public AWS URLs, `Review.hasImages`, `Review.hasVideo`, `ReviewMedia`, pending media cleanup, and summary update transactionally. On the isolated review-request host, an active HttpOnly session is atomically consumed in the same transaction; DB uniqueness on `Review.reviewRequestId` prevents parallel duplicate verified reviews. Tokenless storefront submissions remain unchanged. Unexpected failures return fixed `reviews_submit_failed` with `no-store`; raw exceptions do not enter response, console, or Sentry. |
 | POST `/api/public/review-request` body `{ token }` | [route.ts](src/app/api/public/review-request/route.ts) | Exchanges a raw token received in the `/request#token=...` fragment for a short-lived, host-only HttpOnly session. The fragment is removed before API navigation; raw tokens are not accepted in query strings or stored in DB/log payloads. |
 | GET `/api/public/review-request` | same | Resolves only the HttpOnly review-request session and returns sanitized store/product/request state. Both methods are host-isolated and return `private, no-store` with `Referrer-Policy: no-referrer`. |
 | POST `/api/public/review-center/session` | [route.ts](src/app/api/public/review-center/session/route.ts) | Exchanges a batch token from the URL fragment for a two-hour host-only HttpOnly session. Multiple devices are allowed; raw token values are never stored. |
@@ -196,7 +209,11 @@ Detail in [[Security_And_Rate_Limits]].
 - Don't `console.log` user data; existing code uses `console.error('[scope] ERROR:', err)` for server errors.
 
 ## Notes
-- **There is no `/api/admin/auth/me` style endpoint.** The JWT itself carries everything. If the UI needs more, it calls `/api/ikas/get-merchant`.
+- **There is no `/api/admin/auth/me` style endpoint.** JWT claims identify the
+  candidate principal but are not authorization by themselves; the server
+  resolves the active installation/token pair. If the UI needs merchant data,
+  it calls `/api/ikas/get-merchant`, whose provider merchant ID must match the
+  principal.
 - **Cron routes must be authenticated.** Always set `CRON_SECRET` in deploy env. Cron routes now refuse to run without it.
 - **Review images are AWS-only for new uploads.** Public review writes accept AWS image refs, not raw image URLs. Public reads render image media only from DB-backed AWS public variant manifests under `media.renuvex.app`; widget renderers consume structured `media[]` first.
 - **Media filtering is indexed/read-model backed.** Public `hasImages=true` must use `Review.hasImages`; public `hasMedia=true` must use `Review.hasImages OR Review.hasVideo`. Do not reintroduce `Review.images contains` string filters.

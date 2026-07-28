@@ -6,7 +6,7 @@ const prismaMock = vi.hoisted(() => ({
   },
 }));
 
-const getUserFromRequestMock = vi.hoisted(() => vi.fn());
+const authenticateIkasAdminRequestMock = vi.hoisted(() => vi.fn());
 const signAwsReviewImagePrivatePreviewUrlMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/prisma', () => ({
@@ -14,7 +14,8 @@ vi.mock('@/lib/prisma', () => ({
 }));
 
 vi.mock('@/lib/auth-helpers', () => ({
-  getUserFromRequest: getUserFromRequestMock,
+  authenticateIkasAdminRequest: authenticateIkasAdminRequestMock,
+  ikasAdminAuthenticationResponse: vi.fn(),
 }));
 
 vi.mock('@/lib/media/providers/aws-review-image', () => ({
@@ -26,7 +27,18 @@ describe('/api/admin/reviews/image-preview', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
-    getUserFromRequestMock.mockReturnValue({ merchantId: 'store-1', authorizedAppId: 'app-1' });
+    authenticateIkasAdminRequestMock.mockResolvedValue({
+      ok: true,
+      context: {
+        principal: {
+          merchantId: 'store-1',
+          authorizedAppId: 'app-1',
+          generation: 1,
+          stateVersion: 1,
+        },
+        authToken: {},
+      },
+    });
     signAwsReviewImagePrivatePreviewUrlMock.mockReturnValue('https://media.renuvex.app/private-signed-thumb.webp?Signature=redacted');
   });
 

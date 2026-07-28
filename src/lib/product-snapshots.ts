@@ -2,6 +2,11 @@ import { getRedirectUri } from '@/helpers/api-helpers';
 import { prisma } from '@/lib/prisma';
 import type { ikasAdminGraphQLAPIClient, ListProductsForSyncQueryData, SaveProductWebhooksMutationData } from '@/lib/ikas-client/generated/graphql';
 import type { AuthToken } from '@/models/auth-token';
+import type { Prisma } from '@prisma/client';
+import {
+  requireActiveIkasStoreInstallationFence,
+  type IkasInstallationFence,
+} from '@/lib/ikas-installation-lifecycle';
 
 export const PRODUCT_WEBHOOK_SCOPES = ['store/product/created', 'store/product/updated'] as const;
 
@@ -66,16 +71,20 @@ function normalizeProduct(product: ProductLike) {
   };
 }
 
-export async function upsertProductSnapshot(storeId: string, product: ProductLike) {
+async function persistProductSnapshot(
+  tx: Prisma.TransactionClient,
+  storeId: string,
+  product: ProductLike,
+) {
   const normalized = normalizeProduct(product);
   if (!normalized) return null;
 
   if (product.deleted === true) {
-    await prisma.productSnapshot.deleteMany({ where: { storeId, productId: normalized.productId } });
+    await tx.productSnapshot.deleteMany({ where: { storeId, productId: normalized.productId } });
     return null;
   }
 
-  return prisma.productSnapshot.upsert({
+  return tx.productSnapshot.upsert({
     where: { storeId_productId: { storeId, productId: normalized.productId } },
     update: {
       slug: normalized.slug,
@@ -94,21 +103,41 @@ export async function upsertProductSnapshot(storeId: string, product: ProductLik
   });
 }
 
-async function upsertProductSnapshotBatch(storeId: string, products: IkasProductForSync[]) {
+export async function upsertProductSnapshot(
+  storeId: string,
+  product: ProductLike,
+  installationFence?: IkasInstallationFence,
+) {
+  return prisma.$transaction(async (tx) => {
+    if (installationFence) {
+      await requireActiveIkasStoreInstallationFence(tx, storeId, installationFence);
+    }
+    return persistProductSnapshot(tx, storeId, product);
+  });
+}
+
+async function upsertProductSnapshotBatch(
+  storeId: string,
+  products: IkasProductForSync[],
+  installationFence?: IkasInstallationFence,
+) {
   if (products.length === 0) return 0;
 
-  await prisma.$transaction(
-    products.map((product) => {
+  await prisma.$transaction(async (tx) => {
+    if (installationFence) {
+      await requireActiveIkasStoreInstallationFence(tx, storeId, installationFence);
+    }
+    await Promise.all(products.map((product) => {
       const normalized = normalizeProduct(product);
       if (!normalized) {
         throw new Error('listProduct returned a product without id');
       }
 
       if (product.deleted === true) {
-        return prisma.productSnapshot.deleteMany({ where: { storeId, productId: normalized.productId } });
+        return tx.productSnapshot.deleteMany({ where: { storeId, productId: normalized.productId } });
       }
 
-      return prisma.productSnapshot.upsert({
+      return tx.productSnapshot.upsert({
         where: { storeId_productId: { storeId, productId: normalized.productId } },
         update: {
           slug: normalized.slug,
@@ -125,13 +154,17 @@ async function upsertProductSnapshotBatch(storeId: string, products: IkasProduct
           lastSyncedAt: new Date(),
         },
       });
-    }),
-  );
+    }));
+  });
 
   return products.length;
 }
 
-export async function syncAllProductsForStore(ikas: IkasClient, storeId: string): Promise<ProductSyncResult> {
+export async function syncAllProductsForStore(
+  ikas: IkasClient,
+  storeId: string,
+  installationFence?: IkasInstallationFence,
+): Promise<ProductSyncResult> {
   const limit = 200;
   let page = 1;
   let synced = 0;
@@ -145,7 +178,7 @@ export async function syncAllProductsForStore(ikas: IkasClient, storeId: string)
       throw new Error('Failed to list ikas products for snapshot sync');
     }
 
-    synced += await upsertProductSnapshotBatch(storeId, payload.data || []);
+    synced += await upsertProductSnapshotBatch(storeId, payload.data || [], installationFence);
     pages += 1;
 
     if (!payload.hasNext) break;
@@ -155,7 +188,13 @@ export async function syncAllProductsForStore(ikas: IkasClient, storeId: string)
   return { synced, pages };
 }
 
-export async function syncSingleProductForStore(ikas: IkasClient, storeId: string, productId: string, fallbackProduct?: ProductLike) {
+export async function syncSingleProductForStore(
+  ikas: IkasClient,
+  storeId: string,
+  productId: string,
+  fallbackProduct?: ProductLike,
+  installationFence?: IkasInstallationFence,
+) {
   const response = await ikas.queries.listProductsForSync({
     id: { eq: productId },
     pagination: { limit: 1, page: 1 },
@@ -163,11 +202,11 @@ export async function syncSingleProductForStore(ikas: IkasClient, storeId: strin
   const product = response.data?.listProduct?.data?.[0];
 
   if (response.isSuccess && product) {
-    return upsertProductSnapshot(storeId, product);
+    return upsertProductSnapshot(storeId, product, installationFence);
   }
 
   if (fallbackProduct) {
-    return upsertProductSnapshot(storeId, fallbackProduct);
+    return upsertProductSnapshot(storeId, fallbackProduct, installationFence);
   }
 
   throw new Error('Failed to sync ikas product snapshot');

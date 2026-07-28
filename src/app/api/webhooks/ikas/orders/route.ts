@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { config } from '@/globals/config';
 import { getIkas } from '@/helpers/api-helpers';
 import { prisma } from '@/lib/prisma';
 import { AuthTokenManager } from '@/models/auth-token/manager';
@@ -17,6 +16,10 @@ import {
 import { getEffectiveReviewEmailSettings } from '@/lib/review-email/settings';
 import { normalizeReviewEmailFailure, reportReviewEmailFailure } from '@/lib/review-email/failures';
 import { ensureActiveIkasStoreInstallation, IkasInstallationError, requireActiveIkasStoreInstallation } from '@/lib/ikas-installation-lifecycle';
+import {
+  getRequiredIkasClientSecret,
+  IkasClientSecretConfigurationError,
+} from '@/lib/ikas-client-secret';
 
 const ORDER_WEBHOOK_SCOPE_SET = reviewRequestWebhookScopeSet();
 const RECEIVER_SCOPE_SET = new Set<string>(REVIEW_EMAIL_RECEIVER_SCOPES);
@@ -25,13 +28,7 @@ export async function POST(request: Request) {
   let eventRowId: string | null = null;
 
   try {
-    if (!config.oauth.clientSecret) {
-      reportReviewEmailFailure('order_webhook', {
-        code: 'order_webhook_configuration_missing',
-        retryable: false,
-      });
-      return NextResponse.json({ error: 'Webhook validation is not configured' }, { status: 500 });
-    }
+    const clientSecret = getRequiredIkasClientSecret();
 
     const rawBody = await request.text();
     let webhook: IkasWebhook;
@@ -41,7 +38,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
     }
 
-    if (!validateIkasWebhookSignature(webhook, config.oauth.clientSecret)) {
+    if (!validateIkasWebhookSignature(webhook, clientSecret)) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
     if (!RECEIVER_SCOPE_SET.has(webhook.scope)) {
@@ -69,7 +66,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, ignored: true, reason: 'review_email_disabled' });
     }
 
-    const parsedData = getParsedIkasWebhookData(webhook, config.oauth.clientSecret);
+    const parsedData = getParsedIkasWebhookData(webhook, clientSecret);
     const orderId = getOrderIdFromWebhookData(parsedData);
     const authToken = await AuthTokenManager.get(webhook.authorizedAppId);
     if (!authToken || authToken.merchantId !== webhook.merchantId) {
@@ -184,6 +181,13 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, data: result });
   } catch (error) {
+    if (error instanceof IkasClientSecretConfigurationError) {
+      reportReviewEmailFailure('order_webhook', {
+        code: 'order_webhook_configuration_missing',
+        retryable: false,
+      });
+      return NextResponse.json({ error: 'Webhook validation is not configured' }, { status: 503 });
+    }
     const failure = normalizeReviewEmailFailure('order_webhook', error, { retryable: true });
     if (eventRowId) {
       await prisma.ikasOrderWebhookEvent

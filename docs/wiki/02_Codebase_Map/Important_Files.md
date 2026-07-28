@@ -73,12 +73,12 @@ related:
   optional signature mandatory without a verified provider-contract change.
 
 ### [src/helpers/jwt-helpers.ts](src/helpers/jwt-helpers.ts)
-- **What:** Issues HS256 JWT with `merchantId` as `subject`, `authorizedAppId` as `audience`, 4h expiry, signed with `CLIENT_SECRET`.
-- **Be careful:** `process.env.CLIENT_SECRET || ''` — if env is missing, you get an empty-key signature, which is catastrophic. Don't ship without env validation.
+- **What:** Verifies ikas AppBridge JWTs with an HS256-only algorithm allowlist and required scalar `aud`/`sub` plus numeric `exp`/`iat` claims.
+- **Be careful:** JWT verification must obtain `CLIENT_SECRET` through the required server-only accessor. Missing or blank configuration is a `configuration_error`, never an empty-key fallback.
 
 ### [src/lib/auth-helpers.ts](src/lib/auth-helpers.ts)
-- **What:** `getUserFromRequest()` — verifies JWT, returns `{ merchantId, authorizedAppId }`.
-- **Why it matters:** Every `/api/admin/*` route gates on this. Treat as the trust boundary.
+- **What:** `authenticateIkasAdminRequest()` verifies the JWT and resolves the exact active installation plus matching OAuth token.
+- **Why it matters:** Every JWT-protected `/api/admin/*` and `/api/ikas/*` route gates on this principal. It prevents signed stale or cross-tenant JWTs from authorizing work after uninstall or reinstall.
 
 ## Public-facing surface
 

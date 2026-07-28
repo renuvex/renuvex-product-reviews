@@ -5,6 +5,7 @@ import { AuthTokenManager } from '../models/auth-token/manager';
 import { ikasAdminGraphQLAPIClient } from '../lib/ikas-client/generated/graphql';
 import { ikasAdminGraphQLAPIClient as ikasAdminGraphQLAPIV1Client } from '../lib/ikas-client/generated/v1-graphql';
 import { config } from '../globals/config';
+import { getRequiredIkasClientSecret } from '../lib/ikas-client-secret';
 
 const IKAS_ADMIN_GRAPH_API_V1_URL = 'https://api.myikas.com/api/v1/admin/graphql';
 
@@ -47,11 +48,17 @@ export async function onCheckToken(token?: AuthToken): Promise<{ accessToken: st
 
     // If the token is expired, attempt to refresh it.
     if (now.getTime() >= expireDate.getTime()) {
+      const expectedRefreshToken = token.refreshToken;
+      const expectedUpdatedAt = token.updatedAt;
+      if (!expectedUpdatedAt || !Number.isFinite(new Date(expectedUpdatedAt).getTime())) {
+        return { accessToken: undefined };
+      }
+
       const response = await OAuthAPI.refreshToken(
         {
-          refresh_token: token.refreshToken,
+          refresh_token: expectedRefreshToken,
           client_id: process.env.NEXT_PUBLIC_CLIENT_ID!,
-          client_secret: process.env.CLIENT_SECRET!,
+          client_secret: getRequiredIkasClientSecret(),
         },
         {
           storeName: 'api',
@@ -62,15 +69,26 @@ export async function onCheckToken(token?: AuthToken): Promise<{ accessToken: st
         // Calculate new expiration date in ISO format.
         const newExpireDate = moment().add(response.data.expires_in, 'seconds').toDate().toISOString();
 
-        // Update token fields with refreshed data.
-        token.accessToken = response.data.access_token;
-        token.refreshToken = response.data.refresh_token;
-        token.tokenType = response.data.token_type;
-        token.expiresIn = response.data.expires_in;
-        token.expireDate = newExpireDate;
+        const refreshedToken: AuthToken = {
+          ...token,
+          accessToken: response.data.access_token,
+          refreshToken: response.data.refresh_token,
+          tokenType: response.data.token_type,
+          expiresIn: response.data.expires_in,
+          expireDate: newExpireDate,
+        };
 
-        // Persist the updated token.
-        const persisted = await AuthTokenManager.updateExisting(token);
+        // Compare against the exact row revision that authorized this refresh.
+        // A same-app reauthorization or concurrent refresh may have updated the
+        // row while the provider request was in flight, even if the provider
+        // returned the same refresh-token value.
+        const persisted = await AuthTokenManager.updateExisting(
+          refreshedToken,
+          {
+            refreshToken: expectedRefreshToken,
+            updatedAt: expectedUpdatedAt,
+          },
+        );
         if (!persisted) return { accessToken: undefined };
 
         return { accessToken: persisted.accessToken, tokenData: persisted };
@@ -79,9 +97,8 @@ export async function onCheckToken(token?: AuthToken): Promise<{ accessToken: st
 
     // Token is still valid or refresh failed, return undefined accessToken.
     return { accessToken: undefined };
-  } catch (error) {
-    // Log the error for debugging purposes (in English).
-    console.error('Failed to check or refresh token:', error);
+  } catch {
+    console.error('[ikas-token-refresh] refresh_failed');
     return { accessToken: undefined };
   }
 }

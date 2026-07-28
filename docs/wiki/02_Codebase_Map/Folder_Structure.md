@@ -91,7 +91,7 @@ renuvex-product-reviews/
 │  │
 │  ├─ lib/
 │  │  ├─ api-requests.ts         # Frontend → backend bridge (axios)
-│  │  ├─ auth-helpers.ts         # getUserFromRequest() — extract JWT
+│  │  ├─ auth-helpers.ts         # Strict JWT + exact active installation/token principal
 │  │  ├─ cors.ts                 # withCors / corsOptions — wide-open for /api/public/*
 │  │  ├─ design-tokens.ts        # Color tokens shared admin/widget
 │  │  ├─ prisma.ts               # Prisma singleton

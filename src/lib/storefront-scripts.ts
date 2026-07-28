@@ -6,6 +6,12 @@ import { buildStorefrontWidgetScript, STOREFRONT_WIDGET_APP_MARKER } from '@/lib
 import { StorefrontJSScriptContentTypeEnum, type ikasAdminGraphQLAPIClient } from '@/lib/ikas-client/generated/graphql';
 import type { ikasAdminGraphQLAPIClient as ikasAdminGraphQLAPIV1Client } from '@/lib/ikas-client/generated/v1-graphql';
 import type { AuthToken } from '@/models/auth-token';
+import {
+  getActiveIkasStoreInstallationFence,
+  IkasInstallationError,
+  requireActiveIkasStoreInstallationFence,
+  type IkasInstallationFence,
+} from '@/lib/ikas-installation-lifecycle';
 
 const STOREFRONT_SCRIPT_NAME = 'renuvex-product-reviews-widget';
 
@@ -30,6 +36,7 @@ type IkasResultError = {
 
 type StorefrontScriptOptions = {
   scriptListClient?: IkasV1Client;
+  installationFence?: IkasInstallationFence;
 };
 
 type RemoteStorefrontScript = {
@@ -249,16 +256,14 @@ export async function ensureStorefrontScripts(
     throw new Error('Storefront list could not be fetched');
   }
 
-  const settings = await prisma.storeSettings.upsert({
+  const settings = await prisma.storeSettings.findUnique({
     where: { storeId },
-    update: {},
-    create: { storeId },
   });
-  const existingScripts = normalizeScriptMap(settings.storefrontScripts);
+  const existingScripts = normalizeScriptMap(settings?.storefrontScripts);
   const hasNoSavedScripts = Object.keys(existingScripts).length === 0;
   const updatedScripts: Record<string, string> = { ...existingScripts };
   const scriptContent = buildStorefrontWidgetScript(storeId);
-  const storefrontTheme = buildStorefrontThemeState(settings.storefrontTheme, resolveStorefrontThemeMetadata(storefronts), {
+  const storefrontTheme = buildStorefrontThemeState(settings?.storefrontTheme, resolveStorefrontThemeMetadata(storefronts), {
     reason: themeSyncReasonForMode(mode),
   });
 
@@ -336,17 +341,35 @@ export async function ensureStorefrontScripts(
     }),
   );
 
-  await prisma.storeSettings.update({
-    where: { storeId },
-    data: {
-      storefrontScripts: updatedScripts,
-      storefrontTheme: storefrontTheme as unknown as Prisma.InputJsonValue,
-    },
+  await prisma.$transaction(async (tx) => {
+    if (options.installationFence) {
+      await requireActiveIkasStoreInstallationFence(tx, storeId, options.installationFence);
+    }
+    await tx.storeSettings.upsert({
+      where: { storeId },
+      update: {
+        storefrontScripts: updatedScripts,
+        storefrontTheme: storefrontTheme as unknown as Prisma.InputJsonValue,
+      },
+      create: {
+        storeId,
+        storefrontScripts: updatedScripts,
+        storefrontTheme: storefrontTheme as unknown as Prisma.InputJsonValue,
+      },
+    });
   });
 
   return summarize(results);
 }
 
 export async function ensureStorefrontScriptsForToken(token: AuthToken, mode: StorefrontScriptMode) {
-  return ensureStorefrontScripts(getIkas(token), token.merchantId, mode, { scriptListClient: getIkasV1(token) });
+  const installationFence = await getActiveIkasStoreInstallationFence(
+    token.merchantId,
+    token.authorizedAppId,
+  );
+  if (!installationFence) throw new IkasInstallationError('ikas_installation_inactive');
+  return ensureStorefrontScripts(getIkas(token), token.merchantId, mode, {
+    scriptListClient: getIkasV1(token),
+    installationFence,
+  });
 }

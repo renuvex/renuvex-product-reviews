@@ -34,6 +34,7 @@ import {
   ReviewRequestHostError,
 } from '@/lib/review-email/public-access';
 import { recordReviewEmailMetricContribution } from '@/lib/review-email/analytics';
+import { reportServerFailure } from '@/lib/server-failures';
 
 // Upstash Redis — tüm Vercel instance'larında ortak rate limit
 const redis = new Redis({
@@ -470,12 +471,14 @@ export async function GET(req: Request) {
     }));
     res.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
     return res;
-  } catch (error: any) {
+  } catch (error) {
     if (error instanceof Error && error.message === 'invalid_image_ref') {
       return withCors(NextResponse.json({ error: 'Image upload is not ready, expired, or belongs to another store.' }, { status: 400 }));
     }
-    console.error('[GET] Reviews ERROR:', error);
-    return withCors(NextResponse.json({ error: error.message }, { status: 500 }));
+    reportServerFailure('public_reviews_fetch_failed');
+    const response = withCors(NextResponse.json({ error: 'reviews_fetch_failed' }, { status: 500 }));
+    response.headers.set('Cache-Control', 'no-store');
+    return response;
   }
 }
 
@@ -809,14 +812,16 @@ export async function POST(request: Request) {
     }, { status: 201 });
     if (verifiedReviewRequestSession) clearReviewRequestSessionCookie(response);
     return withCors(response, request);
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof Error && error.message === 'invalid_video_session') {
       return withCors(NextResponse.json({ error: 'Video yüklemesi hazır değil, süresi dolmuş veya bu ürüne ait değil.' }, { status: 400 }));
     }
     if (error instanceof ReviewRequestTokenError || error instanceof ReviewRequestHostError) {
       return withCors(NextResponse.json({ error: 'Geçersiz yorum bağlantısı.' }, { status: 400 }));
     }
-    console.error('[POST] Reviews ERROR:', error);
-    return withCors(NextResponse.json({ error: 'Sunucu hatası.' }, { status: 500 }));
+    reportServerFailure('public_reviews_submit_failed');
+    const response = NextResponse.json({ error: 'reviews_submit_failed' }, { status: 500 });
+    response.headers.set('Cache-Control', 'no-store');
+    return withCors(response);
   }
 }

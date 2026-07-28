@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --webpack",
-    "build": "prisma generate && prisma migrate deploy && pnpm build:widget && next build --webpack",
+    "build": "pnpm verify:auth-runtime-env && prisma generate && prisma migrate deploy && pnpm verify:ikas-installation-auth && pnpm build:widget && next build --webpack",
     "start": "next start",
     "lint": "eslint src",
     "codegen": "graphql-codegen --config src/lib/ikas-client/codegen.ts",
@@ -63,6 +63,8 @@
     "budget:widget:network": "node scripts/check-widget-performance-budget.mjs --include-network --warn",
     "verify:deployed-jsonld": "node scripts/verify-deployed-jsonld.mjs",
     "verify:preview-db-isolation": "node scripts/verify-preview-db-isolation.mjs",
+    "verify:auth-runtime-env": "node --env-file-if-exists=.env.local scripts/verify-ikas-auth-runtime-env.mjs",
+    "verify:ikas-installation-auth": "node --env-file-if-exists=.env.local scripts/verify-ikas-installation-auth.mjs",
     "verify:video-infrastructure": "node --env-file=.env.local scripts/verify-mux-infrastructure.mjs --phase=pre-webhook --expect-disabled",
     "verify:video-infrastructure:post-webhook": "node --env-file=.env.local scripts/verify-mux-infrastructure.mjs --phase=post-webhook",
     "video:canary:ops": "node --env-file=.env.local scripts/video-canary-ops.mjs",

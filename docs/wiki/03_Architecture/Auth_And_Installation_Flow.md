@@ -19,6 +19,10 @@ source_files:
   - "src/app/api/oauth/authorize/ikas/route.ts"
   - "src/app/api/oauth/callback/ikas/route.ts"
   - "src/lib/oauth-state.ts"
+  - "src/lib/auth-helpers.ts"
+  - "src/lib/ikas-client-secret.ts"
+  - "src/helpers/jwt-helpers.ts"
+  - "scripts/verify-ikas-installation-auth.mjs"
   - "src/lib/session.ts"
   - "src/lib/storefront-scripts.ts"
   - "src/lib/ikas-client/v1-graphql-requests.ts"
@@ -120,7 +124,7 @@ Source files:
 
 ## Token refresh
 - `onCheckToken(token)` in [src/helpers/api-helpers.ts](src/helpers/api-helpers.ts) is wired into the ikas client.
-- Before each ikas GraphQL call, the client invokes `onCheckToken` which checks `expireDate`, refreshes via `OAuthAPI.refreshToken` if expired, and persists the new pair via `AuthTokenManager.updateExisting` only when the exact `(authorizedAppId, merchantId)` row still exists. Refresh never upserts/recreates a token removed by uninstall erasure.
+- Before each ikas GraphQL call, the client invokes `onCheckToken` which checks `expireDate`, refreshes via `OAuthAPI.refreshToken` if expired, and persists the new pair via `AuthTokenManager.updateExisting` only when the exact `(authorizedAppId, merchantId)` row still has both the refresh token and `updatedAt` revision that authorized the provider request. The revision check remains effective even if ikas returns an unchanged refresh-token value, so an older in-flight refresh cannot overwrite a same-app reauthorization or concurrent refresh. Tokens without a persisted revision fail closed, and refresh never upserts/recreates a token removed by uninstall erasure.
 - If refresh fails, returns `{ accessToken: undefined }` and the call effectively fails — current code does not surface a clear error to the UI. Consider improving observability here.
 
 ## Browser → server auth (post-install)
@@ -129,7 +133,29 @@ Source files:
   `token-<authorizedAppId>`; OAuth callback query parameters are not a token
   source.
 - All `/api/admin/*` calls send `Authorization: JWT <token>`.
-- Server: `getUserFromRequest()` ([src/lib/auth-helpers.ts](src/lib/auth-helpers.ts)) verifies via `JwtHelpers.verifyToken(token)`. JWT carries `subject = merchantId` and `audience = authorizedAppId`.
+- Server: `authenticateIkasAdminRequest()` accepts exactly one
+  `Authorization: JWT <compact-token>` credential. `JwtHelpers.verifyToken()`
+  permits only HS256 and requires scalar, non-empty `aud`/`sub` plus finite
+  numeric `exp`/`iat`.
+- Signature validation is followed by a DB authorization decision:
+  `sub = installation.storeId = AuthToken.merchantId`,
+  `aud = installation.authorizedAppId = AuthToken.authorizedAppId`, and the
+  installation must be `active`. The resulting principal carries
+  `generation` and `stateVersion`; provider routes reuse the exact token from
+  that same lookup. Installation and token are resolved while holding the same
+  per-store transaction advisory/row lock used by reauthorization and
+  uninstall, so a principal cannot combine an old lifecycle fence with a new
+  OAuth token.
+- Invalid credentials, inactive/mismatched installations, and stale reinstall
+  JWTs return the same `401 unauthorized`. An active exact installation with a
+  missing OAuth token returns `409 reauthorization_required`. Secret/DB
+  availability failures return `503 authentication_unavailable`; all are
+  private/no-store.
+- Local writes after an ikas provider call repeat the principal's generation
+  and state-version fence in their final transaction. Network calls do not
+  hold DB transactions open. If uninstall or reauthorization wins before that
+  final write, the route returns `401 unauthorized` rather than treating the
+  expected lifecycle race as an internal `500`.
 - Expired cached tokens are discarded and AppBridge re-issues from ikas Admin.
 - Malformed cached tokens are also discarded before one AppBridge retry; JWT
   expiry parsing uses base64url decoding rather than assuming plain base64.
@@ -164,9 +190,17 @@ Source files:
 - The transaction freezes the exact redirect URI used by both authorize and
   token exchange. A failed token/install attempt does not restore consumed
   state; the merchant starts a new authorization.
-- `CLIENT_SECRET` is used for ikas OAuth and AppBridge JWT verification.
-  Verification still has an empty-string environment fallback; explicit boot
-  validation remains a separate hardening item.
+- `CLIENT_SECRET` is read only through
+  `getRequiredIkasClientSecret()`. Missing or whitespace-only configuration
+  fails closed for JWT verification, OAuth exchange/signature validation,
+  token refresh, and ikas webhooks. `pnpm build` checks presence before Prisma
+  migration work without printing the value.
+- `verify:ikas-installation-auth` is a read-only aggregate deploy gate. It
+  requires zero token-without-exact-active-installation and zero
+  active-installation-without-exact-token rows. It never outputs identities or
+  token material, rejects malformed/empty aggregate results, and never
+  backfills drift. It runs after additive migrations have made the audit schema
+  available but before the new application build is activated.
 - The callback target is built only from trusted admin URL configuration, the
   frozen canonical transaction store, and provider-returned authorized app ID.
   It clears query/fragment data and returns `303`, `no-store`, and
@@ -186,6 +220,9 @@ Source files:
   reads, and inherited write/inventory permissions. The customer-read scope is
   required by the review-email consent preflight; remaining write scopes still
   need separate least-privilege review.
+- **Development bypass** requires both dev merchant and authorized-app IDs.
+  It bypasses only JWT cryptography and still requires the same exact active
+  installation/token lookup.
 
 ## Related Source Files
 - [src/app/api/oauth/](src/app/api/oauth/)

@@ -14,6 +14,12 @@ import {
 import type { ikasAdminGraphQLAPIClient } from '@/lib/ikas-client/generated/graphql';
 import type { AuthToken } from '@/models/auth-token';
 import { AuthTokenManager } from '@/models/auth-token/manager';
+import {
+  getActiveIkasStoreInstallationFence,
+  IkasInstallationError,
+  requireActiveIkasStoreInstallationFence,
+  type IkasInstallationFence,
+} from '@/lib/ikas-installation-lifecycle';
 
 type IkasClient = ikasAdminGraphQLAPIClient<AuthToken>;
 
@@ -102,31 +108,36 @@ export async function syncStorefrontTheme(
   ikas: IkasClient,
   storeId: string,
   options: StorefrontThemeSyncOptions,
+  installationFence?: IkasInstallationFence,
 ): Promise<StorefrontThemeSyncResult> {
   const now = options.now || new Date();
   const observedMetadata = await readStorefrontThemeMetadata(ikas, now);
-  const settings = await prisma.storeSettings.upsert({
+  const settings = await prisma.storeSettings.findUnique({
     where: { storeId },
-    update: {},
-    create: { storeId },
   });
 
-  const nextState = buildStorefrontThemeState(settings.storefrontTheme, observedMetadata, {
+  const nextState = buildStorefrontThemeState(settings?.storefrontTheme, observedMetadata, {
     now,
     reason: options.reason,
     promotePending: options.promotePending,
   });
-  const changed = hasStorefrontThemeStateChanged(settings.storefrontTheme, nextState);
+  const changed = hasStorefrontThemeStateChanged(settings?.storefrontTheme, nextState);
   const shouldPersist = changed || options.persistUnchangedCheck === true;
 
   if (shouldPersist) {
-    await prisma.storeSettings.update({
-      where: { storeId },
-      data: { storefrontTheme: toJsonInput(nextState) },
+    await prisma.$transaction(async (tx) => {
+      if (installationFence) {
+        await requireActiveIkasStoreInstallationFence(tx, storeId, installationFence);
+      }
+      await tx.storeSettings.upsert({
+        where: { storeId },
+        update: { storefrontTheme: toJsonInput(nextState) },
+        create: { storeId, storefrontTheme: toJsonInput(nextState) },
+      });
     });
   }
 
-  const action = getSyncAction(settings.storefrontTheme, nextState, changed, shouldPersist);
+  const action = getSyncAction(settings?.storefrontTheme, nextState, changed, shouldPersist);
 
   // ADR_0022 follow-up: telemetry for unsupported themes. Emit a structured
   // console.warn (caught by Sentry as a breadcrumb) when we first detect an
@@ -164,8 +175,17 @@ export async function syncStorefrontTheme(
   };
 }
 
-export function syncStorefrontThemeForToken(token: AuthToken, options: StorefrontThemeSyncOptions) {
-  return syncStorefrontTheme(getIkas(token), token.merchantId, options);
+export async function syncStorefrontThemeForToken(
+  token: AuthToken,
+  options: StorefrontThemeSyncOptions,
+  installationFence?: IkasInstallationFence,
+) {
+  const fence = installationFence ?? await getActiveIkasStoreInstallationFence(
+    token.merchantId,
+    token.authorizedAppId,
+  );
+  if (!fence) throw new IkasInstallationError('ikas_installation_inactive');
+  return syncStorefrontTheme(getIkas(token), token.merchantId, options, fence);
 }
 
 async function getPendingThemeCandidates(limit: number): Promise<StoreSettingsThemeCandidate[]> {

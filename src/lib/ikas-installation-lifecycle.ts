@@ -126,6 +126,87 @@ export async function requireActiveIkasStoreInstallation(
   return current;
 }
 
+export type ActiveIkasInstallationTokenPairResult =
+  | {
+      status: 'active';
+      installation: IkasStoreInstallation;
+      authToken: AuthTokenRow;
+    }
+  | { status: 'inactive' }
+  | { status: 'tenant_mismatch' }
+  | { status: 'reauthorization_required' };
+
+export async function resolveActiveIkasInstallationTokenPair(
+  tx: Prisma.TransactionClient,
+  storeId: string,
+  authorizedAppId: string,
+): Promise<ActiveIkasInstallationTokenPairResult> {
+  const installation = await lockStoreInstallation(tx, storeId);
+  if (
+    !installation ||
+    installation.status !== 'active' ||
+    installation.authorizedAppId !== authorizedAppId
+  ) {
+    return { status: 'inactive' };
+  }
+
+  const authToken = await tx.authToken.findUnique({
+    where: { authorizedAppId },
+  });
+  if (!authToken) return { status: 'reauthorization_required' };
+  if (authToken.merchantId !== storeId) return { status: 'tenant_mismatch' };
+
+  return { status: 'active', installation, authToken };
+}
+
+export type IkasInstallationFence = {
+  authorizedAppId: string;
+  generation: number;
+  stateVersion: number;
+};
+
+export async function getActiveIkasStoreInstallationFence(
+  storeId: string,
+  authorizedAppId: string,
+): Promise<IkasInstallationFence | null> {
+  const installation = await prisma.ikasStoreInstallation.findUnique({
+    where: { storeId },
+    select: {
+      authorizedAppId: true,
+      generation: true,
+      stateVersion: true,
+      status: true,
+    },
+  });
+  if (
+    !installation ||
+    installation.status !== 'active' ||
+    installation.authorizedAppId !== authorizedAppId
+  ) {
+    return null;
+  }
+  return {
+    authorizedAppId: installation.authorizedAppId,
+    generation: installation.generation,
+    stateVersion: installation.stateVersion,
+  };
+}
+
+export async function requireActiveIkasStoreInstallationFence(
+  tx: Prisma.TransactionClient,
+  storeId: string,
+  fence: IkasInstallationFence,
+): Promise<IkasStoreInstallation> {
+  const installation = await requireActiveIkasStoreInstallation(tx, storeId, fence.authorizedAppId);
+  if (
+    installation.generation !== fence.generation ||
+    installation.stateVersion !== fence.stateVersion
+  ) {
+    throw new IkasInstallationError('ikas_installation_inactive');
+  }
+  return installation;
+}
+
 export async function lockActiveIkasStoreInstallationGeneration(
   tx: Prisma.TransactionClient,
   storeId: string,

@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const originalClientSecret = process.env.CLIENT_SECRET;
+
 const mocks = vi.hoisted(() => ({
   getSettings: vi.fn(),
   erase: vi.fn(),
@@ -85,6 +87,7 @@ describe('ikas review email webhook route guards', () => {
     vi.clearAllMocks();
     vi.resetModules();
     process.env.REVIEW_EMAIL_ENABLED = 'true';
+    process.env.CLIENT_SECRET = 'client-secret';
     mocks.eventFind.mockResolvedValue(null);
     mocks.eventCreate.mockResolvedValue({ id: 'event-row-1' });
     mocks.eventUpdate.mockResolvedValue({ id: 'event-row-1' });
@@ -93,6 +96,8 @@ describe('ikas review email webhook route guards', () => {
 
   afterEach(() => {
     delete process.env.REVIEW_EMAIL_ENABLED;
+    if (originalClientSecret === undefined) delete process.env.CLIENT_SECRET;
+    else process.env.CLIENT_SECRET = originalClientSecret;
   });
 
   it('skips a disabled merchant without recording or fetching canonical order PII', async () => {

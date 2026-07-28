@@ -60,6 +60,10 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
+- 2026-07-28: Admin auth now requires strict JWT and an exact active
+  installation/token pair. Final writes repeat the fence. Production drift is
+  zero after conditional removal of one expired legacy orphan credential; the
+  intended store retained its active pair.
 - 2026-07-28: Token exchange still requires browser-bound, single-use Redis
   state. A dashboard callback without state is discarded and receives
   one bounded restart; repeats and Redis failure fail closed.
@@ -85,9 +89,7 @@ source_files:
 - 2026-07-04: Wiki low-token routing is active: hot-path pages stay short; long critical pages use `## Agent Brief`.
 - 2026-07-04: QStash maintenance scheduler is active; health gate is delivery logs/DLQ plus `ScheduledJobRunLock`, not `nextScheduleTime`.
 - 2026-07-04: AWS review images are production path: `media.renuvex.app/reviews/...`, immutable public variants, private signed admin previews, public-only orphan scan.
-- 2026-07-08: CloudFront standard logging v2 is deployed for `media.renuvex.app`; logs deliver to the EU log bucket under `AWSLogs/989086371563/CloudFront/cloudfront/media/` with 14-day lifecycle and no query/cookie fields. See [[AWS_Setup_And_Access]].
 - 2026-07-02: Cloudflare Worker remains widget asset/read-cache delivery; AWS widget CDN canary is closed.
-- 2026-06-21/23: Mux video upload/playback/cleanup is live; Mux Data tracking/cookies stay disabled. See [[ADR_0032_Review_Video_On_Mux]].
 
 ## Current Risks / Open Questions
 - Storefront is Turkish-first; future EN/DE needs real i18n, not only merchant copy.

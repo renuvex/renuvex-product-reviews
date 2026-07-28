@@ -7,7 +7,7 @@ import type { AuthToken as PrismaAuthToken } from '@prisma/client';
  * tokens. Installation activation is owned by ikas-installation-lifecycle.ts.
  */
 export class AuthTokenManager {
-  private static toModel(db: PrismaAuthToken): AuthToken {
+  static fromDatabaseRow(db: PrismaAuthToken): AuthToken {
     return {
       authorizedAppId: db.authorizedAppId,
       merchantId: db.merchantId,
@@ -31,7 +31,15 @@ export class AuthTokenManager {
     const token = await prisma.authToken.findUnique({
       where: { authorizedAppId },
     });
-    return token ? this.toModel(token) : undefined;
+    return token ? this.fromDatabaseRow(token) : undefined;
+  }
+
+  static async getExact(authorizedAppId: string, merchantId: string): Promise<AuthToken | undefined> {
+    const token = await prisma.authToken.findUnique({
+      where: { authorizedAppId },
+    });
+    if (!token || token.merchantId !== merchantId) return undefined;
+    return this.fromDatabaseRow(token);
   }
 
   /**
@@ -49,18 +57,29 @@ export class AuthTokenManager {
       where: { merchantId },
       orderBy: { updatedAt: 'desc' },
     });
-    return token ? this.toModel(token) : undefined;
+    return token ? this.fromDatabaseRow(token) : undefined;
   }
 
   /**
    * Refreshes an existing installation token without recreating a row removed
    * by uninstall erasure.
    */
-  static async updateExisting(token: AuthToken): Promise<AuthToken | undefined> {
+  static async updateExisting(
+    token: AuthToken,
+    expectedRevision: {
+      refreshToken: string;
+      updatedAt: string;
+    },
+  ): Promise<AuthToken | undefined> {
+    const expectedUpdatedAt = new Date(expectedRevision.updatedAt);
+    if (!Number.isFinite(expectedUpdatedAt.getTime())) return undefined;
+
     const updated = await prisma.authToken.updateMany({
       where: {
         authorizedAppId: token.authorizedAppId,
         merchantId: token.merchantId,
+        refreshToken: expectedRevision.refreshToken,
+        updatedAt: expectedUpdatedAt,
       },
       data: {
         salesChannelId: token.salesChannelId || undefined,
@@ -82,6 +101,6 @@ export class AuthTokenManager {
    */
   static async list(): Promise<AuthToken[]> {
     const tokens = await prisma.authToken.findMany();
-    return tokens.map(AuthTokenManager.toModel);
+    return tokens.map(AuthTokenManager.fromDatabaseRow);
   }
 }
