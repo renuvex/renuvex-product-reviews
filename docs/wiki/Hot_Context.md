@@ -60,6 +60,12 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
+- 2026-07-28: Source hardening now serializes OAuth activation and uninstall
+  erasure by store, marks older nonterminal runs `stale_ignored`, and rechecks
+  the exact app/generation before and after journal I/O plus every destructive
+  batch. This package is not deployed yet. Journal activation remains blocked
+  until the stale production run closes without changing generation-6 data and
+  a real managed Supabase backup is observed.
 - 2026-07-28: Admin auth now requires strict JWT and an exact active
   installation/token pair. Final writes repeat the fence. Production drift is
   zero after conditional removal of one expired legacy orphan credential; the
@@ -72,7 +78,7 @@ source_files:
   first backup, verify its live window, then update the copy register and rerun
   preflight. The expected `7` days is not yet verified.
 - 2026-07-24: Foundation is `CREATE_COMPLETE` with nine resources, effective
-  stack policy, and termination protection. Full `deployed-pending-dns`
+  stack policy, and termination protection. Full `foundation-no-dns`
   verification passes; sending and sandbox gates remain closed, DNS is pending,
   and sender/subscription/tenant surfaces are absent.
 - 2026-07-23: Least-privilege review-email access hardening is live; approval
@@ -81,15 +87,6 @@ source_files:
 - 2026-07-20: Current ikas consent, immutable delivery evidence, package-line
   grouping, and all four shipping methods are deployed but disabled; all 59
   migrations are applied and lifecycle rows remain zero.
-- 2026-07-15: Disabled review-email Multi-Product Batch / Envelope V3.2 source
-  adds one initial and at most one reminder per delivery group, independent
-  product requests, guarded attempts/events, review-center access, and
-  V5-compatible DSR/retention. Live rollout remains gated. See
-  [[ADR_0036_Review_Request_Email_Architecture]].
-- 2026-07-04: Wiki low-token routing is active: hot-path pages stay short; long critical pages use `## Agent Brief`.
-- 2026-07-04: QStash maintenance scheduler is active; health gate is delivery logs/DLQ plus `ScheduledJobRunLock`, not `nextScheduleTime`.
-- 2026-07-04: AWS review images are production path: `media.renuvex.app/reviews/...`, immutable public variants, private signed admin previews, public-only orphan scan.
-- 2026-07-02: Cloudflare Worker remains widget asset/read-cache delivery; AWS widget CDN canary is closed.
 
 ## Current Risks / Open Questions
 - Storefront is Turkish-first; future EN/DE needs real i18n, not only merchant copy.
@@ -99,14 +96,13 @@ source_files:
 - Theme adapters depend on `listStorefront.themes[].isMainTheme`; no ikas theme webhook exists.
 - Deferred gaps: unsupported-theme warning UI, authenticated dashboard smoke, Sentry post-deploy health.
 - Review-email V5/V3.2 backend is deployed but disabled. Activation still needs
-  a managed Supabase backup plus verified restore window, app-deleted checks,
-  journal gates, SES sender/DNS/sandbox evidence, merchant UI, legal review,
-  media controls, and live acceptance. Supabase Pro upgrade is pending; it is
-  not yet applied or verified.
+  the generation-fence source deploy and stale-run acceptance, a managed
+  Supabase backup plus verified restore window, journal gates, SES
+  sender/DNS/sandbox evidence, product/legal gates, and live acceptance. Signed
+  app-deleted delivery is proven; safe completion and journal activation are
+  not.
 
 ## Read Next
 - [[Current_Status]]
 - [[Test_Strategy]]
-- [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]]
-- [[ADR_0032_Review_Video_On_Mux]]
-- [[Storefront_CDN_Performance_Benchmark]]
+- [[ADR_0036_Review_Request_Email_Architecture]]

@@ -38,6 +38,13 @@ async function lockStoreInstallation(tx: Prisma.TransactionClient, storeId: stri
   return rows[0] ?? null;
 }
 
+export async function lockIkasStoreInstallationLifecycle(
+  tx: Prisma.TransactionClient,
+  storeId: string,
+): Promise<IkasStoreInstallation | null> {
+  return lockStoreInstallation(tx, storeId);
+}
+
 async function createActiveInstallationFromToken(
   tx: Prisma.TransactionClient,
   token: Pick<AuthTokenRow, 'merchantId' | 'authorizedAppId'>,
@@ -67,6 +74,19 @@ export async function activateIkasStoreInstallation(token: AuthToken, now = new 
         ? current.generation
         : current.generation + 1;
     const stateVersion = (current?.stateVersion ?? 0) + 1;
+
+    await tx.storeDataErasureRun.updateMany({
+      where: {
+        storeId: token.merchantId,
+        status: { in: ['processing', 'pending', 'error'] },
+      },
+      data: {
+        status: 'stale_ignored',
+        finishedAt: now,
+        nextRetryAt: null,
+        sanitizedErrorCode: null,
+      },
+    });
 
     await tx.authToken.deleteMany({ where: { merchantId: token.merchantId } });
     await tx.authToken.create({

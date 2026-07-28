@@ -4,9 +4,9 @@
   "liveRestoreWindowVerifiedAt": null,
   "databaseCopies": [
     {
-      "id": "supabase-managed-backup-and-pitr",
+      "id": "supabase-managed-daily-backup",
       "restorable": true,
-      "maximumRestoreWindowDays": 30,
+      "maximumRestoreWindowDays": 7,
       "containsReviewEmailPii": true,
       "restoreRequiresJournalReplay": true
     },

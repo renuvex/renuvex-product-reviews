@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-06-09
-updated: 2026-07-20
-last_verified: 2026-07-20
+updated: 2026-07-28
+last_verified: 2026-07-28
 confidence: high
 tags:
   - runbook
@@ -85,12 +85,19 @@ QStash is the active maintenance scheduler per [[ADR_0035_QStash_Scheduler_For_M
 
 Both require `Authorization: Bearer <CRON_SECRET>`.
 
-Review-email erasure retries retain the signed `authorizedAppId` and resolved
-installation generation. Each retry takes the same store advisory lock as OAuth
-activation and order ingest. If a reinstall has a different current identity,
-the old retry finishes as `stale_ignored` and performs no deletion. A run that
-predates installation identity evidence is exhausted fail-closed rather than
-guessing which installation to erase.
+Review-email erasure uses one store advisory-lock order:
+`IkasStoreInstallation` first, then the exact `StoreDataErasureRun` row. OAuth
+activation takes the same store lock and atomically closes every nonterminal
+older run as `stale_ignored`. Retry processing repeats the generation fence
+before checking attempt exhaustion, before and after the S3 journal call, and
+inside every destructive batch/finalization transaction. A reinstall that wins
+while S3 is in flight may leave immutable evidence, but the next fence prevents
+deletion. Live finalization deletes only the exact
+`storeId + authorizedAppId` token and conditionally marks only the matching
+`storeId + authorizedAppId + generation + erasing` installation erased.
+Duplicate `store/app/deleted` deliveries return the existing pending or
+terminal run and cannot reset its retry budget. Runs without trustworthy
+installation identity remain fail-closed.
 
 Review-email V5 retention defaults to `report`. Each invocation scans at most
 5 batches of 100 rows and stops after 10 seconds. `enforce` is a separate
@@ -132,7 +139,18 @@ phase/counters. Normal continuation resets the failure counter; only actual
 failures consume the eight-attempt error budget. Daily maintenance is the
 fallback if one-off dispatch fails. Restore coverage is operator-only via
 `pnpm aws:review-email:journal-coverage -- --approved-change-id=...`; `--replay`
-also requires outbound review email to be disabled.
+also requires outbound review email to be disabled. Restore replay uses the
+immutable payload generation and `createdAt`: no current installation or an
+older restored lifecycle may continue, while a greater current generation or
+an activation at/after journal creation closes the replay as
+`stale_ignored`. Replay cannot replace an existing live-uninstall run that
+happens to use the same `runId`.
+
+The generation-fence source package is not proof that production has already
+closed an older failed run. Deploy it while journal and outbound-email envs
+remain disabled, then process that run once through the signed continuation
+and verify that the active installation/token and review/media counts are
+unchanged before any journal activation.
 
 ## QStash schedules
 

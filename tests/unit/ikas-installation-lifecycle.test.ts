@@ -45,6 +45,9 @@ describe('ikas installation lifecycle fence', () => {
         deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
         create: vi.fn().mockResolvedValue({ authorizedAppId: 'app-new' }),
       },
+      storeDataErasureRun: {
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
       ikasStoreInstallation: {
         upsert: vi.fn().mockResolvedValue({
           ...current,
@@ -60,6 +63,18 @@ describe('ikas installation lifecycle fence', () => {
     const result = await activateIkasStoreInstallation(token() as never, new Date('2026-07-10T12:00:00.000Z'));
 
     expect(result).toMatchObject({ authorizedAppId: 'app-new', generation: 4, status: 'active' });
+    expect(tx.storeDataErasureRun.updateMany).toHaveBeenCalledWith({
+      where: {
+        storeId: 'store-1',
+        status: { in: ['processing', 'pending', 'error'] },
+      },
+      data: {
+        status: 'stale_ignored',
+        finishedAt: new Date('2026-07-10T12:00:00.000Z'),
+        nextRetryAt: null,
+        sanitizedErrorCode: null,
+      },
+    });
     expect(tx.authToken.deleteMany).toHaveBeenCalledWith({ where: { merchantId: 'store-1' } });
     expect(tx.ikasStoreInstallation.upsert).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -22,9 +22,9 @@ function register(restoreWindowDays: number) {
 }
 
 describe('review email journal retention calculator', () => {
-  it('derives the current 35/42 defaults from a 30-day restore horizon', () => {
-    expect(calculateReviewEmailJournalRetention(register(30))).toEqual({
-      longestRegisteredDatabaseRestoreWindowDays: 30,
+  it('keeps the 35/42 defaults above the approved seven-day Pro daily-backup target', () => {
+    expect(calculateReviewEmailJournalRetention(register(7))).toEqual({
+      longestRegisteredDatabaseRestoreWindowDays: 7,
       journalActiveRetentionDays: 35,
       journalVersionTailDays: 7,
       journalObjectLockRetentionDays: 42,

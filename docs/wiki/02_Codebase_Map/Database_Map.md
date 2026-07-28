@@ -3,8 +3,8 @@ type: database
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-20
-last_verified: 2026-07-20
+updated: 2026-07-28
+last_verified: 2026-07-28
 confidence: high
 tags:
   - database
@@ -70,7 +70,7 @@ Postgres (Supabase) accessed via Prisma. Core review/media models now include th
 | Model | Primary key | Purpose |
 |---|---|---|
 | `AuthToken` | `authorizedAppId` | OAuth tokens per app installation; refresh updates only an existing tenant-matching row. `[merchantId, updatedAt]` supports reinstall cleanup and latest-token lookup. |
-| `IkasStoreInstallation` | `storeId`, unique `authorizedAppId` | Active/erasing/erased installation generation and tombstone used by the shared PostgreSQL transaction advisory-lock fence. |
+| `IkasStoreInstallation` | `storeId`, unique `authorizedAppId` | Active/erasing/erased installation generation and tombstone used by the shared PostgreSQL transaction advisory-lock fence. Activation atomically marks older nonterminal store-erasure runs `stale_ignored`. |
 | `Review` | `id` (uuid) | Reviews; denormalized (`productName`, `slug`); status workflow; additive `hasVideo` marks video-bearing reviews and `moderationVersion` dedupes async provider moderation jobs. Review-request tokens can set `reviewRequestId`, `verifiedBuyer`, `verifiedAt`, and `verificationSource`. |
 | `ReviewMedia` | `id` (uuid), unique `publicId` | Normalized trusted media rows. New images are AWS-backed (`provider='aws_s3'`) and use `variantManifest`; videos use Mux. `visible` + `Review.status` remains the public gate. |
 | `ProductReviewSummary` | `id` (uuid), unique `(storeId, productId)` | Product-level aggregate read model for public badge, structured-data, summary distribution, and exact filtered review-list counts |
@@ -99,7 +99,7 @@ Postgres (Supabase) accessed via Prisma. Core review/media models now include th
 | `ReviewEmailDataSubjectRun` | unique `storeId+idempotencyKeyHash` | Exact-subject DSR workflow, request digest, progress, deterministic journal key/digest, S3 VersionId/ETag/checksum/retention evidence, and sanitized retry/error state. |
 | `ReviewEmailPurgeRun` | `id` (uuid) | Bounded review-email retention report/enforce evidence: batch, duration, candidate, delete, and sanitized failure counts. |
 | `ReviewEmailJournalCoverageCheck` | `id` (uuid) | Restore/journal coverage result, genesis/earliest-safe-restore evidence, verified/replayed/conflicting counts, and sanitized failure code. |
-| `IkasOrderReconciliationCursor` / `StoreDataErasureRun` | `storeId` / `id` | Reconciliation window/page cursor acquired only for an active enabled installation, and uninstall/personal-data erasure evidence with authorized-app/generation identity plus bounded exponential retries. |
+| `IkasOrderReconciliationCursor` / `StoreDataErasureRun` | `storeId` / `id` | Reconciliation window/page cursor acquired only for an active enabled installation, and uninstall/personal-data erasure evidence with authorized-app/generation identity plus bounded retries. Journal pre/postflight, each destructive batch, and finalization recheck the exact generation; replay also binds immutable generation and creation time. |
 
 ## Review-email analytics metric contract
 

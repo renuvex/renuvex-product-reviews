@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-07-09
-updated: 2026-07-24
-last_verified: 2026-07-24
+updated: 2026-07-28
+last_verified: 2026-07-28
 confidence: high
 tags:
   - adr
@@ -94,6 +94,8 @@ source_files:
   - "tests/integration/review-email-installation-fence.test.ts"
   - "tests/integration/review-email-v5-db-guarantees.test.ts"
   - "tests/integration/review-email-batch-db-guarantees.test.ts"
+  - "tests/unit/review-email-erasure.test.ts"
+  - "tests/unit/ikas-installation-lifecycle.test.ts"
   - "tests/unit/review-email-batch-jobs.test.ts"
   - "tests/unit/review-email-maintenance.test.ts"
   - "tests/unit/review-email-pii.test.ts"
@@ -747,7 +749,9 @@ Implemented ownership and privacy boundaries:
 - `IkasStoreInstallation` is the store-scoped lifecycle fence. It binds one
   active `authorizedAppId` to a monotonically increasing generation and keeps
   an erased tombstone so a delayed uninstall/retry or OAuth callback cannot
-  affect another generation.
+  affect another generation. Activation and erasure use one advisory-lock
+  order: installation first, erasure-run row second. A successful activation
+  atomically closes every nonterminal older erasure run as `stale_ignored`.
 - `IkasOrderWebhookEvent`, `IkasOrderSnapshot`, and
   `IkasOrderLineSnapshot` store normalized, tenant-scoped canonical evidence.
   Raw webhook/order payloads, addresses, phone numbers, payment details, IPs,
@@ -1301,7 +1305,21 @@ DNS, Vercel, or outbound-email mutation is part of this checkpoint.
   content, enqueues idempotent AWS/Mux cleanup jobs, recalculates summaries, and
   removes order/email/auth PII in batches. QStash signed continuations provide
   prompt progress while daily maintenance remains the fallback. Normal batch
-  continuation does not consume the consecutive-failure budget.
+  continuation does not consume the consecutive-failure budget. The exact
+  store, authorized app, generation, and `erasing` installation are rechecked
+  before attempt exhaustion, before and after S3 journal I/O, and inside every
+  destructive batch/finalization transaction. Reinstall during network I/O or
+  between batches therefore preserves the new generation. Live finalization
+  deletes only the exact app token and conditionally erases exactly one matching
+  installation. Duplicate provider webhooks return the existing pending or
+  terminal run rather than executing or resetting it.
+- Restore replay is authorized by verified immutable journal evidence, not by
+  the mere existence of a run row. The payload generation and `createdAt`
+  protect a newer current generation or an activation at/after journal
+  creation; those cases end `stale_ignored`. A replay may proceed only when no
+  current installation exists or the current row represents an older restored
+  lifecycle. A replay cannot overwrite a live-uninstall run with the same
+  `runId`.
 - Analytics reversal uses the receipt manifest as the one-time authority even
   after the 210-day contribution row expires. A later subject erasure replaces
   a prior detail-retention close reason, and late provider events remain fenced.
@@ -1354,10 +1372,14 @@ DNS, Vercel, or outbound-email mutation is part of this checkpoint.
   `enforce` is a separate production gate. Receipt, subject block, and daily
   aggregate live for the active installation; uninstall removes their DB rows.
 - `config/review-email-copy-register.json` is the machine-readable copy-policy
-  source. Default approved DB restore horizon `30` days yields journal active
-  retention `35` days and physical/Object-Lock target `42` days. These are
-  parameters, not runtime self-adjustment: drift blocks rollout and requires a
-  separately approved CloudFormation update.
+  source. The unverified target is `supabase-managed-daily-backup` with a
+  seven-day restore window, matching the current Supabase Pro daily-backup
+  contract. The formula still yields journal active retention `35` days and
+  physical/Object-Lock target `42` days. `approved_target` is not live restore
+  evidence; the first managed backup must be observed before the register can
+  become `verified_current`. These are parameters, not runtime self-adjustment:
+  drift blocks rollout and requires a separately approved CloudFormation
+  update.
 - The journal uses deterministic canonical JSON, a stable per-run S3 key,
   `If-None-Match: *`, SHA-256 checksum metadata, versioning, Governance Object
   Lock, and a writer role without delete, retention-change, or bypass rights.
@@ -1384,9 +1406,9 @@ DNS, Vercel, or outbound-email mutation is part of this checkpoint.
 Production rollout remains explicitly staged: additive DB migration, journal
 bucket/IAM change sets, genesis creation, Vercel env, retention report
 acceptance, retention enforce, and outbound SES/AWS dispatch are separate
-mutation gates. The copy register's 30-day restore value is an approved source
-contract and must be checked against the actual managed database restore
-configuration before journal activation.
+mutation gates. The copy register's seven-day daily-backup value is an
+unverified approved target and must be checked against the actual managed
+database restore configuration before journal activation.
 
 2026-07-10 V3 DB/backend lifecycle source implementation:
 
@@ -1653,6 +1675,15 @@ External contract evidence:
   defaults, and separately authorized retention extension. A clean PostgreSQL
   16 run applied all 56 migrations and passed 5 integration tests; 443 unit
   tests and local IaC/type/lint gates passed. No live mutation occurred.
+- 2026-07-28: Hardened store erasure against reinstall races. OAuth activation,
+  run acquisition/retry, journal pre/postflight, destructive batches, and
+  finalization now share the installation-first store lock and exact generation
+  fence. Duplicate uninstall deliveries do not restart work; restore replay
+  cannot overwrite a live run or cross a newer activation. The copy register
+  now records the unverified Supabase Pro daily-backup target as seven days
+  while preserving the derived `35/42` journal retention. This source package
+  does not activate journal envs, AWS journal stacks, SES sending, or the
+  production feature.
 - 2026-07-10: Hardened the disabled V3 source after a full correctness audit.
   Added an additive install-generation lifecycle fence, stale-uninstall
   protection, disabled-store no-PII gates, canonical merchant binding,

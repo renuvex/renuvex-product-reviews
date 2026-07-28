@@ -39,6 +39,11 @@ const DOWNSTREAM_STACK_NAMES = [
   'renuvex-review-email-erasure-journal-prod',
   'renuvex-review-email-erasure-journal-iam-prod',
 ];
+const EXPECTED_DOWNSTREAM_STACKS = {
+  'access-only': [],
+  foundation: ['renuvex-review-email-foundation-prod'],
+  journal: DOWNSTREAM_STACK_NAMES,
+};
 const EXPECTED_STACK_RESOURCES = {
   ReviewEmailAuthorsGroup: 'AWS::IdentityStore::Group',
   ReviewEmailAuthorMembership: 'AWS::IdentityStore::GroupMembership',
@@ -63,12 +68,12 @@ const DISABLED_APPROVAL_PARAMETERS = {
 
 const profile = readOption('--profile') || process.env.AWS_PROFILE || 'renuvex-readonly';
 const region = readOption('--region') || process.env.AWS_REGION || EXPECTED_REGION;
-const expectation = readOption('--expect') || 'ready';
+const expectation = readOption('--expect') || 'access-only';
 const jsonOutput = process.argv.includes('--json');
 const awsCli = resolveAwsCli();
 
-if (!['absent', 'ready'].includes(expectation)) {
-  fail('Expected --expect=absent or --expect=ready.');
+if (!['absent', ...Object.keys(EXPECTED_DOWNSTREAM_STACKS)].includes(expectation)) {
+  fail('Expected --expect=absent, access-only, foundation, or journal.');
 }
 if (region !== EXPECTED_REGION) {
   fail(`Review-email deployment access must be verified in ${EXPECTED_REGION}.`);
@@ -118,12 +123,15 @@ const principalSurfaces = Object.fromEntries(
 const serviceRoles = Object.values(EXPECTED_SERVICE_ROLES)
   .map((roleName) => optionalAwsJson(['iam', 'get-role', '--role-name', roleName], isIamNotFound)?.Role ?? null)
   .filter(Boolean);
-const downstreamStacks = DOWNSTREAM_STACK_NAMES
-  .map((stackName) => optionalAwsJson(
+const downstreamStacks = Object.fromEntries(
+  DOWNSTREAM_STACK_NAMES.map((stackName) => [stackName, optionalAwsJson(
     ['cloudformation', 'describe-stacks', '--stack-name', stackName],
     isCloudFormationNotFound,
-  )?.Stacks?.[0] ?? null)
-  .filter(Boolean);
+  )?.Stacks?.[0] ?? null]),
+);
+const activeReviewEmailStackNames = (awsJson(['cloudformation', 'describe-stacks']).Stacks ?? [])
+  .map((candidate) => candidate.StackName)
+  .filter((stackName) => typeof stackName === 'string' && stackName.startsWith('renuvex-review-email-'));
 
 if (expectation === 'absent') {
   assert(stack === null, 'Access stack must be absent before bootstrap.');
@@ -132,7 +140,11 @@ if (expectation === 'absent') {
     assert(permissionSets.length === 0, `${expected.permissionSetName} must be absent before bootstrap.`);
   }
   assert(serviceRoles.length === 0, 'Review-email CloudFormation service roles must be absent before bootstrap.');
-  assert(downstreamStacks.length === 0, 'Downstream review-email stacks must remain absent before bootstrap.');
+  assert(
+    Object.values(downstreamStacks).every((candidate) => candidate === null),
+    'Downstream review-email stacks must remain absent before bootstrap.',
+  );
+  assert(activeReviewEmailStackNames.length === 0, 'Unexpected active review-email stack exists before bootstrap.');
   report({
     account: EXPECTED_ACCOUNT_ID,
     expectation,
@@ -157,7 +169,23 @@ for (const { expected, groups, permissionSets } of Object.values(principalSurfac
   assert(permissionSets.length === 1, `Expected exactly one ${expected.permissionSetName} permission set.`);
 }
 assert(serviceRoles.length === 3, 'Expected exactly three review-email CloudFormation service roles.');
-assert(downstreamStacks.length === 0, 'Bootstrap must not create downstream review-email stacks.');
+const expectedDownstreamNames = EXPECTED_DOWNSTREAM_STACKS[expectation];
+for (const [stackName, downstreamStack] of Object.entries(downstreamStacks)) {
+  if (expectedDownstreamNames.includes(stackName)) {
+    assert(downstreamStack, `Expected downstream stack is missing: ${stackName}.`);
+    assert(
+      ['CREATE_COMPLETE', 'UPDATE_COMPLETE', 'UPDATE_ROLLBACK_COMPLETE'].includes(downstreamStack.StackStatus),
+      `Downstream stack is not stable: ${stackName} (${downstreamStack.StackStatus}).`,
+    );
+  } else {
+    assert(downstreamStack === null, `Downstream stack is not allowed in ${expectation}: ${stackName}.`);
+  }
+}
+assertDeepEqual(
+  [...activeReviewEmailStackNames].sort(),
+  [EXPECTED_STACK_NAME, ...expectedDownstreamNames].sort(),
+  'Active review-email stack allowlist',
+);
 
 const stackParameters = Object.fromEntries(
   (stack.Parameters ?? []).map(({ ParameterKey, ParameterValue }) => [ParameterKey, ParameterValue]),
@@ -190,6 +218,7 @@ report({
   authorGroupCount: 1,
   authorMembershipCount: 1,
   expectation,
+  downstreamStackCount: expectedDownstreamNames.length,
   operatorGroupCount: 1,
   operatorMembershipCount: 1,
   permissionSetCount: 2,

@@ -3,8 +3,8 @@ type: log
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-07-24
-last_verified: 2026-07-24
+updated: 2026-07-28
+last_verified: 2026-07-28
 confidence: high
 tags:
   - log
@@ -26,6 +26,21 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-07-28 - hardening | Fence store erasure across reinstall
+- Added installation-first advisory locking and exact generation/app/status
+  checks around erasure retry, journal pre/postflight, every destructive batch,
+  and finalization. Reinstall atomically closes older nonterminal runs, while
+  duplicate uninstall deliveries cannot restart or reset existing work.
+- Bound restore replay to immutable journal generation/creation evidence and
+  rejected replay identity conflicts before writing evidence.
+- Replaced the unverified 30-day restore target with the current Supabase Pro
+  daily-backup seven-day target while preserving derived 35/42-day journal
+  retention. AWS journal/env activation remains blocked until a real managed
+  backup is observed.
+- PostgreSQL 16/17 and live read-only AWS verifier evidence passed. No
+  production DB, Supabase, AWS, Vercel, SES, env, deploy, commit, or push
+  mutation occurred.
 
 ## 2026-07-24 - rollout | Deploy review-email AWS foundation
 - Deployed `renuvex-review-email-foundation-prod` with the exact nine

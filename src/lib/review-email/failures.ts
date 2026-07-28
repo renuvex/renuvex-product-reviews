@@ -75,9 +75,13 @@ const ALLOWED_CODES: Record<ReviewEmailFailureContext, ReadonlySet<string>> = {
     ...COMMON_JOURNAL_CODES,
     'store_erasure_authorized_app_missing',
     'store_erasure_generation_missing',
+    'store_erasure_installation_finalize_conflict',
     'store_erasure_journal_not_verified',
     'store_erasure_journal_timestamp_invalid',
+    'store_erasure_replay_identity_invalid',
     'store_erasure_replay_batch_limit_exceeded',
+    'store_erasure_replay_run_conflict',
+    'store_erasure_retention_base_missing',
     'store_erasure_run_not_found',
   ]),
   data_subject_erasure: new Set([

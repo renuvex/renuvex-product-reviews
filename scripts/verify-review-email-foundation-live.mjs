@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { Resolver } from 'node:dns/promises';
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -25,9 +26,11 @@ const region = readOption('--region') || process.env.AWS_REGION || REVIEW_EMAIL_
 const expectation = readOption('--expect') || 'absent';
 const jsonOutput = process.argv.includes('--json');
 const awsCli = resolveAwsCli();
+const publicDns = new Resolver();
+publicDns.setServers(['1.1.1.1', '8.8.8.8']);
 
-if (!['absent', 'deployed-pending-dns'].includes(expectation)) {
-  fail('--expect must be absent or deployed-pending-dns.');
+if (!['absent', 'foundation-no-dns', 'dns-verified'].includes(expectation)) {
+  fail('--expect must be absent, foundation-no-dns, or dns-verified.');
 }
 if (region !== REVIEW_EMAIL_REGION) fail(`Foundation verification is locked to ${REVIEW_EMAIL_REGION}.`);
 const template = readStrictJsonFile(TEMPLATE_PATH, 'foundation template');
@@ -183,7 +186,7 @@ assert(!resourceMap.ReviewEmailEventsHttpsSubscription, 'HTTPS subscription must
 verifyKms(resourceMap, stackParameters);
 verifySns(resourceMap, stackParameters);
 verifySqs(resourceMap);
-verifySes(configurationSet, identity, resourceMap);
+const dnsEvidence = await verifySes(configurationSet, identity, resourceMap);
 
 const sesAccount = awsJson(['sesv2', 'get-account']);
 assert(sesAccount.ProductionAccessEnabled === false, 'SES sandbox status changed unexpectedly.');
@@ -199,6 +202,7 @@ report({
   sesProductionAccessEnabled: false,
   sourceCommit,
   effectiveStackPolicyDigest,
+  dnsEvidence,
   stackPolicyDigest,
   stackStatus: stack.StackStatus,
   templateDigest,
@@ -295,7 +299,7 @@ function verifySqs(resourceMap) {
   assertTags(tags, 'SQS DLQ');
 }
 
-function verifySes(liveConfigurationSet, liveIdentity, resourceMap) {
+async function verifySes(liveConfigurationSet, liveIdentity, resourceMap) {
   assert(liveConfigurationSet.SendingOptions?.SendingEnabled === false, 'Configuration-set sending is enabled.');
   assert(
     !liveConfigurationSet.SuppressionOptions ||
@@ -321,15 +325,7 @@ function verifySes(liveConfigurationSet, liveIdentity, resourceMap) {
   assert(!destination.MatchingEventTypes.includes('OPEN'), 'OPEN tracking must remain disabled.');
   assert(!destination.MatchingEventTypes.includes('CLICK'), 'CLICK tracking must remain disabled.');
 
-  assert(
-    ['PENDING', 'NOT_STARTED'].includes(liveIdentity.VerificationStatus),
-    `Identity must be pending before DNS: ${liveIdentity.VerificationStatus}.`,
-  );
   assert(liveIdentity.DkimAttributes?.SigningEnabled === true, 'SES DKIM signing is disabled.');
-  assert(
-    ['PENDING', 'NOT_STARTED'].includes(liveIdentity.DkimAttributes?.Status),
-    `DKIM must be pending before DNS: ${liveIdentity.DkimAttributes?.Status}.`,
-  );
   assert(
     liveIdentity.DkimAttributes?.CurrentSigningKeyLength === 'RSA_2048_BIT' ||
       liveIdentity.DkimAttributes?.NextSigningKeyLength === 'RSA_2048_BIT',
@@ -345,10 +341,6 @@ function verifySes(liveConfigurationSet, liveIdentity, resourceMap) {
   );
   assert(liveIdentity.MailFromAttributes?.MailFromDomain === defaults.MailFromDomain, 'MAIL FROM domain drifted.');
   assert(
-    ['PENDING', 'NOT_STARTED'].includes(liveIdentity.MailFromAttributes?.MailFromDomainStatus),
-    `MAIL FROM must be pending before DNS: ${liveIdentity.MailFromAttributes?.MailFromDomainStatus}.`,
-  );
-  assert(
     resourceMap.ReviewEmailConfigurationSet.PhysicalResourceId === defaults.ConfigurationSetName,
     'Configuration-set physical ID drifted.',
   );
@@ -356,6 +348,94 @@ function verifySes(liveConfigurationSet, liveIdentity, resourceMap) {
     resourceMap.ReviewEmailIdentity.PhysicalResourceId === defaults.SenderDomain,
     'SES identity physical ID drifted.',
   );
+
+  const dkimTokens = liveIdentity.DkimAttributes?.Tokens ?? [];
+  assert(dkimTokens.length === 3, 'SES Easy DKIM must expose exactly three tokens.');
+  const dnsEvidence = await inspectSesDns(dkimTokens);
+  if (expectation === 'foundation-no-dns') {
+    assert(
+      ['PENDING', 'FAILED'].includes(liveIdentity.VerificationStatus),
+      `Identity must be pending or failed while DNS is absent: ${liveIdentity.VerificationStatus}.`,
+    );
+    assert(
+      ['PENDING', 'FAILED'].includes(liveIdentity.DkimAttributes?.Status),
+      `DKIM must be pending or failed while DNS is absent: ${liveIdentity.DkimAttributes?.Status}.`,
+    );
+    assert(
+      ['PENDING', 'FAILED'].includes(liveIdentity.MailFromAttributes?.MailFromDomainStatus),
+      `MAIL FROM must be pending or failed while DNS is absent: ${liveIdentity.MailFromAttributes?.MailFromDomainStatus}.`,
+    );
+    assert(dnsEvidence.presentRecords === 0, 'SES DNS records already exist; foundation-no-dns is not the correct stage.');
+  } else {
+    assert(liveIdentity.VerificationStatus === 'SUCCESS', 'SES identity is not verified.');
+    assert(liveIdentity.VerifiedForSendingStatus === true, 'SES identity is not verified for sending.');
+    assert(liveIdentity.DkimAttributes?.Status === 'SUCCESS', 'SES DKIM is not verified.');
+    assert(
+      liveIdentity.MailFromAttributes?.MailFromDomainStatus === 'SUCCESS',
+      'SES custom MAIL FROM is not verified.',
+    );
+    assert(
+      dnsEvidence.matchingRecords === dnsEvidence.expectedRecords,
+      'The expected SES DNS record set is incomplete or points to unexpected values.',
+    );
+  }
+  return dnsEvidence;
+}
+
+async function inspectSesDns(dkimTokens) {
+  const checks = [
+    ...dkimTokens.map((token) => ({
+      name: `${token}._domainkey.${defaults.SenderDomain}`,
+      query: () => publicDns.resolveCname(`${token}._domainkey.${defaults.SenderDomain}`),
+      matches: (values) => values.some((value) =>
+        normalizeDnsName(value) === normalizeDnsName(`${token}.dkim.amazonses.com`)),
+    })),
+    {
+      name: defaults.MailFromDomain,
+      query: () => publicDns.resolveMx(defaults.MailFromDomain),
+      matches: (values) => values.some(({ exchange, priority }) =>
+        priority === 10 &&
+        normalizeDnsName(exchange) === normalizeDnsName(`feedback-smtp.${REVIEW_EMAIL_REGION}.amazonses.com`)),
+    },
+    {
+      name: defaults.MailFromDomain,
+      query: () => publicDns.resolveTxt(defaults.MailFromDomain),
+      matches: (values) => values.some((segments) =>
+        segments.join('') === 'v=spf1 include:amazonses.com ~all'),
+    },
+  ];
+  let presentRecords = 0;
+  let matchingRecords = 0;
+  for (const check of checks) {
+    const values = await optionalDns(check.query);
+    if (values.length > 0) presentRecords += 1;
+    if (check.matches(values)) matchingRecords += 1;
+  }
+  return {
+    expectedRecords: checks.length,
+    matchingRecords,
+    presentRecords,
+  };
+}
+
+function normalizeDnsName(value) {
+  return String(value).trim().toLowerCase().replace(/\.$/, '');
+}
+
+async function optionalDns(query) {
+  try {
+    return await query();
+  } catch (error) {
+    if (
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      ['ENODATA', 'ENOTFOUND'].includes(error.code)
+    ) {
+      return [];
+    }
+    throw error;
+  }
 }
 
 function findExpectedAlias() {

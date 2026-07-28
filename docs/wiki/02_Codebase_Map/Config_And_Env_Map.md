@@ -3,7 +3,7 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-10
+updated: 2026-07-28
 tags:
   - config
   - env
@@ -145,6 +145,7 @@ See [[Sentry_Operations]] and [[ADR_0009_Sentry_Observability_Strategy]] for the
 | [next.config.js](next.config.js) | Next.js config, including the `media.renuvex.app` public image remote pattern when Next/Image is used for public AWS image delivery. |
 | [vercel.json](vercel.json) | `regions: ["fra1"]` and widget static asset cache headers. Maintenance schedules live in QStash, not `vercel.json.crons`. |
 | [wrangler.widget.jsonc](wrangler.widget.jsonc) | Cloudflare Worker Static Assets config for live `widget.renuvex.app` delivery. Source includes V2 public-read proxy support with non-secret `BACKEND_API_ORIGIN=https://app.renuvex.app`; no routes/custom domains are stored in source. Future Worker redeploys or domain/DNS edits remain separately approved. |
+| [config/review-email-copy-register.json](config/review-email-copy-register.json) | Review-email restore/journal policy input. Current source is the unverified `supabase-managed-daily-backup` seven-day target with `approved_target`; it must not become `verified_current` until a live managed backup and window are observed. The derived journal retention remains 35 active plus 7 version-tail days. |
 | [components.json](components.json) | shadcn/ui CLI/MCP config |
 | [tsconfig.json](tsconfig.json) | TS config (paths: `@/*` → `src/*`) |
 | [eslint.config.mjs](eslint.config.mjs) | ESLint flat config |

@@ -737,13 +737,16 @@ Source validation is:
 pnpm aws:review-email:validate-access-template
 pnpm aws:review-email:validate-templates
 pnpm aws:lint-templates:eu-central-1
-pnpm aws:review-email:verify-access-live -- --expect=ready --profile=renuvex-readonly --region=eu-central-1 --json
+pnpm aws:review-email:verify-access-live -- --expect=foundation --profile=renuvex-readonly --region=eu-central-1 --json
 ```
 
 The live verifier is read-only and fail-closed. It compares stack inventory,
 group membership, account assignment, permission-set policy, service-role
 trust/inline policies, managed-policy absence, and termination protection with
 the source contract without printing identity IDs or policy bodies.
+Its explicit stages are `access-only`, `foundation`, and `journal`; each stage
+requires the exact corresponding downstream stack set and rejects both missing
+and unexpected review-email stacks.
 
 Effective-policy simulation on 2026-07-23 allowed only the exact approved
 change-set and matching CloudFormation `PassRole` paths. Wrong stack, service
@@ -926,9 +929,13 @@ Checkpoint status and required next order:
     `FeedbackAttributes.EmailForwardingEnabled`, while SES v2
     `GetEmailIdentity` returns top-level `FeedbackForwardingStatus`. The live
     value was already `false`; no SES mutation was needed. After correcting the
-    verifier contract, `deployed-pending-dns` acceptance passed for all nine
+    verifier contract, the acceptance stage then named
+    `deployed-pending-dns` passed for all nine
     resources, live policies, tags, event types, sandbox state, absent
     subscription/sender/tenant surfaces, and enabled termination protection.
+    The current stage name is `foundation-no-dns`; a separate `dns-verified`
+    stage requires successful SES identity/DKIM/MAIL FROM status plus exact
+    public DNS records. The no-DNS stage fails if those records already exist.
 
 No command in this section authorizes an AWS mutation by itself. Each
 `--apply`, change-set execution, stack-policy write, or termination-protection
@@ -959,10 +966,10 @@ current production state:
 
 `config/review-email-copy-register.json` therefore remains
 `contractStatus=approved_target` with `liveRestoreWindowVerifiedAt=null`. Its
-`30`-day restore window is an approved target, not a statement about current
-Supabase capability. It must not be changed to `verified_current`, and the
-erasure-journal stacks must not be deployed, while the live project has no
-restorable managed copy.
+source is `supabase-managed-daily-backup` and its seven-day restore window is
+an approved target, not a statement about current Supabase capability. It must
+not be changed to `verified_current`, and the erasure-journal stacks must not be
+deployed, while the live project has no restorable managed copy.
 
 The next approved order is:
 
@@ -977,13 +984,13 @@ The next approved order is:
 5. Rerun the copy-register validator, retention calculator, and full
    erasure-journal preflight before any journal change set is created.
 
-The expected Pro daily-backup entitlement is seven days, but the source must
-use the observed live window rather than that expectation. If seven days is
-verified, the existing formula still yields `35` active days and `42`
-Object-Lock days: `max(35, 7 + 5) = 35`, then the seven-day version tail. If
-the product decision is to retain a roughly 30-day database restore target,
-ordinary Pro daily backups are insufficient; PITR or a higher Supabase plan
-requires a separate cost, recovery-point, and rollout decision.
+The current Supabase Pro daily-backup contract is seven days, but the source
+must still use the observed live window rather than treating plan entitlement
+as evidence. If seven days is verified, the existing formula yields `35`
+active days and `42` Object-Lock days: `max(35, 7 + 5) = 35`, then the
+seven-day version tail. Supabase billing can occur after this source package is
+deployed, but journal stack/env activation cannot occur before the first
+managed backup and restore window are verified.
 
 Status snapshot on 2026-07-09:
 
