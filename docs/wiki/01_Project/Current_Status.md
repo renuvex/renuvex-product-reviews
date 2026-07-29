@@ -29,7 +29,7 @@ delivery, QStash maintenance scheduling, and public read-cache paths are live.
 Remaining public-launch blockers are mainly security hardening, operational
 observability, authenticated dashboard smoke, and product polish.
 The review-request email V5 plus Multi-Product Batch/Envelope V3.2 packages are
-deployed as a disabled backend and schema; all 59 Production migrations are
+deployed as a disabled backend and schema; all 60 Production migrations are
 applied, customer/request/job/attempt lifecycle rows remain zero, and
 `REVIEW_EMAIL_ENABLED` remains absent. Report-mode maintenance has produced
 only successful, error-free `ReviewEmailPurgeRun` audit rows.

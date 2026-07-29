@@ -5,6 +5,7 @@ const imageRemotePatterns = [
     pathname: '/reviews/**',
   },
 ];
+const isCiBuild = process.env.RENUVEX_CI_BUILD === 'true';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -51,9 +52,13 @@ module.exports = withSentryConfig(module.exports, {
 
   org: process.env.SENTRY_ORG || "renuvex",
   project: process.env.SENTRY_PROJECT || "renuvex-product-reviews",
+  telemetry: !isCiBuild,
+  sourcemaps: {
+    disable: isCiBuild,
+  },
 
   // Only print logs for uploading source maps in CI
-  silent: !process.env.CI,
+  silent: isCiBuild || !process.env.CI,
 
   // For all available options, see:
   // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/

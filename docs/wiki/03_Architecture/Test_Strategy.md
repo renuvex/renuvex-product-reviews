@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-28
-updated: 2026-07-28
-last_verified: 2026-07-28
+updated: 2026-07-29
+last_verified: 2026-07-29
 confidence: high
 tags:
   - testing
@@ -26,7 +26,10 @@ source_files:
   - "vitest.integration.config.ts"
   - ".github/workflows/widget-smoke.yml"
   - ".github/workflows/media-cross-browser.yml"
+  - ".github/workflows/database-compatibility.yml"
   - ".github/pull_request_template.md"
+  - "scripts/check-generated-artifacts.mjs"
+  - "scripts/run-ci-build.mjs"
   - "scripts/test-review-email-cloudformation-contract.mjs"
   - "scripts/check-widget-runtime.mjs"
   - "scripts/check-widget-performance-budget.mjs"
@@ -56,6 +59,7 @@ source_files:
   - "tests/unit/review-email-batch-schema.test.ts"
   - "tests/unit/review-email-tokens.test.ts"
   - "tests/unit/review-email-disabled-public-routes.test.ts"
+  - "tests/unit/widget-health.test.ts"
   - "tests/widget-network-smoke.spec.ts"
   - "tests/widget-runtime-smoke.spec.ts"
   - "tests/widget-interaction-smoke.spec.ts"
@@ -157,14 +161,17 @@ Unit coverage for this layer lives in `tests/unit/widget-origin.test.ts` and `te
 | CloudFormation IaC lint | `pnpm aws:lint-templates` | Runs `cfn-lint` against committed AWS CloudFormation templates with their deployment regions (`eu-central-1` for S3/CloudFront review-image and widget stacks, `us-east-1` for CloudFront global observability/log delivery). CI installs pinned `cfn-lint==1.52.1` before this gate. |
 | Review-email IaC contracts | `pnpm aws:review-email:validate-templates` | Runs strict UTF-8/JSON/canonical-digest fixtures plus semantic access, foundation, and journal validators. It rejects author/operator privilege overlap, omitted or unexpected resource types, malformed provenance tags, unsafe rollback/finalization contracts, wrong event sets, and policy drift that schema-only lint cannot detect. Fixtures also pin committed-source ancestry and blob reads, placeholder-stack service-role evidence, existing-stack update evidence, the one exact dependency-only SSO assignment signature, deterministic stack-policy materialization for both conditional HTTPS subscription states, and the top-level SES v2 `FeedbackForwardingStatus` live response path; arbitrary conditional replacement remains forbidden. The non-live command is required in CI; IAM simulation, Access Analyzer, and live verifiers remain read-only pre-mutation gates because CI has no production AWS credentials. |
 | Widget performance budget | `pnpm budget:widget` | Deterministic local artifact budget after `pnpm build:widget`; fails on loader/runtime/always-loaded graph, major lazy surface graph, largest output, or manifest-count regressions. Live deployed request budgets stay report-only via `pnpm budget:widget:network`. |
-| Widget network/chunk smoke | `pnpm test:widget-smoke` | Built `public/widget.js` and content-hashed runtime chunks; validates API fan-out, lazy chunk boundaries, badge/review/structured-data combinations, unsupported theme behavior, listing fallback gating, and local transfer evidence without byte-budget gating. |
+| Widget network/chunk smoke | `pnpm test:widget-smoke` | Built `public/widget.js` and content-hashed runtime chunks; validates API fan-out, lazy chunk boundaries, badge/review/structured-data combinations, unsupported theme behavior, listing fallback gating, SPA product retirement without false health telemetry, and local transfer evidence without byte-budget gating. `tests/unit/widget-health.test.ts` separately pins that lifecycle-retired probes stay quiet while relevant missing nodes still report. |
 | Widget layout/runtime smoke | `pnpm test:widget-runtime` | Pairwise summary/review layout matrix (`classic`, `compact`, `hero`, `minimal`, `split` x `card`, `list`, `gallery`), rating bar keyboard filtering + badge/summary isolation, compact mobile accordion persistence/motion after rating-bar filter renders, large localized bar-count layout, media gallery toggles, badge/JSON-LD presence, hostile host-theme CSS isolation (a light-DOM `img{width:100%!important}` balloons a control image but cannot reach the shadow-hosted review thumbnail — ADR_0021 regression), and unexpected console errors. |
 | Storefront interactions | `pnpm test:widget-interactions` | Media-gallery lightbox, review-image lightbox, summary filter/popover light-dismiss, keyboard close, review wizard validation, step flow, mocked review submit, and body-scroll-lock regression (opening either overlay locks scroll on BOTH `<html>` and `<body>` and restores on close — ADR_0025). |
 | Cross-browser review media | `pnpm test:widget-media` | Local fast path runs Chromium desktop only. CI runs PR media coverage as isolated matrix jobs for Chromium desktop, Pixel Android emulation, and iPhone WebKit emulation. The scheduled cross-browser workflow adds Firefox desktop and desktop WebKit. The suite pins poster-first card/list/gallery rendering, size presets, no list autoplay/preload, Mux Player lightbox attributes, browser-back cleanup, Mux direct-upload wizard submit, and video-to-image navigation cleanup. |
 | Admin preview/settings | `pnpm test:admin-preview` | Preview `postMessage` update path, layout/icon/color/toggle effects, and static `widgetDefs.ts` option/showWhen alignment with widget registries. |
-| Unit/API/theme state | `pnpm test:unit` | Public API route behavior, product review summary read-model helpers, review GET filters, review POST validation/rate-limit/profanity/image-policy/approval branches, fixed GET/POST public-error sanitization, strict HS256/claim/header admin auth, exact active installation/token authorization, token-refresh row-revision compare-and-set, aggregate verifier fail-closed shapes, review-center same-origin matching, storefront theme stable/pending/generic/fail-closed helpers, surface test contracts, popover registry lifecycle contract, stable widget asset cache headers, and the overlay shared-surface invariant (scroll-lock / focus-trap primitives live only in their shared modules — ADR_0025). Vitest runs these unit files with a single worker because the route-level tests rely on mocked module graphs and Next route imports that showed 5s timeout flakes under parallel local Windows runs; serial execution is slower but deterministic. |
+| Migration-free application build | `pnpm build:ci` | Uses synthetic CI values for the application build, generates Prisma, deterministically rebuilds and verifies widget artifacts, then runs `next build --webpack`. Widget regeneration reuses the committed manifest timestamp and the committed public widget origins so exact generated files can be compared; it performs no network call and skips time-based retention pruning. The command never runs migrations, live installation checks, provider calls, or Sentry source-map upload. The Vercel-only `pnpm build` contract remains separate because it applies migrations and checks live installation state. |
+| Ikas generated-client drift | `pnpm codegen:check` | Regenerates both official Ikas schema clients and enum globals from the public v1/v2 schema endpoints, then requires the exact generated files to remain clean. Provider unavailability or schema drift fails this independent contract job instead of weakening the application build. |
+| Generated widget drift | `pnpm build:widget:ci` | Rebuilds with the committed manifest timestamp and public-origin contract, skips time-based retention pruning, then checks tracked changes and untracked output under `public/widget.js` and `public/widget-runtime/**`. Content-hashed artifacts retained by the build contract are allowed only when already represented by the committed output set. |
+| Unit/API/theme state | `pnpm test:unit` | Public API route behavior, product review summary read-model helpers, review GET filters, review POST validation/rate-limit/profanity/image-policy/approval branches, fixed GET/POST public-error sanitization, strict HS256/claim/header admin auth, exact active installation/token authorization, token-refresh row-revision compare-and-set, aggregate verifier fail-closed shapes, review-center same-origin matching, storefront theme stable/pending/generic/fail-closed helpers, surface test contracts, popover registry lifecycle contract, stable widget asset cache headers, and the overlay shared-surface invariant (scroll-lock / focus-trap primitives live only in their shared modules — ADR_0025). Vitest runs these unit files with one worker. Heavy route modules in the feature-disabled and admin-settings suites are imported during file collection rather than inside the timed assertion, so module transform load cannot create a false timeout and the default bounded timeout remains sufficient instead of being widened enough to hide a real hang. |
 | Review-center browser | `pnpm test:review-center` | Isolated `reviews.renuvex.app`-style flow with mocked network: fragment token exchange/removal, session item reads, independent Product A submit, Product B continuation/skip, and terminal batch state. It does not send email or call AWS/Mux. |
-| Review-email DB guarantees | `pnpm test:integration:review-email` | Opt-in test against an explicitly supplied local disposable PostgreSQL DB. It refuses non-local hosts and requires `DATABASE_URL` to equal `REVIEW_EMAIL_INTEGRATION_DATABASE_URL`; it proves install/DSR/retention guarantees plus batch fingerprint/live-group races, product membership uniqueness, job target checks, cross-store composite FKs, provider-neutral event dedupe, attempt evidence retention, DSR/event lock ordering, journal replay equivalence, and disable/re-enable behavior around committed versus uncommitted attempts. It also proves old JWT rejection after uninstall/reinstall, exact-token reauthorization semantics, unchanged-refresh-token row-revision CAS, and that an uninstall winning the installation lock prevents a stale final admin write. The uninstall suite additionally proves activation atomically stales nonterminal older runs, an exhausted old generation cannot delete a reinstalled token/review, concurrent duplicate app-deleted deliveries share one run, and restore replay cannot cross a newer generation/activation fence. Exact-identity coverage includes same-folded/different-exact collision isolation, retained-key lookup, real retention detaching an unsubscribe token from its attempt, old-link suppression without ciphertext, normal/journal DSR deletion, and legacy progress/payload compatibility. Migrations must be applied first. It is not a production/CI DB mutation gate. |
+| Review-email DB guarantees | `pnpm test:integration:review-email` | Test against an explicitly supplied local disposable PostgreSQL DB. It refuses non-local hosts and requires `DATABASE_URL` to equal `REVIEW_EMAIL_INTEGRATION_DATABASE_URL`; it proves install/DSR/retention guarantees plus batch fingerprint/live-group races, product membership uniqueness, job target checks, cross-store composite FKs, provider-neutral event dedupe, attempt evidence retention, DSR/event lock ordering, journal replay equivalence, and disable/re-enable behavior around committed versus uncommitted attempts. It also proves old JWT rejection after uninstall/reinstall, exact-token reauthorization semantics, unchanged-refresh-token row-revision CAS, and that an uninstall winning the installation lock prevents a stale final admin write. The uninstall suite additionally proves activation atomically stales nonterminal older runs, an exhausted old generation cannot delete a reinstalled token/review, concurrent duplicate app-deleted deliveries share one run, and restore replay cannot cross a newer generation/activation fence. Exact-identity coverage includes same-folded/different-exact collision isolation, retained-key lookup, real retention detaching an unsubscribe token from its attempt, old-link suppression without ciphertext, normal/journal DSR deletion, and legacy progress/payload compatibility. Migrations must be applied first. GitHub runs the complete migration/status/diff/surface/integration chain on disposable PostgreSQL 17 for every PR and main push; PostgreSQL 16 is the scheduled and database-path N-1 compatibility gate. Neither job can use a non-local database URL. |
 
 OAuth state coverage is split between `oauth-state.test.ts` and
 `oauth-routes.test.ts`. The service suite pins 256-bit generation, hashed key
@@ -255,7 +262,30 @@ disabled, legacy anon, publishable, and secret-key REST/GraphQL probes produced
 no `2xx`, server-side Prisma remained compatible, and the production app
 returned HTTP `200`.
 
-`pnpm test:ci` runs the core non-media quality gate: unit tests, widget network smoke, widget runtime smoke, storefront interactions, and admin preview. `.github/workflows/widget-smoke.yml` uses Node 24 runtime action majors, installs Python 3.13 plus pinned `cfn-lint==1.52.1`, runs `pnpm aws:lint-templates` and `pnpm aws:review-email:validate-templates`, runs `pnpm prisma:generate` first so Linux CI has the generated Prisma client, then runs `pnpm build:widget`, installs Chromium, runs `pnpm test:ci`, syntax-checks generated widget assets with `pnpm check:widget-js`, then runs TypeScript, lint, and whitespace gates. The same workflow runs PR media coverage as a separate Playwright matrix so each media browser/device project gets its own Ubuntu runner and failure artifact.
+`pnpm test:ci` remains the core non-media browser/unit bundle: unit tests,
+widget network smoke, widget runtime smoke, storefront interactions, and admin
+preview. `.github/workflows/widget-smoke.yml` keeps independent merge-gate jobs
+for this quality gate, the migration-free Next.js build, review-center
+Chromium, disposable PostgreSQL 17 contracts, live-schema Ikas codegen drift,
+and the three-project PR media matrix. The quality job also requires generated
+widget cleanliness and the full wiki audit. Every action is pinned to a full
+commit SHA, workflow permissions are `contents: read`, checkout credentials are
+not persisted, jobs have timeouts, and superseded runs on the same PR/ref are
+cancelled. No CI job receives a GitHub environment, production secret, or
+provider deployment credential.
+
+The private/free repository cannot currently mark these jobs as technically
+required branch checks. The operational release rule is therefore branch plus
+pull request, no direct `main` push, and no merge until every job on the same
+commit SHA succeeds. If the repository moves to a plan with ruleset support,
+the existing stable job names should become required status checks.
+
+`.github/workflows/database-compatibility.yml` repeats migration deploy,
+status, migration-to-database diff, native RLS/default-grants audit, and all
+integration tests on PostgreSQL 16. It runs weekly, manually, and when database
+contract paths change. PostgreSQL 17 is the always-on current production-major
+gate; PostgreSQL 16 is the N-1 compatibility gate. Major-tag containers are
+intentional so current patch releases remain covered.
 
 The media config uses Playwright's official desktop and device descriptors for Desktop Chrome, Desktop Firefox, Desktop Safari, Pixel 7, and iPhone 15. It keeps one active worker per Playwright project to avoid browser-engine memory contention and uses isolated tests with screenshots on failure. Trace recording follows Playwright's CI guidance: local media runs keep tracing off, while CI records traces only on the first retry of a failed test. Local media scripts are single-project entry points (`test:widget-media:*`), with `pnpm test:widget-media` kept as the fast Chromium desktop default. GitHub Actions does not run a local full-matrix wrapper; the PR workflow runs the three highest-value shopper targets as separate matrix jobs, and the scheduled `Media Cross-Browser` workflow runs all five projects daily as separate matrix jobs.
 

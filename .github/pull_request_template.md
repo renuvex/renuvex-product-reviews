@@ -3,14 +3,21 @@
 
 ## Verification
 - [ ] `pnpm test:unit`
+- [ ] `pnpm build:ci`
+- [ ] `pnpm codegen:check`
+- [ ] `pnpm test:review-center`
 - [ ] `pnpm test:widget-smoke`
 - [ ] `pnpm test:widget-runtime`
 - [ ] `pnpm test:widget-interactions`
 - [ ] `pnpm test:widget-media`
 - [ ] `pnpm test:admin-preview`
+- [ ] Disposable PostgreSQL 17 migration/diff/integration gate
+- [ ] PostgreSQL 16 compatibility gate when database paths changed
+- [ ] `pnpm build:widget:ci`
 - [ ] `pnpm check:widget-js`
 - [ ] `pnpm exec tsc --noEmit`
 - [ ] `pnpm lint`
+- [ ] `node scripts/wiki-audit.mjs`
 - [ ] `git diff --check`
 
 ## Widget/API Test Coverage
