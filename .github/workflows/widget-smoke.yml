@@ -65,6 +65,10 @@ jobs:
 
       - name: Run unit and browser smoke tests
         run: pnpm test:ci
+        env:
+          STOREFRONT_WIDGET_API_BASE_URL: https://app.renuvex.app
+          STOREFRONT_WIDGET_BASE_URL: https://widget.renuvex.app
+          STOREFRONT_WIDGET_READ_API_BASE_URL: https://widget.renuvex.app
 
       - name: Syntax check generated widget assets
         run: pnpm check:widget-js

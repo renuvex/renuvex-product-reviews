@@ -364,7 +364,7 @@ These commands are not hard byte-budget gates. They produce repeatable productio
 Record notable evidence in `docs/wiki/10_Research/` instead of adding brittle byte thresholds immediately.
 
 ## Test Harness
-`tests/widget-harness.ts` serves a fake widget origin and a fake ikas-like merchant page. Tests intercept `/api/public/*` requests and provider image URLs, so browser tests exercise real built widget files while keeping external services mocked. This is deliberate: source imports are useful for unit tests, but widget smoke tests must validate the browser-visible loader/runtime shape.
+`tests/widget-harness.ts` serves a fake widget origin and a fake ikas-like merchant page. Tests intercept `/api/public/*` requests and provider image URLs, so browser tests exercise real built widget files while keeping external services mocked. The GitHub quality job supplies the same public `app.renuvex.app` / `widget.renuvex.app` split-origin contract used by the deterministic widget build; this keeps those requests inside the mock harness instead of allowing an accidental external request. This is deliberate: source imports are useful for unit tests, but widget smoke tests must validate the browser-visible loader/runtime shape.
 
 ## Review API Matrix
 The highest-risk public write surface is `POST /api/public/reviews`. Unit tests cover:
