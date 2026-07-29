@@ -1,0 +1,126 @@
+model IkasOrderWebhookEvent {
+  id              String    @id @default(uuid())
+  providerEventId String    @unique @db.VarChar(256)
+  scope           String    @db.VarChar(128)
+  storeId         String    @db.VarChar(128)
+  authorizedAppId String    @db.VarChar(128)
+  ikasOrderId     String?   @db.VarChar(128)
+  payloadDigest   String?   @db.VarChar(64)
+  status          String    @default("received") @db.VarChar(32)
+  receivedAt      DateTime  @default(now())
+  processedAt     DateTime?
+  lastErrorCode   String?   @db.VarChar(128)
+
+  @@index([storeId, receivedAt])
+  @@index([status, receivedAt])
+  @@index([ikasOrderId])
+}
+
+model IkasOrderSnapshot {
+  id                                String                  @id @default(uuid())
+  storeId                           String
+  authorizedAppId                   String                  @db.VarChar(128)
+  ikasOrderId                       String                  @db.VarChar(128)
+  orderNumber                       String?                 @db.VarChar(128)
+  shippingMethod                    String                  @db.VarChar(64)
+  orderStatus                       String                  @db.VarChar(64)
+  orderPackageStatus                String?                 @db.VarChar(64)
+  orderPaymentStatus                String?                 @db.VarChar(64)
+  orderedAt                         DateTime?
+  ikasUpdatedAt                     DateTime?
+  notificationsAccepted             Boolean?
+  guestCheckout                     Boolean?
+  customerId                        String?                 @db.VarChar(128)
+  customerEmailHash                 String?                 @db.VarChar(128)
+  customerEmailFoldedHash           String?                 @db.VarChar(128)
+  customerEmailHashKeyVersion       Int?
+  customerEmailNormalizationVersion Int                     @default(1)
+  customerEmailEncrypted            String?                 @db.Text
+  createdAt                         DateTime                @default(now())
+  updatedAt                         DateTime                @updatedAt
+  lines                             IkasOrderLineSnapshot[]
+  reviewRequests                    ReviewRequest[]
+  reviewEmailBatches                ReviewEmailBatch[]
+
+  @@unique([storeId, ikasOrderId])
+  @@unique([id, storeId], map: "IkasOrderSnapshot_id_store_key")
+  @@index([storeId, ikasUpdatedAt])
+  @@index([storeId, customerEmailHash])
+  @@index([storeId, customerEmailFoldedHash])
+  @@index([orderPackageStatus, ikasUpdatedAt])
+}
+
+model IkasOrderLineSnapshot {
+  id                  String            @id @default(uuid())
+  storeId             String
+  orderSnapshotId     String
+  ikasOrderId         String            @db.VarChar(128)
+  ikasOrderLineItemId String            @db.VarChar(128)
+  productId           String            @db.VarChar(128)
+  variantId           String?           @db.VarChar(128)
+  lineStatus          String            @db.VarChar(64)
+  lineStatusUpdatedAt DateTime?
+  firstDeliveredAt    DateTime?
+  quantity            Float?
+  productName         String?           @db.VarChar(512)
+  variantName         String?           @db.VarChar(512)
+  packageId           String?           @db.VarChar(128)
+  packageStatus       String?           @db.VarChar(64)
+  eligibleAt          DateTime?
+  ineligibleReason    String?           @db.VarChar(128)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  orderSnapshot       IkasOrderSnapshot @relation(fields: [orderSnapshotId], references: [id], onDelete: Cascade)
+  reviewRequests      ReviewRequest[]
+
+  @@unique([storeId, ikasOrderLineItemId])
+  @@index([orderSnapshotId])
+  @@index([storeId, productId])
+  @@index([storeId, eligibleAt])
+  @@index([lineStatus, eligibleAt])
+}
+
+model ReviewRequestReceipt {
+  id                      String                          @id @default(uuid())
+  storeId                 String
+  installationGeneration  Int
+  orderProductFingerprint String                          @db.VarChar(128)
+  fingerprintKeyVersion   Int
+  normalizationVersion    Int                             @default(2)
+  exactSubjectHash        String?                         @db.VarChar(128)
+  exactSubjectKeyVersion  Int?
+  analyticsManifest       Json?
+  analyticsClosedAt       DateTime?
+  analyticsCloseReason    String?                         @db.VarChar(64)
+  metricsReversedAt       DateTime?
+  createdAt               DateTime                        @default(now())
+  updatedAt               DateTime                        @updatedAt
+  request                 ReviewRequest?
+  review                  Review?
+  contributions           ReviewEmailMetricContribution[]
+
+  @@unique([storeId, installationGeneration, orderProductFingerprint], map: "ReviewRequestReceipt_order_product_key")
+  @@index([storeId, installationGeneration, exactSubjectHash], map: "ReviewRequestReceipt_subject_idx")
+  @@index([storeId, analyticsClosedAt, updatedAt])
+}
+
+model IkasOrderReconciliationCursor {
+  storeId          String    @id
+  authorizedAppId  String?   @db.VarChar(128)
+  lastCheckpointAt DateTime?
+  overlapMinutes   Int       @default(15)
+  leaseOwner       String?   @db.VarChar(128)
+  leaseExpiresAt   DateTime?
+  leaseVersion     Int       @default(0)
+  windowStart      DateTime?
+  windowEnd        DateTime?
+  nextPage         Int       @default(1)
+  status           String    @default("idle") @db.VarChar(32)
+  lastSuccessAt    DateTime?
+  lastErrorAt      DateTime?
+  lastErrorCode    String?   @db.VarChar(128)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([status, updatedAt])
+}

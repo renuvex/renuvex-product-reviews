@@ -3,7 +3,7 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-07-30
 tags:
   - adr
   - database
@@ -58,7 +58,7 @@ Single denormalized `Review` table:
 - `helpful` feature was added then reverted (visible in migrations 20260408*) — if we re-add it, plan to re-introduce as a separate `ReviewVote` table rather than columns on `Review`.
 
 ## Related Source Files
-- [prisma/schema.prisma](prisma/schema.prisma)
+- [prisma/models/reviews.prisma](prisma/models/reviews.prisma)
 - [prisma/migrations/](prisma/migrations/)
 - [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts)
 - [src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts)

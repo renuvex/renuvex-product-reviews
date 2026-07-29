@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-17
-updated: 2026-05-17
-last_verified: 2026-05-17
+updated: 2026-07-30
+last_verified: 2026-07-30
 confidence: high
 tags:
   - adr
@@ -26,7 +26,7 @@ source_files:
   - "src/widget/core/storefront-context.js"
   - "src/widget/listing-badges/collect.js"
   - "src/widget/listing-badges/ratings.js"
-  - "prisma/schema.prisma"
+  - "prisma/models/reviews.prisma"
 ---
 
 # ADR_0015 - Canonical Product Identity
@@ -135,7 +135,7 @@ fields define identity.
 - [src/widget/listing-badges/collect.js](src/widget/listing-badges/collect.js)
 - [src/widget/listing-badges/ratings.js](src/widget/listing-badges/ratings.js)
 - [src/widget/listing-badges/index.js](src/widget/listing-badges/index.js)
-- [prisma/schema.prisma](prisma/schema.prisma)
+- [prisma/models/reviews.prisma](prisma/models/reviews.prisma)
 - [prisma/migrations/20260517120000_add_review_product_status_index/migration.sql](prisma/migrations/20260517120000_add_review_product_status_index/migration.sql)
 - [prisma/migrations/20260517133000_add_product_snapshot/migration.sql](prisma/migrations/20260517133000_add_product_snapshot/migration.sql)
 

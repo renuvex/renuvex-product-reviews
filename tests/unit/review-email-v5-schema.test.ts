@@ -1,9 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { readCombinedPrismaSchema } from '../helpers/read-prisma-schema';
 
 const root = process.cwd();
-const schema = fs.readFileSync(path.join(root, 'prisma', 'schema.prisma'), 'utf8');
+const schema = readCombinedPrismaSchema(root);
 const migration = fs.readFileSync(
   path.join(root, 'prisma', 'migrations', '20260710210000_add_review_email_retention_analytics_journal', 'migration.sql'),
   'utf8',
@@ -11,7 +12,7 @@ const migration = fs.readFileSync(
 const lifecycleMigration = fs.readFileSync(
   path.join(root, 'prisma', 'migrations', '20260710120000_add_review_request_email_lifecycle', 'migration.sql'),
   'utf8',
-);
+).replace(/\r\n/g, '\n');
 
 describe('review email V5 schema contract', () => {
   it('keeps the DSR idempotency and order-product receipt guarantees at DB level', () => {

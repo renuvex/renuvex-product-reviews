@@ -3,8 +3,8 @@ type: database
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-28
-last_verified: 2026-07-28
+updated: 2026-07-30
+last_verified: 2026-07-30
 confidence: high
 tags:
   - database
@@ -19,6 +19,16 @@ related:
   - "[[ADR_0030_Cleanup_Hardening]]"
 source_files:
   - "prisma/schema.prisma"
+  - "prisma/models/auth-installation.prisma"
+  - "prisma/models/reviews.prisma"
+  - "prisma/models/storefront.prisma"
+  - "prisma/models/media.prisma"
+  - "prisma/models/operations.prisma"
+  - "prisma/models/review-email-config.prisma"
+  - "prisma/models/review-email-orders.prisma"
+  - "prisma/models/review-email-delivery.prisma"
+  - "prisma/models/review-email-privacy.prisma"
+  - "prisma/models/review-email-analytics.prisma"
   - "prisma/migrations/20260606193000_add_product_review_summary/migration.sql"
   - "prisma/migrations/20260607120000_add_review_media_read_model/migration.sql"
   - "prisma/migrations/20260608120000_add_review_cursor_indexes/migration.sql"
@@ -50,9 +60,11 @@ source_files:
 ## Agent Brief
 Use this page to route Prisma/Postgres work. It summarizes the active review,
 media, cleanup, video, and review-request email lifecycle tables plus the
-index strategy. Source of truth remains [prisma/schema.prisma](prisma/schema.prisma)
-and the matching migration files; never use this page to justify `prisma db
-push` or destructive production schema changes.
+index strategy. The Prisma datamodel source of truth is the root
+[prisma/schema.prisma](prisma/schema.prisma) entrypoint plus the domain files
+under [prisma/models/](prisma/models/); matching migration files remain the
+database-history source. Never use this page to justify `prisma db push` or
+destructive production schema changes.
 
 ## Summary
 Postgres (Supabase) accessed via Prisma. Core review/media models now include the image-era tables, the additive video lifecycle tables, and the disabled source-only review-request email V5 plus Multi-Product Batch/Envelope V3.2 lifecycle/receipt/DSR/analytics/retention tables. Pooler URL via `DATABASE_URL` (transaction pooler 6543, pgbouncer); migration URL via `DIRECT_URL` (session pooler 5432). Detailed field-level reference in [[Database_Schema]].
@@ -61,11 +73,36 @@ Postgres (Supabase) accessed via Prisma. Core review/media models now include th
 
 | File | Role |
 |---|---|
-| [prisma/schema.prisma](prisma/schema.prisma) | Schema source |
-| [prisma/migrations/](prisma/migrations/) | Migration history (29+ files, 2026-03 → 2026-06) |
+| [prisma/schema.prisma](prisma/schema.prisma) | Multi-file entrypoint; owns the generator and datasource blocks |
+| [prisma/models/](prisma/models/) | Domain-owned Prisma model sources |
+| [prisma/migrations/](prisma/migrations/) | Immutable migration history (60 migrations at the 2026-07-30 verification baseline) |
 | [src/lib/prisma.ts](src/lib/prisma.ts) | Prisma client singleton |
 | [src/models/auth-token/index.ts](src/models/auth-token/index.ts) | `AuthToken` interface |
 | [src/models/auth-token/manager.ts](src/models/auth-token/manager.ts) | `AuthTokenManager` reads tokens and refreshes existing rows without recreating erased installations; install/delete writes belong to the lifecycle helper and erasure transaction. |
+
+## Multi-File Schema Ownership
+
+| Domain file | Ownership |
+|---|---|
+| `auth-installation.prisma` | OAuth tokens and installation generation |
+| `reviews.prisma` | Reviews, normalized review media, summaries, and product snapshots |
+| `storefront.prisma` | Store and widget settings |
+| `media.prisma` | Image/video upload and provider lifecycle |
+| `operations.prisma` | Cleanup, scheduled-run locks, and quarantine |
+| `review-email-config.prisma` | Merchant review-email settings |
+| `review-email-orders.prisma` | Ikas order evidence, reconciliation, and receipt fence |
+| `review-email-delivery.prisma` | Batch, request, token, session, job, attempt, and event |
+| `review-email-privacy.prisma` | Suppression, unsubscribe, DSR, purge, journal, and store erasure |
+| `review-email-analytics.prisma` | Daily metrics and metric contributions |
+
+Use the canonical `pnpm prisma:*` scripts. Repository-owned Prisma commands
+resolve `--schema ./prisma` explicitly; generation also requires models.
+
+Add a new model to the existing file that owns its domain. Create another
+`prisma/models/*.prisma` file only when the model introduces a genuinely new
+domain boundary; do not create one file per model. Cross-file relations require
+no imports. After any datamodel change, use the canonical scripts and follow the
+normal migration workflow below.
 
 ## Models (one-line summaries)
 
@@ -245,7 +282,7 @@ On `Review` cursor pagination:
 
 ## Migration workflow
 - Local dev: `pnpm prisma:migrate` (creates + applies migration)
-- Deploy: `pnpm build` runs `prisma generate && prisma migrate deploy && next build` — migrations apply on every Vercel deploy.
+- Deploy: `pnpm build` runs `pnpm prisma:generate && pnpm prisma:migrate:deploy && pnpm build:widget && next build --webpack` — migrations apply on every Vercel deploy.
 - ⚠️ Never `prisma db push` in production (only first-run via `pnpm prisma:init` for local).
 
 ### Migration safety (deploy-window rule)
@@ -303,6 +340,7 @@ code run together, so a migration must not break the old code.
 
 ## Related Source Files
 - [prisma/schema.prisma](prisma/schema.prisma)
+- [prisma/models/](prisma/models/)
 - [prisma/migrations/](prisma/migrations/)
 - [src/lib/prisma.ts](src/lib/prisma.ts)
 - [src/lib/review-media.ts](src/lib/review-media.ts)

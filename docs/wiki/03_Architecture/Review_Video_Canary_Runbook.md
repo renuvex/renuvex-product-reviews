@@ -3,7 +3,7 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-06-14
-updated: 2026-06-21
+updated: 2026-07-30
 last_verified: 2026-06-21
 confidence: high
 tags:
@@ -75,7 +75,7 @@ Stop and get explicit approval before any migration apply, deploy, Vercel env mu
 
 ## Preview Sequence
 1. Read-only evidence freeze: Git branch/status, deployment target, DB video row counts, Mux Preview credentials presence, QStash, and Preview DB isolation. Run `pnpm verify:preview-db-isolation -- --json` before pushing a branch that can trigger Vercel Preview. This check must prove Preview `DATABASE_URL` and `DIRECT_URL` do not target the Production Supabase project.
-2. Apply only approved local code/doc changes. Run `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm exec prisma validate`, `pnpm test:unit`, `pnpm build:widget`, and `pnpm check:widget-js`.
+2. Apply only approved local code/doc changes. Run `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm prisma:validate`, `pnpm test:unit`, `pnpm build:widget`, and `pnpm check:widget-js`.
 3. After approval, apply migrations in the target DB:
    - `20260617090000_review_video_mux_additive`
    - `20260617100000_review_video_mux_backend_cutover`

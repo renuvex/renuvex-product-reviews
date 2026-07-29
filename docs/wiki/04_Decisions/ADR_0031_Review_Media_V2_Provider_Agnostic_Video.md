@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: superseded
 created: 2026-06-12
-updated: 2026-06-20
-last_verified: 2026-06-20
+updated: 2026-07-30
+last_verified: 2026-07-30
 confidence: high
 tags:
   - adr
@@ -16,7 +16,8 @@ related:
   - "[[Decision_Index]]"
   - "[[Review_Video_Canary_Runbook]]"
 source_files:
-  - "prisma/schema.prisma"
+  - "prisma/models/reviews.prisma"
+  - "prisma/models/media.prisma"
   - "src/lib/media/providers/mux.ts"
   - "src/app/api/public/upload/video/initiate/route.ts"
   - "src/app/api/webhooks/mux/route.ts"

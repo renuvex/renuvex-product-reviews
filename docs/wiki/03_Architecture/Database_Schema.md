@@ -3,8 +3,8 @@ type: database
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-15
-last_verified: 2026-07-15
+updated: 2026-07-30
+last_verified: 2026-07-30
 confidence: high
 tags:
   - database
@@ -21,6 +21,16 @@ related:
   - "[[ADR_0030_Cleanup_Hardening]]"
 source_files:
   - "prisma/schema.prisma"
+  - "prisma/models/auth-installation.prisma"
+  - "prisma/models/reviews.prisma"
+  - "prisma/models/storefront.prisma"
+  - "prisma/models/media.prisma"
+  - "prisma/models/operations.prisma"
+  - "prisma/models/review-email-config.prisma"
+  - "prisma/models/review-email-orders.prisma"
+  - "prisma/models/review-email-delivery.prisma"
+  - "prisma/models/review-email-privacy.prisma"
+  - "prisma/models/review-email-analytics.prisma"
   - "prisma/migrations/20260606193000_add_product_review_summary/migration.sql"
   - "prisma/migrations/20260607120000_add_review_media_read_model/migration.sql"
   - "prisma/migrations/20260608120000_add_review_cursor_indexes/migration.sql"
@@ -40,14 +50,18 @@ source_files:
 ## Agent Brief
 Use this page for durable Prisma model shape and migration-history orientation,
 not as the final source of truth. Verify all field names, defaults, indexes,
-and relations in `prisma/schema.prisma` first, then inspect the migration files
-that introduced the touched model. Current high-risk areas are review media,
-AWS image pending/variant fields, Mux media jobs, summary read models,
+and relations in the relevant `prisma/models/*.prisma` domain file, then inspect
+the migration files that introduced the touched model. `prisma/schema.prisma`
+is the generator/datasource entrypoint. Current high-risk areas are review
+media, AWS image pending/variant fields, Mux media jobs, summary read models,
 two-phase orphan cleanup, and `ScheduledJobRunLock` scheduler idempotency.
 Production migrations must remain expand/contract safe.
 
 ## Summary
-PostgreSQL via Prisma. Source of truth: [prisma/schema.prisma](prisma/schema.prisma).
+PostgreSQL via Prisma. Datamodel source of truth:
+[prisma/schema.prisma](prisma/schema.prisma) plus
+[prisma/models/](prisma/models/). Migration history remains authoritative for
+PostgreSQL-only constraints, grants, RLS, and default privileges.
 
 ## Models
 
@@ -391,6 +405,7 @@ History documented in [[Database_Map]]. Notable themes: index churn (added → c
 
 ## Related Source Files
 - [prisma/schema.prisma](prisma/schema.prisma)
+- [prisma/models/](prisma/models/)
 - [prisma/migrations/](prisma/migrations/)
 - [src/lib/widget-settings.ts](src/lib/widget-settings.ts)
 - [src/models/auth-token/manager.ts](src/models/auth-token/manager.ts)

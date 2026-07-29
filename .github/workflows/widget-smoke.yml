@@ -51,6 +51,15 @@ jobs:
       - name: Validate review-email infrastructure contracts
         run: pnpm aws:review-email:validate-templates
 
+      - name: Validate Prisma schema
+        run: pnpm prisma:validate
+        env:
+          DATABASE_URL: postgresql://ci:ci@127.0.0.1:1/renuvex_ci?schema=public
+          DIRECT_URL: postgresql://ci:ci@127.0.0.1:1/renuvex_ci?schema=public
+
+      - name: Check Prisma schema formatting
+        run: pnpm prisma:format && git diff --exit-code -- prisma
+
       - name: Generate Prisma client
         run: pnpm prisma:generate
 
@@ -78,6 +87,9 @@ jobs:
 
       - name: Lint source
         run: pnpm lint
+
+      - name: Lint Prisma schema tests
+        run: pnpm lint:prisma-schema
 
       - name: Audit wiki
         run: node scripts/wiki-audit.mjs
@@ -207,16 +219,24 @@ jobs:
           --command='CREATE DATABASE renuvex_shadow'
 
       - name: Apply all migrations
-        run: pnpm exec prisma migrate deploy
+        run: pnpm prisma:migrate:deploy
 
       - name: Check migration status
-        run: pnpm exec prisma migrate status
+        run: pnpm prisma:migrate:status
 
       - name: Compare migrations with the database
         run: >-
           pnpm exec prisma migrate diff
           --from-migrations prisma/migrations
           --to-url "$DATABASE_URL"
+          --shadow-database-url "$SHADOW_DATABASE_URL"
+          --exit-code
+
+      - name: Compare migrations with the Prisma datamodel
+        run: >-
+          pnpm exec prisma migrate diff
+          --from-migrations prisma/migrations
+          --to-schema-datamodel ./prisma
           --shadow-database-url "$SHADOW_DATABASE_URL"
           --exit-code
 

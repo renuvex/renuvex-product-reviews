@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-06-17
-updated: 2026-06-21
-last_verified: 2026-06-21
+updated: 2026-07-30
+last_verified: 2026-07-30
 confidence: high
 supersedes: "[[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]]"
 tags:
@@ -23,7 +23,8 @@ related:
   - "[[Review_Video_Canary_Runbook]]"
   - "[[Hot_Context]]"
 source_files:
-  - "prisma/schema.prisma"
+  - "prisma/models/reviews.prisma"
+  - "prisma/models/media.prisma"
   - "prisma/migrations/20260617090000_review_video_mux_additive/migration.sql"
   - "prisma/migrations/20260617100000_review_video_mux_backend_cutover/migration.sql"
   - "prisma/migrations/20260620190000_add_video_upload_performance_sample/migration.sql"

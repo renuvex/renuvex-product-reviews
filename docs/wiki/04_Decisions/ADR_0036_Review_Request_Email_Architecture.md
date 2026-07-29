@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-07-09
-updated: 2026-07-28
-last_verified: 2026-07-28
+updated: 2026-07-30
+last_verified: 2026-07-30
 confidence: high
 tags:
   - adr
@@ -28,6 +28,12 @@ source_files:
   - ".env.example"
   - "infra/aws/review-images-runtime-iam.cloudformation.json"
   - "prisma/schema.prisma"
+  - "prisma/models/auth-installation.prisma"
+  - "prisma/models/review-email-config.prisma"
+  - "prisma/models/review-email-orders.prisma"
+  - "prisma/models/review-email-delivery.prisma"
+  - "prisma/models/review-email-privacy.prisma"
+  - "prisma/models/review-email-analytics.prisma"
   - "prisma/migrations/20260710120000_add_review_request_email_lifecycle/migration.sql"
   - "prisma/migrations/20260710150000_harden_review_email_installation_lifecycle/migration.sql"
   - "prisma/migrations/20260710210000_add_review_email_retention_analytics_journal/migration.sql"
@@ -1530,6 +1536,12 @@ database restore configuration before journal activation.
 Project evidence:
 
 - `prisma/schema.prisma`
+- `prisma/models/auth-installation.prisma`
+- `prisma/models/review-email-config.prisma`
+- `prisma/models/review-email-orders.prisma`
+- `prisma/models/review-email-delivery.prisma`
+- `prisma/models/review-email-privacy.prisma`
+- `prisma/models/review-email-analytics.prisma`
 - `src/globals/config.ts`
 - `src/lib/ikas-client/graphql-requests.ts`
 - `src/lib/product-snapshots.ts`
@@ -1597,6 +1609,12 @@ External contract evidence:
 ## Related Source Files
 
 - [prisma/schema.prisma](prisma/schema.prisma)
+- [prisma/models/auth-installation.prisma](prisma/models/auth-installation.prisma)
+- [prisma/models/review-email-config.prisma](prisma/models/review-email-config.prisma)
+- [prisma/models/review-email-orders.prisma](prisma/models/review-email-orders.prisma)
+- [prisma/models/review-email-delivery.prisma](prisma/models/review-email-delivery.prisma)
+- [prisma/models/review-email-privacy.prisma](prisma/models/review-email-privacy.prisma)
+- [prisma/models/review-email-analytics.prisma](prisma/models/review-email-analytics.prisma)
 - [src/globals/config.ts](src/globals/config.ts)
 - [src/lib/ikas-client/graphql-requests.ts](src/lib/ikas-client/graphql-requests.ts)
 - [src/lib/product-snapshots.ts](src/lib/product-snapshots.ts)

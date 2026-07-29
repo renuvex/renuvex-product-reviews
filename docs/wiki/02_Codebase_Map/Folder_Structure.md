@@ -3,8 +3,8 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-29
-last_verified: 2026-07-29
+updated: 2026-07-30
+last_verified: 2026-07-30
 tags:
   - structure
 related:
@@ -38,8 +38,9 @@ renuvex-product-reviews/
 ├─ @types/                       # Local ambient TS types
 │
 ├─ prisma/
-│  ├─ schema.prisma              # Prisma models: auth, reviews, product summaries, settings, product snapshots, uploads
-│  └─ migrations/                # 29+ migrations, 2026-03 → 2026-05; iterative widget settings churn
+│  ├─ schema.prisma              # Multi-file entrypoint: generator + datasource
+│  ├─ models/                    # Domain-owned Prisma model files
+│  └─ migrations/                # Immutable Prisma/PostgreSQL migration history
 │
 ├─ public/
 │  ├─ widget.js                  # ✅ BUILT artifact (esbuild) — do NOT hand-edit

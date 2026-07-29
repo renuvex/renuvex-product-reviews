@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-07-02
-updated: 2026-07-04
-last_verified: 2026-07-04
+updated: 2026-07-30
+last_verified: 2026-07-30
 confidence: high
 tags:
   - adr
@@ -24,7 +24,9 @@ source_files:
   - ".env.example"
   - "package.json"
   - "next.config.js"
-  - "prisma/schema.prisma"
+  - "prisma/models/reviews.prisma"
+  - "prisma/models/media.prisma"
+  - "prisma/models/operations.prisma"
   - "src/lib/cleanup-pending-uploads.ts"
   - "src/lib/cleanup-orphan-images.ts"
   - "src/lib/media/jobs.ts"
@@ -55,7 +57,7 @@ schema fields, cleanup family behavior, runtime IAM, and rollback boundaries.
 Current truth: new review images are AWS-only; Cloudinary is no longer a
 production image provider and old pre-public data was not migrated. Verify
 implementation in `src/lib/media/providers/aws-review-image.ts`, public upload
-routes, admin image-preview route, `prisma/schema.prisma`, and AWS templates
+routes, admin image-preview route, the review/media/operations Prisma domain files, and AWS templates
 before changing behavior. Provider or infrastructure mutations still need a
 separate approval gate.
 

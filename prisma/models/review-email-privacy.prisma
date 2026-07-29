@@ -1,0 +1,170 @@
+model ReviewEmailSuppression {
+  id                        String    @id @default(uuid())
+  storeId                   String
+  emailHash                 String    @db.VarChar(128)
+  category                  String    @default("review_request") @db.VarChar(64)
+  recipientExactHash        String?   @db.VarChar(128)
+  recipientEmailEncrypted   String?   @db.Text
+  installationGeneration    Int?
+  emailHashKeyVersion       Int?
+  emailNormalizationVersion Int       @default(1)
+  reason                    String    @db.VarChar(64)
+  source                    String    @db.VarChar(64)
+  status                    String    @default("active") @db.VarChar(32)
+  bounceType                String?   @db.VarChar(64)
+  bounceSubType             String?   @db.VarChar(64)
+  providerEventId           String?   @db.VarChar(256)
+  createdAt                 DateTime  @default(now())
+  expiresAt                 DateTime?
+  releasedAt                DateTime?
+
+  @@unique([storeId, emailHash, reason])
+  @@index([storeId, emailHash])
+  @@index([storeId, category, emailHash, status])
+  @@index([reason, createdAt])
+}
+
+model ReviewEmailUnsubscribeToken {
+  id                                 String              @id @default(uuid())
+  storeId                            String
+  category                           String              @default("review_request") @db.VarChar(64)
+  recipientFoldedHash                String              @db.VarChar(128)
+  recipientExactHash                 String              @db.VarChar(128)
+  recipientExactHashKeyVersion       Int
+  recipientEmailNormalizationVersion Int                 @default(2)
+  tokenHash                          String              @unique @db.VarChar(64)
+  tokenKeyVersion                    Int                 @default(1)
+  status                             String              @default("active") @db.VarChar(32)
+  createdFromAttemptId               String?             @unique
+  usedAt                             DateTime?
+  revokedAt                          DateTime?
+  expiresAt                          DateTime?
+  createdAt                          DateTime            @default(now())
+  updatedAt                          DateTime            @updatedAt
+  createdFromAttempt                 ReviewEmailAttempt? @relation(fields: [createdFromAttemptId], references: [id], onDelete: SetNull)
+
+  @@index([storeId, category, recipientFoldedHash, status], map: "ReviewEmailUnsubscribeToken_scope_idx")
+  @@index([storeId, recipientExactHash], map: "ReviewEmailUnsubscribeToken_store_exact_idx")
+  @@index([status, expiresAt])
+}
+
+model ReviewEmailSubjectBlock {
+  id                     String   @id @default(uuid())
+  storeId                String
+  installationGeneration Int
+  foldedSubjectHash      String   @db.VarChar(128)
+  foldedHashKeyVersion   Int
+  normalizationVersion   Int      @default(2)
+  reason                 String   @default("subject_erasure") @db.VarChar(64)
+  sourceRunId            String?  @db.VarChar(64)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@unique([storeId, installationGeneration, foldedSubjectHash], map: "ReviewEmailSubjectBlock_subject_key")
+  @@index([storeId, installationGeneration, createdAt], map: "ReviewEmailSubjectBlock_store_generation_created_idx")
+}
+
+model ReviewEmailDataSubjectRun {
+  id                           String    @id @default(uuid())
+  storeId                      String
+  installationGeneration       Int
+  action                       String    @default("erase") @db.VarChar(32)
+  normalizationVersion         Int       @default(2)
+  exactSubjectHash             String?   @db.VarChar(128)
+  exactSubjectKeyVersion       Int?
+  foldedSubjectHash            String?   @db.VarChar(128)
+  foldedSubjectKeyVersion      Int?
+  idempotencyKeyHash           String    @db.VarChar(64)
+  requestDigest                String    @db.VarChar(64)
+  requestDigestKeyVersion      Int?
+  journalKey                   String?   @db.VarChar(1024)
+  journalPayloadSha256         String?   @db.VarChar(64)
+  journalVersionId             String?   @db.VarChar(1024)
+  journalEtag                  String?   @db.VarChar(128)
+  journalChecksumSha256        String?   @db.VarChar(128)
+  journalRetentionBaseAt       DateTime?
+  journalObjectLockRetainUntil DateTime?
+  journalStatus                String    @default("pending") @db.VarChar(32)
+  status                       String    @default("pending") @db.VarChar(32)
+  attempts                     Int       @default(0)
+  nextRetryAt                  DateTime?
+  rowCounts                    Json?
+  progress                     Json?
+  sanitizedErrorCode           String?   @db.VarChar(128)
+  subjectHashesClearedAt       DateTime?
+  startedAt                    DateTime  @default(now())
+  finishedAt                   DateTime?
+  createdAt                    DateTime  @default(now())
+  updatedAt                    DateTime  @updatedAt
+
+  @@unique([storeId, idempotencyKeyHash])
+  @@index([storeId, installationGeneration, createdAt], map: "ReviewEmailDSR_store_generation_created_idx")
+  @@index([storeId, exactSubjectHash])
+  @@index([status, nextRetryAt])
+  @@index([journalStatus, createdAt])
+}
+
+model ReviewEmailPurgeRun {
+  id                 String    @id @default(uuid())
+  mode               String    @db.VarChar(16)
+  status             String    @default("running") @db.VarChar(32)
+  batchSize          Int       @default(100)
+  batchesProcessed   Int       @default(0)
+  candidates         Json?
+  deleted            Json?
+  elapsedMs          Int       @default(0)
+  sanitizedErrorCode String?   @db.VarChar(128)
+  startedAt          DateTime  @default(now())
+  finishedAt         DateTime?
+
+  @@index([status, startedAt])
+  @@index([mode, startedAt])
+}
+
+model ReviewEmailJournalCoverageCheck {
+  id                    String    @id @default(uuid())
+  status                String    @default("running") @db.VarChar(32)
+  restoreTargetAt       DateTime?
+  coverageStartAt       DateTime?
+  earliestSafeRestoreAt DateTime?
+  checkedObjects        Int       @default(0)
+  missingIntents        Int       @default(0)
+  conflictingObjects    Int       @default(0)
+  orphanIntents         Int       @default(0)
+  details               Json?
+  sanitizedErrorCode    String?   @db.VarChar(128)
+  startedAt             DateTime  @default(now())
+  finishedAt            DateTime?
+
+  @@index([status, startedAt])
+}
+
+model StoreDataErasureRun {
+  id                     String    @id @default(uuid())
+  storeId                String
+  authorizedAppId        String?   @db.VarChar(128)
+  installationGeneration Int?
+  triggerSource          String    @db.VarChar(64)
+  status                 String    @default("processing") @db.VarChar(32)
+  attempts               Int       @default(0)
+  nextRetryAt            DateTime?
+  journalKey             String?   @db.VarChar(1024)
+  journalPayloadSha256   String?   @db.VarChar(64)
+  journalVersionId       String?   @db.VarChar(1024)
+  journalEtag            String?   @db.VarChar(128)
+  journalChecksumSha256  String?   @db.VarChar(128)
+  journalRetentionBaseAt DateTime?
+  journalRetainUntil     DateTime?
+  journalStatus          String    @default("pending") @db.VarChar(32)
+  rowCounts              Json?
+  progress               Json?
+  startedAt              DateTime  @default(now())
+  finishedAt             DateTime?
+  sanitizedErrorCode     String?   @db.VarChar(128)
+  createdAt              DateTime  @default(now())
+
+  @@index([storeId, startedAt])
+  @@index([status, startedAt])
+  @@index([status, nextRetryAt])
+  @@index([journalStatus, startedAt])
+}

@@ -3,8 +3,8 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-29
-last_verified: 2026-07-29
+updated: 2026-07-30
+last_verified: 2026-07-30
 tags:
   - critical-files
 related:
@@ -45,8 +45,12 @@ related:
 - **Be careful:** Preview-only controls can use this component without writing to `WidgetSettings`; keep DB persistence decisions in the caller. Do not re-enable user-facing alpha unless the UX for transparent defaults is redesigned.
 
 ### [prisma/schema.prisma](prisma/schema.prisma)
-- **What:** Core Prisma models including `AuthToken`, `Review`, `ProductReviewSummary`, `StoreSettings`, `WidgetSettings`, `ProductSnapshot`, and `PendingReviewImage`.
-- **Why it matters:** Touched by every feature. `Review` has tuned indexes for common widget query shapes (`storeId+status+slug`, `storeId+productId`).
+- **What:** Prisma multi-file entrypoint containing only the client generator and PostgreSQL datasource.
+- **Why it matters:** Every repository-owned Prisma command resolves the containing `prisma/` directory explicitly. Do not move the generator into a domain file or restore implicit schema discovery.
+
+### [prisma/models/](prisma/models/)
+- **What:** Domain-owned Prisma model sources for auth/installation, reviews, storefront, media, operations, and the review-email config/order/delivery/privacy/analytics boundaries.
+- **Why it matters:** Prisma loads the directory as one datamodel, so relations may cross files without imports. Use canonical `pnpm prisma:*` commands; direct single-file reads are incomplete.
 - **Be careful:**
   - When adding indexes, check [prisma/migrations/20260404170403_cleanup_redundant_indexes/](prisma/migrations/20260404170403_cleanup_redundant_indexes/) — there's a history of churn here.
   - `Review.images` is a TEXT (`JSON.stringify(string[])`), not a relation. Keep the parser in sync if format changes.

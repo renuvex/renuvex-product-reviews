@@ -1,0 +1,55 @@
+model ReviewEmailDailyMetric {
+  id                       String   @id @default(uuid())
+  storeId                  String
+  installationGeneration   Int
+  metricDate               DateTime
+  kind                     String   @db.VarChar(32)
+  templateVersion          String   @db.VarChar(64)
+  locale                   String   @db.VarChar(16)
+  accepted                 Int      @default(0)
+  delivered                Int      @default(0)
+  delayed                  Int      @default(0)
+  bounced                  Int      @default(0)
+  complained               Int      @default(0)
+  rejected                 Int      @default(0)
+  failed                   Int      @default(0)
+  outcomeUnknown           Int      @default(0)
+  skipped                  Int      @default(0)
+  reviewedRequests         Int      @default(0)
+  reviewsViaReminder       Int      @default(0)
+  initialRequestsIncluded  Int      @default(0)
+  reminderRequestsIncluded Int      @default(0)
+  batchesWithReview        Int      @default(0)
+  completedBatches         Int      @default(0)
+  skippedRequests          Int      @default(0)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@unique([storeId, installationGeneration, metricDate, kind, templateVersion, locale], map: "ReviewEmailDailyMetric_dimensions_key")
+  @@index([storeId, installationGeneration, metricDate], map: "ReviewEmailDailyMetric_store_generation_date_idx")
+}
+
+model ReviewEmailMetricContribution {
+  id                     String                @id @default(uuid())
+  receiptId              String?
+  batchId                String?
+  storeId                String
+  installationGeneration Int
+  exactSubjectHash       String?               @db.VarChar(128)
+  dedupeKey              String                @unique @db.VarChar(256)
+  metricDate             DateTime
+  kind                   String                @db.VarChar(32)
+  templateVersion        String                @db.VarChar(64)
+  locale                 String                @db.VarChar(16)
+  metric                 String                @db.VarChar(64)
+  delta                  Int
+  reversedAt             DateTime?
+  createdAt              DateTime              @default(now())
+  receipt                ReviewRequestReceipt? @relation(fields: [receiptId], references: [id], onDelete: SetNull)
+  batch                  ReviewEmailBatch?     @relation(fields: [batchId], references: [id], onDelete: SetNull)
+
+  @@index([receiptId, createdAt])
+  @@index([batchId, createdAt])
+  @@index([storeId, exactSubjectHash, createdAt], map: "ReviewEmailContribution_subject_created_idx")
+  @@index([reversedAt, createdAt])
+}

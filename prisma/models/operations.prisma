@@ -1,0 +1,63 @@
+// --- Cleanup hardening (ADR_0030) -------------------------------------------
+
+// Audit log: one durable row per cleanup-images cron run. Records what the
+// orphan cleanup scanned / quarantined / released / deleted, whether the safety
+// breaker tripped (and why), and a sample of deleted publicIds for recovery.
+model MediaCleanupRun {
+  id             String    @id @default(uuid())
+  startedAt      DateTime  @default(now())
+  finishedAt     DateTime?
+  status         String    @default("ok") @db.VarChar(32) // ok | tripped | error | skipped
+  trigger        String    @default("cron") @db.VarChar(32) // cron | manual
+  scanned        Int       @default(0)
+  usedCount      Int       @default(0)
+  candidates     Int       @default(0) // current orphans flagged this run
+  quarantinedNew Int       @default(0) // newly added to quarantine this run
+  released       Int       @default(0) // un-quarantined (no longer orphan) this run
+  deleted        Int       @default(0) // hard-deleted (swept) this run
+  breakerTripped Boolean   @default(false)
+  breakerReason  String?   @db.VarChar(128)
+  forced         Boolean   @default(false)
+  sampleDeleted  Json? // up to ~50 deleted publicIds, for forensics/recovery
+  error          String?   @db.VarChar(512)
+  durationMs     Int?
+
+  @@index([startedAt])
+  @@index([status, startedAt])
+}
+
+// Idempotency guard for QStash scheduled maintenance jobs. The composite key
+// represents one logical scheduled run, while status/lockedUntil let failed or
+// stale attempts be retried without overlapping a currently running attempt.
+model ScheduledJobRunLock {
+  task         String    @db.VarChar(64)
+  scheduleSlot String    @db.VarChar(32)
+  status       String    @default("processing") @db.VarChar(32)
+  attempts     Int       @default(1)
+  lockedUntil  DateTime?
+  startedAt    DateTime  @default(now())
+  completedAt  DateTime?
+  lastError    String?   @db.VarChar(512)
+  updatedAt    DateTime  @updatedAt
+
+  @@id([task, scheduleSlot])
+  @@index([startedAt])
+  @@index([status, startedAt])
+}
+
+// Two-phase orphan deletion (ADR_0030). The monthly cleanup-images cron MARKS an
+// orphan here (phase 1) instead of deleting it; a later run hard-DELETES it
+// (phase 2) only if it is still orphaned after the grace window. Rows are
+// removed automatically when an asset stops being an orphan (e.g. its review is
+// re-found), giving a recoverable grace period before any irreversible delete.
+model OrphanImageQuarantine {
+  publicId      String   @id @db.VarChar(512)
+  storeId       String?
+  reason        String   @default("orphan_scan") @db.VarChar(64)
+  quarantinedAt DateTime @default(now())
+  lastSeenAt    DateTime @default(now()) // last run it was still seen as orphan
+  scanCount     Int      @default(1) // number of runs it has been flagged
+
+  @@index([quarantinedAt])
+  @@index([storeId])
+}
