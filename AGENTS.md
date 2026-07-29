@@ -170,6 +170,13 @@ export async function GET(request: NextRequest) {
 
 ## Quality Gates
 - Run `pnpm codegen` when `graphql-requests.ts` changes.
+- Use `pnpm build:ci` for CI or local migration-free application builds. Do not
+  run `pnpm build` in CI: it is the Vercel deployment contract and includes
+  `prisma migrate deploy` plus the live installation-auth verifier.
+- Database contract jobs must use disposable local PostgreSQL only. Never point
+  `DATABASE_URL` or `REVIEW_EMAIL_INTEGRATION_DATABASE_URL` at production.
+- Generated Ikas and widget outputs must pass `pnpm codegen:check` and
+  `pnpm build:widget:ci` without tracked or untracked drift.
 - Ensure type-safety and linter cleanliness before committing.
 - Reject PRs that introduce raw GraphQL usage outside `graphql-requests.ts`.
 - Keep naming consistent with `ikas` brand and command patterns.

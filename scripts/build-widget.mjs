@@ -18,7 +18,7 @@ const args = process.argv.slice(2);
 const watchMode = args.includes('--watch');
 const themeArg = args.find(a => a.startsWith('--theme='));
 const theme = themeArg ? themeArg.split('=')[1] : 'default';
-const buildTime = new Date().toISOString();
+const ciBuild = process.env.RENUVEX_CI_BUILD === 'true';
 
 const validThemes = ['default', 'new-theme'];
 if (!validThemes.includes(theme)) {
@@ -39,6 +39,17 @@ const runtimePublicPath = theme === 'default'
 const runtimeOutdirPublicPrefix = theme === 'default'
   ? 'public/widget-runtime'
   : `public/widget-runtime-${theme}`;
+
+function resolveBuildTime() {
+  if (!ciBuild) return new Date().toISOString();
+  const configured = process.env.RENUVEX_WIDGET_BUILD_TIME?.trim();
+  if (!configured || Number.isNaN(Date.parse(configured)) || new Date(configured).toISOString() !== configured) {
+    throw new Error('RENUVEX_WIDGET_BUILD_TIME must be a canonical ISO timestamp for CI builds');
+  }
+  return configured;
+}
+
+const buildTime = resolveBuildTime();
 
 const classicEntryPoint = resolve(ROOT, 'src/widget/classic-loader.js');
 const runtimeEntryPoint = resolve(ROOT, 'src/widget/index.js');
@@ -310,7 +321,7 @@ if (watchMode) {
     resolve(runtimeOutdir, 'build-manifest.json'),
     JSON.stringify(manifest, null, 2),
   );
-  pruneOldRuntimeFiles(manifest);
+  if (!ciBuild) pruneOldRuntimeFiles(manifest);
 
   const { execSync } = await import('child_process');
   try {

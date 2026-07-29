@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { GET, PUT } from '@/app/api/admin/settings/route';
+import { IkasInstallationError } from '@/lib/ikas-installation-lifecycle';
 
 const prismaMock = vi.hoisted(() => ({
   $transaction: vi.fn(),
@@ -33,7 +35,6 @@ vi.mock('next/server', async (importOriginal) => {
 });
 
 beforeEach(() => {
-  vi.resetModules();
   vi.clearAllMocks();
   authMock.authenticateIkasAdminRequest.mockResolvedValue({
     ok: true,
@@ -82,7 +83,6 @@ beforeEach(() => {
 
 describe('GET /api/admin/settings', () => {
   it('returns video usage as read-only metadata beside editable settings', async () => {
-    const { GET } = await import('@/app/api/admin/settings/route');
     const response = await GET(new Request('https://app.test/api/admin/settings'));
     const body = await response.json();
 
@@ -103,7 +103,6 @@ describe('GET /api/admin/settings', () => {
 
 describe('PUT /api/admin/settings', () => {
   it('rechecks the installation fence in the final settings transaction', async () => {
-    const { PUT } = await import('@/app/api/admin/settings/route');
     const response = await PUT(new Request('https://app.test/api/admin/settings', {
       method: 'PUT',
       body: JSON.stringify({
@@ -126,11 +125,9 @@ describe('PUT /api/admin/settings', () => {
   });
 
   it('returns unauthorized when uninstall wins before settings persistence', async () => {
-    const { IkasInstallationError } = await import('@/lib/ikas-installation-lifecycle');
     lifecycleMock.requireFence.mockRejectedValueOnce(
       new IkasInstallationError('ikas_installation_inactive'),
     );
-    const { PUT } = await import('@/app/api/admin/settings/route');
 
     const response = await PUT(new Request('https://app.test/api/admin/settings', {
       method: 'PUT',

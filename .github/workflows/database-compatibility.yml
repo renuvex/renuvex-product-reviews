@@ -1,0 +1,118 @@
+name: Database Compatibility
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '15 3 * * 1'
+  pull_request:
+    paths:
+      - '.github/workflows/database-compatibility.yml'
+      - 'prisma/**'
+      - 'scripts/lib/supabase-data-api-surface-audit.mjs'
+      - 'scripts/verify-supabase-data-api-surface.mjs'
+      - 'src/lib/auth-helpers.ts'
+      - 'src/lib/ikas-installation-lifecycle.ts'
+      - 'src/lib/prisma.ts'
+      - 'src/lib/review-email/**'
+      - 'src/models/auth-token/**'
+      - 'tests/integration/**'
+      - 'vitest.integration.config.ts'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/database-compatibility.yml'
+      - 'prisma/**'
+      - 'scripts/lib/supabase-data-api-surface-audit.mjs'
+      - 'scripts/verify-supabase-data-api-surface.mjs'
+      - 'src/lib/auth-helpers.ts'
+      - 'src/lib/ikas-installation-lifecycle.ts'
+      - 'src/lib/prisma.ts'
+      - 'src/lib/review-email/**'
+      - 'src/models/auth-token/**'
+      - 'tests/integration/**'
+      - 'vitest.integration.config.ts'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: database-compatibility-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  postgres-16:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: renuvex_ci
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d renuvex_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/renuvex_ci?schema=public&connection_limit=10
+      DIRECT_URL: postgresql://postgres:postgres@127.0.0.1:5432/renuvex_ci?schema=public&connection_limit=10
+      REVIEW_EMAIL_INTEGRATION_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/renuvex_ci?schema=public&connection_limit=10
+      SHADOW_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/renuvex_shadow?schema=public
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
+        with:
+          version: 10.4.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm prisma:generate
+
+      - name: Create shadow database
+        run: >-
+          docker exec "${{ job.services.postgres.id }}"
+          psql --username=postgres --dbname=postgres
+          --set=ON_ERROR_STOP=1
+          --command='CREATE DATABASE renuvex_shadow'
+
+      - name: Apply all migrations
+        run: pnpm exec prisma migrate deploy
+
+      - name: Check migration status
+        run: pnpm exec prisma migrate status
+
+      - name: Compare migrations with the database
+        run: >-
+          pnpm exec prisma migrate diff
+          --from-migrations prisma/migrations
+          --to-url "$DATABASE_URL"
+          --shadow-database-url "$SHADOW_DATABASE_URL"
+          --exit-code
+
+      - name: Verify Data API grants and RLS surface
+        run: pnpm verify:supabase-data-api-surface
+
+      - name: Run PostgreSQL integration tests
+        run: pnpm test:integration:review-email

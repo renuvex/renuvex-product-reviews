@@ -462,12 +462,16 @@ test('stale product bootstrap cannot overwrite the current review widget', async
     merchantReply: null,
     recommendation: true,
   };
+  let oldReviewsRequested = false;
+  let releaseOldReviews: () => void = () => {};
+  const oldReviewsGate = new Promise<void>((resolve) => {
+    releaseOldReviews = resolve;
+  });
   const log = await setupWidgetRoutes(page, {
     badgeEnabled: true,
     mountReviews: true,
     ikasEvents: [
       { type: 'PRODUCT_VIEW', data: { productDetail: { id: 'old-product', name: 'Old Product' } } },
-      { type: 'PRODUCT_VIEW', data: { productDetail: { id: PRODUCT_ID, name: PRODUCT_NAME } }, delayMs: 100 },
       { type: 'PAGE_VIEW', data: { pageType: 'PRODUCT' } },
     ],
     reviewsGetHandler: async (route) => {
@@ -475,7 +479,8 @@ test('stale product bootstrap cannot overwrite the current review widget', async
       const productId = url.searchParams.get('productId');
       const hasImages = url.searchParams.get('hasImages') === 'true';
       if (productId === 'old-product') {
-        await wait(300);
+        oldReviewsRequested = true;
+        await oldReviewsGate;
         await fulfillJson(route, hasImages
           ? reviewPayload([stalePhotoReview], { allCount: 1, totalCount: 1 })
           : reviewPayload([], { allCount: 0, totalCount: 0, ratingCounts: [0, 0, 0, 0, 0], avgRating: '0.0' }));
@@ -486,8 +491,27 @@ test('stale product bootstrap cannot overwrite the current review widget', async
     },
   });
   await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
-  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await expect.poll(() => oldReviewsRequested).toBe(true);
+
+  try {
+    const emitted = await page.evaluate(({ productId, productName }) => {
+      const emit = (window as unknown as { __renuvexEmitIkasEvent?: (event: unknown) => void }).__renuvexEmitIkasEvent;
+      if (typeof emit !== 'function') return false;
+      emit({ type: 'PRODUCT_VIEW', data: { productDetail: { id: productId, name: productName } } });
+      return true;
+    }, { productId: PRODUCT_ID, productName: PRODUCT_NAME });
+    expect(emitted).toBe(true);
+    await expect.poll(() => reviewsWidgetState(page)).toMatchObject({
+      productId: PRODUCT_ID,
+      reviewCards: 1,
+      transitioning: false,
+    });
+  } finally {
+    releaseOldReviews();
+  }
+
   await waitForWidgetIdle(page);
+  await page.waitForTimeout(100);
 
   const state = await reviewsWidgetState(page);
   expect(state.productId).toBe(PRODUCT_ID);
@@ -495,7 +519,9 @@ test('stale product bootstrap cannot overwrite the current review widget', async
   expect(state.reviewCards).toBeGreaterThanOrEqual(1);
   expect(state.mediaThumbs).toBeGreaterThanOrEqual(1);
   expect(log.urls.some((url) => url.includes('/api/public/reviews?') && url.includes('productId=old-product') && url.includes('hasMedia=true'))).toBe(false);
-  expect(countUrls(log, '/api/public/reviews?')).toBe(3);
+  const reviewUrls = log.urls.filter((url) => url.includes('/api/public/reviews?'));
+  expect(reviewUrls.filter((url) => url.includes('productId=old-product'))).toHaveLength(1);
+  expect(reviewUrls.filter((url) => url.includes(`productId=${PRODUCT_ID}`))).toHaveLength(2);
   expect(widgetErrors(log)).toEqual([]);
 });
 
@@ -652,6 +678,8 @@ test('history route change clears rendered stale reviews before product event ar
   });
   const routeTransitionState = await reviewsWidgetState(page);
   expect(routeTransitionState.text).not.toContain('Old product review should be cleared on route change before product event.');
+  await page.waitForTimeout(450);
+  expect(countUrls(log, '/api/public/widget-error')).toBe(0);
 
   const emitted = await page.evaluate(() => {
     const emit = (window as unknown as { __renuvexEmitIkasEvent?: (event: unknown) => void }).__renuvexEmitIkasEvent;

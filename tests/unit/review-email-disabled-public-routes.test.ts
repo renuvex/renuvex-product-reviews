@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
+import {
+  GET as resolveLegacyReviewRequest,
+  POST as exchangeLegacyReviewRequest,
+} from '@/app/api/public/review-request/route';
+import { POST as exchangeReviewCenterSession } from '@/app/api/public/review-center/session/route';
+import { GET as listReviewCenterItems } from '@/app/api/public/review-center/items/route';
+import { POST as submitReviewCenterItem } from '@/app/api/public/review-center/items/[itemId]/reviews/route';
+import { POST as skipReviewCenterItem } from '@/app/api/public/review-center/items/[itemId]/skip/route';
 
 vi.mock('@/lib/prisma', () => ({ prisma: {} }));
 
@@ -29,8 +37,7 @@ describe('feature-disabled public review email routes', () => {
     {
       name: 'legacy token exchange',
       invoke: async () => {
-        const { POST } = await import('@/app/api/public/review-request/route');
-        return POST(new NextRequest('https://app.renuvex.app/api/public/review-request', {
+        return exchangeLegacyReviewRequest(new NextRequest('https://app.renuvex.app/api/public/review-request', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token: 'invalid' }),
@@ -40,15 +47,13 @@ describe('feature-disabled public review email routes', () => {
     {
       name: 'legacy session resolve',
       invoke: async () => {
-        const { GET } = await import('@/app/api/public/review-request/route');
-        return GET(new NextRequest('https://app.renuvex.app/api/public/review-request'));
+        return resolveLegacyReviewRequest(new NextRequest('https://app.renuvex.app/api/public/review-request'));
       },
     },
     {
       name: 'batch token exchange',
       invoke: async () => {
-        const { POST } = await import('@/app/api/public/review-center/session/route');
-        return POST(new NextRequest('https://app.renuvex.app/api/public/review-center/session', {
+        return exchangeReviewCenterSession(new NextRequest('https://app.renuvex.app/api/public/review-center/session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token: 'invalid' }),
@@ -58,15 +63,13 @@ describe('feature-disabled public review email routes', () => {
     {
       name: 'batch item listing',
       invoke: async () => {
-        const { GET } = await import('@/app/api/public/review-center/items/route');
-        return GET(new NextRequest('https://app.renuvex.app/api/public/review-center/items'));
+        return listReviewCenterItems(new NextRequest('https://app.renuvex.app/api/public/review-center/items'));
       },
     },
     {
       name: 'batch item submit',
       invoke: async () => {
-        const { POST } = await import('@/app/api/public/review-center/items/[itemId]/reviews/route');
-        return POST(new NextRequest('https://app.renuvex.app/api/public/review-center/items/item/reviews', {
+        return submitReviewCenterItem(new NextRequest('https://app.renuvex.app/api/public/review-center/items/item/reviews', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ rating: 5 }),
@@ -76,8 +79,7 @@ describe('feature-disabled public review email routes', () => {
     {
       name: 'batch item skip',
       invoke: async () => {
-        const { POST } = await import('@/app/api/public/review-center/items/[itemId]/skip/route');
-        return POST(new NextRequest('https://app.renuvex.app/api/public/review-center/items/item/skip', {
+        return skipReviewCenterItem(new NextRequest('https://app.renuvex.app/api/public/review-center/items/item/skip', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: '{}',

@@ -75,6 +75,14 @@ function responseSummaryExpectsMediaGallery(reviewsData) {
   return Number.isFinite(mediaCount) && mediaCount > 0;
 }
 
+function isReviewsVisibilityProbeRelevant(container, sRoot, productId) {
+  if (container.getAttribute('data-renuvex-transitioning') === 'true') return false;
+
+  var current = sRoot.getElementById('renuvex-reviews-widget');
+  if (!current) return true;
+  return String(current.getAttribute('data-renuvex-product-id') || '') === String(productId || '');
+}
+
 export function renderDeferredMediaGallery(productId, settings) {
   if (String(currentProductId || '') !== String(productId || '')) return false;
 
@@ -322,6 +330,8 @@ export async function render(productId, settings, reviewsData, productName, orde
         registerSpriteRoot(sRoot);
         probeWidgetVisibility(widget, 'reviews-widget', { productId: productId || '', reason: 'fetch_error' }, function () {
           return sRoot.getElementById('renuvex-reviews-widget');
+        }, function () {
+          return isReviewsVisibilityProbeRelevant(container, sRoot, productId);
         });
         markWidgetPerf('reviews-widget-visible');
         return;
@@ -469,6 +479,8 @@ export async function render(productId, settings, reviewsData, productName, orde
       registerSpriteRoot(sRoot);
       probeWidgetVisibility(widget, 'reviews-widget', { productId: productId || '' }, function () {
         return sRoot.getElementById('renuvex-reviews-widget');
+      }, function () {
+        return isReviewsVisibilityProbeRelevant(container, sRoot, productId);
       });
       markWidgetPerf('reviews-widget-visible');
     } catch (err) {

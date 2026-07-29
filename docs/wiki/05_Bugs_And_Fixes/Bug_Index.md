@@ -3,7 +3,7 @@ type: bug
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-04
+updated: 2026-07-29
 tags:
   - bugs
 related:
@@ -21,6 +21,7 @@ related:
 - _None tracked._
 
 ## Recently fixed (verify periodically)
+- 2026-07-29 - [[Bug_Review_Widget_SPA_Health_Probe_False_Positive]] - Fixed a CI-reproduced false `reviews-widget / missing_after_render` report. The old product widget is intentionally cleared during an SPA route transition, but its delayed visibility probe could fire before the next product event. Review probes now stop only when their route/product lifecycle is no longer relevant; genuine unexpected removal remains observable.
 - 2026-07-04 - [[Bug_AWS_Lightbox_Full_Size_Variant_Selection]] - Fixed a storefront AWS image lightbox bug where small uploaded originals could make every generated variant report the same width, causing the generic picker to choose `thumb_640x854.webp` for the main 1200px modal image. Lightbox main images now prefer the full-size `w*` variant family, and duplicate immutable `srcset` values are suppressed.
 - 2026-07-02 - [[Bug_Offline_Refresh_Unstyled_SVG_Star]] - Verified and fixed an offline refresh / partial-load hardening bug where widget-owned SVG stars and media thumbnails could become huge when CSS/current chunks were missing or delayed. Shared icon output now carries intrinsic `1em` fallback dimensions, and media thumbnail source quality is separated from small HTML display fallback dimensions.
 - 2026-06-12 - [[Bug_Widget_Editor_Late_Settings_Dirty_State]] - Verified and fixed an admin customization dirty-state bug where opening Product Reviews before asynchronous saved settings finished loading could initialize the editor draft from defaults, then mark the screen as unsaved when the real saved settings arrived. The editor now syncs late saved settings only while the local draft is still untouched, preserves real merchant edits, and unit tests pin the draft/saved snapshot contract.
@@ -67,6 +68,7 @@ related:
 - 2026-05-10 - [[Bug_Review_Detail_Lightbox_Risks]] - Public review image URLs are now restricted to trusted Cloudinary assets before storage or storefront render.
 
 ## Change Log
+- 2026-07-29: Added [[Bug_Review_Widget_SPA_Health_Probe_False_Positive]] after Playwright trace evidence proved that the full CI browser failure was an intentional SPA retirement reported as `missing_after_render`, not a failed product transition. Added lifecycle-relevance gating plus unit and browser regressions.
 - 2026-07-04: Added [[Bug_AWS_Lightbox_Full_Size_Variant_Selection]] after live storefront inspection showed the modal main image using `thumb_640x854.webp` in a 1200px lightbox. Root cause was small-original AWS variants sharing the same output width; fixed by making the lightbox prefer full-size `w*` variants and suppressing duplicate immutable `srcset`.
 - 2026-07-02: Added and expanded [[Bug_Offline_Refresh_Unstyled_SVG_Star]] after Android Chrome offline refresh screenshots showed partial/no-style widget rendering with oversized stars and media thumbnails. Fixed by adding intrinsic `width="1em" height="1em" focusable="false"` fallback attributes to shared sprite icon use-sites, separating media thumbnail source and display dimensions, and pinning the contract with unit/runtime tests.
 - 2026-06-12: Added [[Bug_Widget_Editor_Late_Settings_Dirty_State]] after a source review proved the admin editor could open with temporary default settings before the saved settings response arrived. Fixed by tracking the previous saved draft snapshot, syncing late saved settings only when the local draft is still untouched, preserving real merchant edits, and pinning the behavior with unit tests.
