@@ -142,7 +142,6 @@
     "zod": "^3.25.67"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3",
     "@graphql-codegen/cli": "^5.0.7",
     "@graphql-codegen/typescript": "^4.1.0",
     "@graphql-codegen/typescript-graphql-request": "^6.3.0",
@@ -152,12 +151,9 @@
     "@types/node": "^24.3.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@typescript-eslint/eslint-plugin": "^8.30.1",
-    "@typescript-eslint/parser": "^8.30.1",
     "esbuild": "^0.28.0",
     "eslint": "^9",
-    "eslint-config-next": "^15.3.0",
-    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-config-next": "^16.2.1",
     "prisma": "^6.14.0",
     "supabase": "2.109.1",
     "tsx": "^4.23.0",

@@ -45,7 +45,11 @@ merchant UI, and live email acceptance remain future approved work.
 Active development on the production test store. Core review, image, Mux video, moderation, storefront widget, Cloudflare Worker delivery, and public read-cache paths are implemented and live. The project is still pre-public-launch; remaining work is product polish, security hardening, operational smoke coverage, and future feature expansion rather than a pending Mux/Worker migration.
 
 ## Working Features
-- OAuth install flow for ikas merchants — code-signature validation, token exchange, JWT issuance, session cookie
+- OAuth install flow for ikas merchants — browser-bound state, optional
+  code-signature validation, provider token exchange, active installation/token
+  persistence, and installation session. The embedded admin JWT is obtained
+  from ikas AppBridge after the iframe opens; the callback neither creates nor
+  transports that bearer credential.
 - Auto-injection of widget script into every merchant storefront on install
 - Manual re-injection via `/api/admin/inject-scripts` (button in admin)
 - Storefront widget runtime (`/public/widget.js` classic loader + `/public/widget-runtime/*` ESM chunks locally; deployed pre-Phase-2 response measured `177763` bytes on 2026-05-15) with:

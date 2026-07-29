@@ -3,8 +3,8 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-28
-last_verified: 2026-07-03
+updated: 2026-07-29
+last_verified: 2026-07-29
 tags:
   - dependencies
 related:
@@ -98,8 +98,12 @@ The legacy image SDK was removed during the AWS-only review-image teardown sourc
 
 | Package | Used for |
 |---|---|
-| `eslint`, `eslint-config-next`, `eslint-plugin-react-hooks` | Linting |
-| `@typescript-eslint/eslint-plugin`, `parser` | TS rules |
+| `eslint`, `eslint-config-next` | ESLint 9 with the Next.js 16.2.1 native flat configuration, including Next, TypeScript, and React Hooks rules |
+
+The React Hooks `refs` and `set-state-in-effect` compiler diagnostics remain
+visible as warnings during incremental adoption. They are not disabled, and
+all other Next.js 16 recommended and Core Web Vitals rules retain their preset
+severity.
 
 ## Testing
 
