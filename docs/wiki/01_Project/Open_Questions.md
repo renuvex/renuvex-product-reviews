@@ -125,7 +125,16 @@ ikas merchants can have multiple storefronts (e.g. locale variants). Today, `Wid
 Install now replaces merchant tokens atomically through `IkasStoreInstallation`; refresh updates only an existing exact installation row and cannot recreate an erased token. The disabled review-email V5 source handles a signed `store/app/deleted` receiver, exact-subject DSR, generation-fenced auth/PII erasure, immutable journal intent, real restore replay, and bounded retries. `saveWebhooks` registers only the MCP-valid order scopes. Still open before launch: verify the copy register against the actual managed DB restore horizon, roll out and initialize journal coverage through separate gates, configure and prove the app-deleted signal provider-side, set the operator verification gate, and run live 24-hour uninstall acceptance.
 
 ## OAuth scope correctness
-Current scope: `read_orders,write_orders,read_products,read_inventories,write_inventories`. Why does a review app need `write_orders` / `write_inventories`? Likely starter-template inheritance. Tightening scope reduces install friction and audit risk.
+The authorize route requests `read_orders`, `write_orders`, `read_products`,
+`read_inventories`, `write_inventories`, and `read_customers`, while the
+retained production token reflects a broader Partner permission set. Source
+uses only product/order webhook registration and storefront script
+create/update mutations; it does not mutate order, inventory, product,
+customer, or campaign data. The exact `saveWebhooks` scope dependency and
+existing-token behavior after Partner permission reduction are pending an ikas
+answer. The application-neutral provider question, evidence, and closure test
+are recorded in [[Ikas_OAuth_Installation_Notes]]. Do not reduce live scopes
+before that contract and a development-store reauthorization test agree.
 
 ## Profanity filter
 Hard-coded list in [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts). Maintainable? Move to config or Redis? Add per-merchant blocklist?
