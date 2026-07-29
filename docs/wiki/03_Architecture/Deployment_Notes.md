@@ -3,7 +3,7 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-20
+updated: 2026-07-30
 last_verified: 2026-07-20
 confidence: high
 tags:
@@ -20,18 +20,18 @@ related:
 # Deployment Notes
 
 ## Summary
-Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler for runtime, session pooler for migrations). Upstash Redis for rate limits. AWS S3/CloudFront for review images. Two scheduled jobs: daily maintenance and monthly AWS image cleanup. Build runs `prisma generate && prisma migrate deploy && pnpm build:widget && next build --webpack`.
+Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler for runtime, session pooler for migrations). Upstash Redis for rate limits. AWS S3/CloudFront for review images. Two scheduled jobs: daily maintenance and monthly AWS image cleanup. Build runs `pnpm prisma:generate && pnpm prisma:migrate:deploy && pnpm build:widget && next build --webpack`.
 
 ## Vercel
 - **Region**: `["fra1"]` ([vercel.json](vercel.json)). Reasonable proximity to ikas/Supabase EU regions.
 - **Production domains**: `app.renuvex.app` is the ikas app/admin/API origin and remains on the production Vercel project. `widget.renuvex.app` is the storefront widget static asset origin and is served by Cloudflare Worker Static Assets. The legacy pre-custom-domain Vercel alias has been removed from the project and must not be used for new configuration or documentation.
 - **Cron**: `/api/admin/daily-maintenance` daily at 03:00 UTC. It verifies pending storefront themes in batches and runs pending-upload cleanup plus storefront script reconciliation. The route still supports lightweight sub-daily execution if the Vercel plan is upgraded and the cron expression is changed later. `/api/admin/cleanup-images` remains monthly on day 1 at 04:00 UTC.
-- **Build command**: `pnpm build` → `prisma generate && prisma migrate deploy && pnpm build:widget && next build --webpack`.
+- **Build command**: `pnpm build` → `pnpm prisma:generate && pnpm prisma:migrate:deploy && pnpm build:widget && next build --webpack`.
 - **Why webpack**: build script forces `--webpack` (Turbopack opt-out, presumably for compatibility — verify when Next ships stable Turbopack production builds).
 
 ### Preview database isolation gate
 
-- Non-`main` Git deployments are disabled in [vercel.json](vercel.json). Preview and Production currently resolve `DATABASE_URL` and `DIRECT_URL` to the same Supabase project, while every Vercel build runs `prisma migrate deploy`; allowing a branch Preview would therefore mutate the Production schema before PR approval.
+- Non-`main` Git deployments are disabled in [vercel.json](vercel.json). Preview and Production currently resolve `DATABASE_URL` and `DIRECT_URL` to the same Supabase project, while every Vercel build runs `pnpm prisma:migrate:deploy`; allowing a branch Preview would therefore mutate the Production schema before PR approval.
 - `main` remains the only Git branch permitted to deploy automatically. Branch pushes must produce GitHub CI evidence without creating a Vercel Preview deployment.
 - Do not re-enable Preview deployments until `pnpm verify:preview-db-isolation -- --json --branch=<branch>` proves that both Preview database URLs are isolated from Production. A failed isolation check is a rollout blocker, not a warning.
 - After every branch push while this guard is active, confirm that Vercel did not start a Preview deployment and that the Production migration set did not change.
@@ -69,7 +69,7 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 - Two URLs:
   - `DATABASE_URL` — transaction pooler (port 6543, `?pgbouncer=true`). Used by runtime queries.
   - `DIRECT_URL` — session pooler (port 5432). Used by `prisma migrate`. Defined in `datasource db { directUrl = env("DIRECT_URL") }`.
-- Migrations apply on each deploy via `prisma migrate deploy`.
+- Migrations apply on each deploy via `pnpm prisma:migrate:deploy`.
 - Connection storms during cold-start: PgBouncer transaction-mode mitigates per-instance pools, but cold serverless instances can still spike. Watch for "too many connections" errors.
 
 ## Review Images

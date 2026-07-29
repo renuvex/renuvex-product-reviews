@@ -98,6 +98,12 @@ Postgres (Supabase) accessed via Prisma. Core review/media models now include th
 Use the canonical `pnpm prisma:*` scripts. Repository-owned Prisma commands
 resolve `--schema ./prisma` explicitly; generation also requires models.
 
+Add a new model to the existing file that owns its domain. Create another
+`prisma/models/*.prisma` file only when the model introduces a genuinely new
+domain boundary; do not create one file per model. Cross-file relations require
+no imports. After any datamodel change, use the canonical scripts and follow the
+normal migration workflow below.
+
 ## Models (one-line summaries)
 
 | Model | Primary key | Purpose |
@@ -276,7 +282,7 @@ On `Review` cursor pagination:
 
 ## Migration workflow
 - Local dev: `pnpm prisma:migrate` (creates + applies migration)
-- Deploy: `pnpm build` runs `prisma generate && prisma migrate deploy && next build` — migrations apply on every Vercel deploy.
+- Deploy: `pnpm build` runs `pnpm prisma:generate && pnpm prisma:migrate:deploy && pnpm build:widget && next build --webpack` — migrations apply on every Vercel deploy.
 - ⚠️ Never `prisma db push` in production (only first-run via `pnpm prisma:init` for local).
 
 ### Migration safety (deploy-window rule)

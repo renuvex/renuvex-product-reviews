@@ -120,7 +120,7 @@ Two cron slots, both daily-or-slower: daily maintenance (`0 3 * * *`, pending cl
 Change log:
 - 2026-05-18: D3 added tenant scope to pending uploads. New Cloudinary uploads are signed and trusted only under `review_images/stores/<storeId>`, `/api/public/upload/register` records `storeId`, and review submit removes pending rows by `publicId + storeId`.
 
-1. Run `pnpm prisma migrate deploy` (or `migrate dev` locally) to apply `20260512100000_add_pending_review_image` and `20260518143000_scope_pending_uploads_by_store`.
+1. Run `pnpm prisma:migrate:deploy` (or `pnpm prisma:migrate` locally) to apply `20260512100000_add_pending_review_image` and `20260518143000_scope_pending_uploads_by_store`.
 2. Confirm `CRON_SECRET`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, and `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_CLOUD_NAME` are present in the Vercel environment.
 3. Verify the daily cron path `/api/admin/daily-maintenance` appears under Vercel → Settings → Cron Jobs after deploy.
 4. First production run of the daily cleanup should report `deleted: 0` (no expired pending rows yet); the first non-zero run lands ~24 hours after the first abandoned upload.
