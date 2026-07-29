@@ -3,8 +3,8 @@ type: roadmap
 project: renuvex-product-reviews
 status: draft
 created: 2026-05-05
-updated: 2026-06-23
-last_verified: 2026-06-23
+updated: 2026-07-29
+last_verified: 2026-07-29
 confidence: medium
 tags:
   - roadmap
@@ -50,7 +50,9 @@ Living roadmap. Order is rough priority, not committed dates. Tweak as decisions
 - Add tests for `/api/public/reviews` (POST validation matrix), widget settings sanitize/validate
 - Replace `JSON.stringify(images)` text column with a relational `ReviewImage` table once we add lightbox/CDN-resize features
 - Move profanity list to a config file (and consider Postgres ILIKE-based filter for scale)
-- Review CORS policy — currently `Access-Control-Allow-Origin: *`; OK for read endpoints, consider tightening POST endpoints
+- Evaluate a per-merchant Origin allowlist for anonymous review POST only if
+  abuse evidence justifies the product/configuration cost. Credentialed
+  review-session and widget-beacon CORS boundaries are already isolated.
 - Revisit OAuth scope (`read_orders,write_orders,read_products,read_inventories,write_inventories`) — does the app actually need write_orders/write_inventories?
 - **Authoritative review-media metadata at scale** — AWS register decodes images server-side today; at thousands of stores / 1M+ images evaluate S3 Inventory/S3 Metadata as an operational audit layer for object-family reconciliation. Detail: [[ADR_0034_AWS_Review_Image_Migration]].
 

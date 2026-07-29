@@ -2,7 +2,7 @@ import { createHash } from 'crypto';
 import { NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { prisma } from '@/lib/prisma';
-import { withCors, corsOptions } from '@/lib/cors';
+import { anonymousPublicCorsOptions, withAnonymousPublicCors } from '@/lib/cors';
 import { getClientIp, checkFixedWindowRateLimit } from '@/lib/public-rate-limit';
 import { MediaRequestError, readJsonObject } from '@/lib/media/request';
 import { getVideoSessionByToken } from '@/lib/media/sessions';
@@ -34,8 +34,8 @@ function sanitizeErrorCode(value: unknown): string | null {
   return /^[a-z0-9_.:-]{1,128}$/.test(raw) ? raw : 'invalid_error_code';
 }
 
-export async function OPTIONS(request: Request) {
-  return corsOptions(request);
+export async function OPTIONS() {
+  return anonymousPublicCorsOptions(['POST']);
 }
 
 export async function POST(request: Request) {
@@ -50,12 +50,12 @@ export async function POST(request: Request) {
     if (!rate.allowed) {
       const response = NextResponse.json({ error: 'rate_limited' }, { status: 429 });
       response.headers.set('Retry-After', String(rate.retryAfterSec));
-      return withCors(response, request);
+      return withAnonymousPublicCors(response);
     }
 
     const body = await readJsonObject(request);
     const session = await getVideoSessionByToken(typeof body.token === 'string' ? body.token : '');
-    if (!session) return withCors(NextResponse.json({ error: 'upload_not_found' }, { status: 404 }), request);
+    if (!session) return withAnonymousPublicCors(NextResponse.json({ error: 'upload_not_found' }, { status: 404 }));
 
     const chunkSizeKb = boundedInteger(body.chunkSizeKb, 0, MAX_CHUNK_SIZE_KB) ?? 0;
     const chunkAttempts = boundedInteger(body.chunkAttempts, 0, MAX_CHUNK_ATTEMPTS) ?? 0;
@@ -95,11 +95,11 @@ export async function POST(request: Request) {
       },
     });
 
-    return withCors(NextResponse.json({ data: { status: 'recorded' } }, { status: 202 }), request);
+    return withAnonymousPublicCors(NextResponse.json({ data: { status: 'recorded' } }, { status: 202 }));
   } catch (error) {
-    if (error instanceof MediaRequestError) return withCors(NextResponse.json({ error: error.code }, { status: 400 }), request);
+    if (error instanceof MediaRequestError) return withAnonymousPublicCors(NextResponse.json({ error: error.code }, { status: 400 }));
     Sentry.captureException(error, { tags: { source: 'media-metrics', task: 'video-upload-metrics' } });
     console.error('[video-metrics] failed:', error);
-    return withCors(NextResponse.json({ error: 'video_metrics_failed' }, { status: 500 }), request);
+    return withAnonymousPublicCors(NextResponse.json({ error: 'video_metrics_failed' }, { status: 500 }));
   }
 }

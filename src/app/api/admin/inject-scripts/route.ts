@@ -5,15 +5,10 @@ import {
   ikasAdminAuthenticationResponse,
 } from '@/lib/auth-helpers';
 import { getIkas, getIkasV1 } from '@/helpers/api-helpers';
-import { withCors, corsOptions } from '@/lib/cors';
 import { StorefrontWidgetUrlError } from '@/lib/storefront-widget-url';
 import { ensureStorefrontScripts } from '@/lib/storefront-scripts';
 import { reportServerFailure } from '@/lib/server-failures';
 import { IkasInstallationError } from '@/lib/ikas-installation-lifecycle';
-
-export async function OPTIONS() {
-  return corsOptions();
-}
 
 /**
  * POST: Tüm mevcut temalara widget scriptini inject et / güncelle.
@@ -22,7 +17,7 @@ export async function OPTIONS() {
 export async function POST(request: Request) {
   try {
     const auth = await authenticateIkasAdminRequest(request);
-    if (!auth.ok) return withCors(ikasAdminAuthenticationResponse(auth));
+    if (!auth.ok) return ikasAdminAuthenticationResponse(auth);
     const { authToken, principal } = auth.context;
 
     const ikasClient = getIkas(authToken);
@@ -31,16 +26,16 @@ export async function POST(request: Request) {
       installationFence: principal,
     });
 
-    return withCors(NextResponse.json({ data: summary }));
+    return NextResponse.json({ data: summary });
   } catch (error) {
     if (error instanceof IkasInstallationError) {
-      return withCors(ikasAdminAuthorizationLostResponse());
+      return ikasAdminAuthorizationLostResponse();
     }
     if (error instanceof StorefrontWidgetUrlError) {
-      return withCors(NextResponse.json({ error: 'storefront_widget_configuration_invalid' }, { status: 500 }));
+      return NextResponse.json({ error: 'storefront_widget_configuration_invalid' }, { status: 500 });
     }
 
     reportServerFailure('storefront_script_sync_failed');
-    return withCors(NextResponse.json({ error: 'storefront_script_sync_failed' }, { status: 500 }));
+    return NextResponse.json({ error: 'storefront_script_sync_failed' }, { status: 500 });
   }
 }

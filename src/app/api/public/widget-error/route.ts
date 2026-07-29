@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { Redis } from '@upstash/redis';
 import * as Sentry from '@sentry/nextjs';
-import { withCors, corsOptions } from '@/lib/cors';
+import { widgetBeaconCorsOptions, withWidgetBeaconCors } from '@/lib/cors';
 
 const redis = new Redis({
   url: process.env.KV_REST_API_URL!,
@@ -35,7 +35,7 @@ function sanitizeExtra(extra: Record<string, unknown> | undefined) {
 }
 
 export async function OPTIONS(req: Request) {
-  return corsOptions(req);
+  return widgetBeaconCorsOptions(req);
 }
 
 export async function POST(req: Request) {
@@ -43,18 +43,18 @@ export async function POST(req: Request) {
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
 
     if (!(await checkRateLimit(ip))) {
-      return withCors(NextResponse.json({ ok: true }, { status: 200 }), req);
+      return withWidgetBeaconCors(NextResponse.json({ ok: true }, { status: 200 }), req);
     }
 
     const body: unknown = await req.json().catch(() => null);
     if (!body || typeof body !== 'object') {
-      return withCors(NextResponse.json({ ok: true }, { status: 200 }), req);
+      return withWidgetBeaconCors(NextResponse.json({ ok: true }, { status: 200 }), req);
     }
 
     const b = body as Record<string, unknown>;
     const message = clip(b.message, 500);
     if (!message) {
-      return withCors(NextResponse.json({ ok: true }, { status: 200 }), req);
+      return withWidgetBeaconCors(NextResponse.json({ ok: true }, { status: 200 }), req);
     }
 
     const stack = clip(b.stack, 4000);
@@ -87,8 +87,8 @@ export async function POST(req: Request) {
       },
     });
 
-    return withCors(NextResponse.json({ ok: true }, { status: 200 }), req);
+    return withWidgetBeaconCors(NextResponse.json({ ok: true }, { status: 200 }), req);
   } catch {
-    return withCors(NextResponse.json({ ok: false }, { status: 200 }), req);
+    return withWidgetBeaconCors(NextResponse.json({ ok: false }, { status: 200 }), req);
   }
 }

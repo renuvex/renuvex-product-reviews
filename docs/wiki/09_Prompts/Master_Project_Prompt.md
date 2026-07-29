@@ -3,7 +3,7 @@ type: prompt
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-28
+updated: 2026-07-29
 tags:
   - prompts
   - ai-workflow
@@ -38,7 +38,10 @@ Hard rules (canonical rules from `/CLAUDE.md` + wiki additions):
 - **Don't introduce a framework into the storefront widget** (`src/widget/*`) without an ADR — bundle size matters.
 - `storeId === merchantId` everywhere.
 - Settings schema lives in `src/components/home-page/widgets/widgetDefs.ts` — admin UI, server validation, and widget all consume it. Don't duplicate.
-- Public APIs (`/api/public/*`) are CORS-open. Always use `withCors()` and rate-limit if writing.
+- Every public route must choose an explicit trust policy: anonymous
+  storefront/preview CORS, widget-error beacon CORS, or no CORS for
+  host-isolated cookie/session routes. Never add a generic credential-reflecting
+  helper to admin or review-center routes. Rate-limit public writes.
 - Public widget API responses are a contract — old `widget.js` may be cached on storefronts. Avoid breaking changes.
 - Never log secrets. Don't write env values to the wiki.
 - Use **Conventional Commits**: `<type>(<scope>): <summary>` (max 72 chars, imperative).
@@ -55,7 +58,8 @@ Project-specific gotchas (top 3):
 Source-code conventions:
 - TypeScript with `@/*` path alias for `src/*`.
 - Comments and UI copy mostly Turkish; identifiers and wiki are English.
-- Prefer `withCors(NextResponse.json(...))` pattern in public APIs.
+- Use `withAnonymousPublicCors(...)` only for anonymous storefront/preview
+  contracts. `withWidgetBeaconCors(...)` is reserved for `widget-error`.
 
 ## Obsidian Links
 - [[Claude_Code_Rules]]

@@ -1,6 +1,6 @@
 import { after, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { withCors, corsOptions } from '@/lib/cors';
+import { anonymousPublicCorsOptions, withAnonymousPublicCors } from '@/lib/cors';
 import { checkFixedWindowRateLimit, getClientIp } from '@/lib/public-rate-limit';
 import { isStorefrontThemeLazySyncDue } from '@/lib/storefront-theme-lazy-sync';
 import { syncStorefrontThemeForToken } from '@/lib/storefront-theme-sync';
@@ -13,8 +13,8 @@ type LazySyncBody = {
   publicApiKey?: unknown;
 };
 
-function noStoreJson(body: Record<string, unknown>, status: number, request: Request): NextResponse {
-  const response = withCors(NextResponse.json(body, { status }), request);
+function noStoreJson(body: Record<string, unknown>, status: number): NextResponse {
+  const response = withAnonymousPublicCors(NextResponse.json(body, { status }));
   response.headers.set('Cache-Control', 'no-store');
   return response;
 }
@@ -28,15 +28,15 @@ async function readBody(request: Request): Promise<LazySyncBody | null> {
   }
 }
 
-export async function OPTIONS(request: Request) {
-  return corsOptions(request);
+export async function OPTIONS() {
+  return anonymousPublicCorsOptions(['POST']);
 }
 
 export async function POST(request: Request) {
   const body = await readBody(request);
   const publicApiKey = typeof body?.publicApiKey === 'string' ? body.publicApiKey.trim() : '';
   if (!publicApiKey) {
-    return noStoreJson({ error: 'invalid_public_api_key' }, 400, request);
+    return noStoreJson({ error: 'invalid_public_api_key' }, 400);
   }
 
   const rateLimit = await checkFixedWindowRateLimit({
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     label: 'storefront-theme-lazy-sync',
   });
   if (!rateLimit.allowed) {
-    const response = noStoreJson({ error: 'rate_limited' }, 429, request);
+    const response = noStoreJson({ error: 'rate_limited' }, 429);
     response.headers.set('Retry-After', String(rateLimit.retryAfterSec));
     return response;
   }
@@ -57,11 +57,11 @@ export async function POST(request: Request) {
   });
 
   if (!store) {
-    return noStoreJson({ error: 'store_not_found' }, 404, request);
+    return noStoreJson({ error: 'store_not_found' }, 404);
   }
 
   if (!isStorefrontThemeLazySyncDue(store.storefrontTheme)) {
-    const response = withCors(new NextResponse(null, { status: 204 }), request);
+    const response = withAnonymousPublicCors(new NextResponse(null, { status: 204 }));
     response.headers.set('Cache-Control', 'no-store');
     return response;
   }
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
     }
   });
 
-  const response = withCors(NextResponse.json({ status: 'accepted' }, { status: 202 }), request);
+  const response = withAnonymousPublicCors(NextResponse.json({ status: 'accepted' }, { status: 202 }));
   response.headers.set('Cache-Control', 'no-store');
   return response;
 }

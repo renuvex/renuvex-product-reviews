@@ -3,7 +3,7 @@ import { createHash } from 'crypto';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { Redis } from '@upstash/redis';
-import { withCors, corsOptions } from '@/lib/cors';
+import { anonymousPublicCorsOptions, withAnonymousPublicCors } from '@/lib/cors';
 import { normalizeReviewImageStoreId } from '@/lib/review-images';
 import {
   AWS_REVIEW_IMAGE_PROVIDER,
@@ -42,21 +42,21 @@ export async function POST(request: Request) {
     const count = await redis.incr(rlKey);
     if (count === 1) await redis.expire(rlKey, REGISTER_RATE_LIMIT_WINDOW_SEC);
     if (count > REGISTER_RATE_LIMIT_MAX) {
-      return withCors(NextResponse.json({ error: 'Too many requests. Please wait.' }, { status: 429 }));
+      return withAnonymousPublicCors(NextResponse.json({ error: 'Too many requests. Please wait.' }, { status: 429 }));
     }
 
     let body: unknown;
     try {
       body = await request.json();
     } catch {
-      return withCors(NextResponse.json({ error: 'Invalid request body.' }, { status: 400 }));
+      return withAnonymousPublicCors(NextResponse.json({ error: 'Invalid request body.' }, { status: 400 }));
     }
 
     const payload = body as { storeId?: unknown; provider?: unknown; itemId?: unknown };
     const scope = await resolveReviewCenterItemScope(prisma, request, payload.itemId);
     const storeId = scope?.storeId ?? normalizeReviewImageStoreId(payload?.storeId);
     if (!storeId) {
-      return withCors(NextResponse.json({ error: 'Invalid store.' }, { status: 400 }));
+      return withAnonymousPublicCors(NextResponse.json({ error: 'Invalid store.' }, { status: 400 }));
     }
 
     const store = await prisma.storeSettings.findUnique({
@@ -64,12 +64,12 @@ export async function POST(request: Request) {
       select: { storeId: true },
     });
     if (!store) {
-      return withCors(NextResponse.json({ error: 'Store could not be verified.' }, { status: 400 }));
+      return withAnonymousPublicCors(NextResponse.json({ error: 'Store could not be verified.' }, { status: 400 }));
     }
 
     const imageRef = sanitizeAwsReviewImageRef(payload);
     if (!imageRef) {
-      return withCors(NextResponse.json({ error: 'Invalid AWS image reference.' }, { status: 400 }));
+      return withAnonymousPublicCors(NextResponse.json({ error: 'Invalid AWS image reference.' }, { status: 400 }));
     }
     const publicId = buildAwsReviewImagePublicId(storeId, imageRef.assetId);
     const pending = await prisma.pendingReviewImage.findFirst({
@@ -82,17 +82,17 @@ export async function POST(request: Request) {
       },
     });
     if (!pending) {
-      return withCors(NextResponse.json({ error: 'Upload intent not found.' }, { status: 400 }));
+      return withAnonymousPublicCors(NextResponse.json({ error: 'Upload intent not found.' }, { status: 400 }));
     }
     if (scope && (
       pending.reviewRequestId !== scope.requestId ||
       pending.reviewRequestSessionId !== scope.sessionId ||
       pending.productId !== scope.productId
     )) {
-      return withCors(NextResponse.json({ error: 'Upload intent scope mismatch.' }, { status: 409 }));
+      return withAnonymousPublicCors(NextResponse.json({ error: 'Upload intent scope mismatch.' }, { status: 409 }));
     }
     if (pending.uploadExpiresAt && pending.uploadExpiresAt <= new Date()) {
-      return withCors(NextResponse.json({ error: 'Upload intent expired.' }, { status: 400 }));
+      return withAnonymousPublicCors(NextResponse.json({ error: 'Upload intent expired.' }, { status: 400 }));
     }
     if (
       pending.sourceAssetId !== imageRef.objectKey ||
@@ -101,10 +101,10 @@ export async function POST(request: Request) {
       pending.sourceChecksumAlgorithm !== 'SHA256' ||
       pending.sourceChecksumSha256 !== imageRef.checksumSha256
     ) {
-      return withCors(NextResponse.json({ error: 'Upload intent mismatch.' }, { status: 400 }));
+      return withAnonymousPublicCors(NextResponse.json({ error: 'Upload intent mismatch.' }, { status: 400 }));
     }
     if (pending.variantStatus === 'private_ready') {
-      return withCors(NextResponse.json({ ok: true, imageRef }));
+      return withAnonymousPublicCors(NextResponse.json({ ok: true, imageRef }));
     }
 
     try {
@@ -155,7 +155,7 @@ export async function POST(request: Request) {
           ipHash: hashIp(ip),
         },
       });
-      return withCors(NextResponse.json({ ok: true, imageRef }));
+      return withAnonymousPublicCors(NextResponse.json({ ok: true, imageRef }));
     } catch (error) {
       const code = sanitizedErrorCode(error);
       await prisma.pendingReviewImage.updateMany({
@@ -163,17 +163,17 @@ export async function POST(request: Request) {
         data: { processingStatus: 'failed', variantStatus: 'failed', variantErrorCode: code },
       });
       console.error('[upload/register] AWS image register failed:', code);
-      return withCors(NextResponse.json({ error: 'Image upload could not be verified.' }, { status: 400 }));
+      return withAnonymousPublicCors(NextResponse.json({ error: 'Image upload could not be verified.' }, { status: 400 }));
     }
   } catch (error) {
     if (error instanceof ReviewRequestHostError || error instanceof ReviewRequestTokenError) {
-      return withCors(NextResponse.json({ error: error.code }, { status: error.status }));
+      return withAnonymousPublicCors(NextResponse.json({ error: error.code }, { status: error.status }));
     }
     console.error('[upload/register] ERROR:', error);
-    return withCors(NextResponse.json({ error: 'Server error.' }, { status: 500 }));
+    return withAnonymousPublicCors(NextResponse.json({ error: 'Server error.' }, { status: 500 }));
   }
 }
 
 export async function OPTIONS() {
-  return corsOptions();
+  return anonymousPublicCorsOptions(['POST']);
 }

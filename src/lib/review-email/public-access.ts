@@ -39,6 +39,31 @@ export function assertReviewRequestSameOrigin(request: Request): void {
   }
 }
 
+export type PublicReviewSubmissionChannel = 'storefront' | 'review_request';
+
+export function resolvePublicReviewSubmissionChannel(
+  request: Request,
+  input: {
+    reviewEmailEnabled: boolean;
+    reviewRequestSession: string;
+  },
+): PublicReviewSubmissionChannel {
+  if (!input.reviewEmailEnabled) {
+    if (input.reviewRequestSession) throw new ReviewRequestHostError();
+    if (!process.env.REVIEW_REQUEST_PUBLIC_BASE_URL?.trim()) return 'storefront';
+    if (isReviewRequestPublicHost(request)) throw new ReviewRequestHostError();
+    return 'storefront';
+  }
+
+  const isReviewHost = isReviewRequestPublicHost(request);
+  if (!isReviewHost && !input.reviewRequestSession) return 'storefront';
+  if (!isReviewHost) throw new ReviewRequestHostError();
+
+  assertReviewRequestPublicHost(request);
+  assertReviewRequestSameOrigin(request);
+  return 'review_request';
+}
+
 export function buildReviewRequestEmailUrl(rawToken: string): string {
   const url = new URL('/request', getReviewRequestPublicBaseUrl());
   url.hash = new URLSearchParams({ token: rawToken }).toString();

@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-28
-last_verified: 2026-07-28
+updated: 2026-07-29
+last_verified: 2026-07-29
 confidence: high
 tags:
   - security
@@ -27,6 +27,7 @@ source_files:
   - "src/lib/ikas-client-secret.ts"
   - "src/lib/server-failures.ts"
   - "src/lib/session.ts"
+  - "src/lib/cors.ts"
   - "src/app/api/oauth/authorize/ikas/route.ts"
   - "src/app/api/oauth/callback/ikas/route.ts"
   - "src/app/api/public/reviews/route.ts"
@@ -164,14 +165,26 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 - Image URLs remain stored as a JSON-stringified array in `Review.images`; all parsing and validation belongs in [src/lib/review-images.ts](src/lib/review-images.ts).
 
 ## CORS
-- Storefront `/api/public/*` reads/writes use `Access-Control-Allow-Origin: *`
-  where documented because merchant domains are not known a priori.
+- Anonymous storefront and preview routes explicitly use
+  `withAnonymousPublicCors()`: `Access-Control-Allow-Origin: *`, no
+  credentials, and no `Vary: Origin`. Their OPTIONS handlers list only the
+  route's real method and accept only `Content-Type`, `Cache-Control`, and
+  `Pragma`; `Authorization` is not part of this public contract.
+- `/api/public/widget-error` is the only credential-reflecting CORS route.
+  Its beacon-specific helper reflects only a parseable canonical `http` or
+  `https` Origin, adds `Vary: Origin`, and emits no CORS permission for a
+  missing, malformed, or literal `null` Origin.
 - Review-center routes are not storefront CORS surfaces. They require the
   isolated review host; session/submit/skip POST routes also validate same
-  origin. One-click unsubscribe is intentionally opaque-token scoped for mail
-  client POSTs. All responses deny framing/referrers/caching.
-- Acceptable for read endpoints. For POST `/api/public/reviews`, the design relies on ProductSnapshot target verification + rate-limit + profanity + abuse-detection at the row level. Could tighten further with per-merchant origin allowlist (config in `StoreSettings`).
-- `/api/admin/*` does not set CORS — same-origin (admin iframe is on the deploy URL).
+  origin. Legacy review-request token exchange and review submission also
+  require the exact review host and exact Origin before rate-limit, token, or
+  DB work. One-click unsubscribe remains opaque-token scoped for mail-client
+  POSTs and does not require an Origin header.
+- Anonymous storefront POSTs rely on ProductSnapshot target verification,
+  rate limits, input/media validation, and row-level abuse controls. A
+  per-merchant Origin allowlist remains an optional abuse-hardening product
+  decision, not a credential-isolation requirement.
+- `/api/admin/*` and cookie/session review-center routes do not emit CORS.
 
 ## CSRF
 - OAuth callback requires a cryptographically random state tied to an opaque
@@ -249,7 +262,8 @@ Official references:
 ## Known weaknesses
 - Profanity filter is bypassable (see above)
 - IP rate limit can be circumvented with rotating IPs
-- `Access-Control-Allow-Origin: *` on POST endpoints
+- Anonymous storefront POST endpoints intentionally use wildcard CORS without
+  credentials; this remains an abuse surface, not a browser credential leak.
 - No bot detection / hCaptcha on public POST
 - Strict admin auth activation remains gated by the aggregate exact
   installation/token verifier. The production gate currently returns zero
@@ -288,6 +302,9 @@ Official references:
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
+- 2026-07-29: Split anonymous wildcard, widget-beacon reflection, and
+  same-origin cookie/admin CORS policies. Legacy review-request state changes
+  now reject the wrong or missing Origin before rate-limit, token, or DB work.
 - 2026-07-28: Applied the additive Supabase surface migration in production,
   verified all 60 migrations and zero RLS/grant/default-ACL drift, then disabled
   the unused Data API through the official Management API.

@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { prisma } from '@/lib/prisma';
-import { withCors, corsOptions } from '@/lib/cors';
+import { anonymousPublicCorsOptions, withAnonymousPublicCors } from '@/lib/cors';
 import { MEDIA_JOB_ACTIONS, VIDEO_PROVIDER } from '@/lib/media/constants';
 import { dispatchMediaProviderJob, enqueueMediaProviderJob, failSessionAndQueueCleanup } from '@/lib/media/jobs';
 import { MediaRequestError, readJsonObject } from '@/lib/media/request';
 import { getVideoSessionByToken } from '@/lib/media/sessions';
 
-export async function OPTIONS(request: Request) {
-  return corsOptions(request);
+export async function OPTIONS() {
+  return anonymousPublicCorsOptions(['POST']);
 }
 
 export async function POST(request: Request) {
@@ -17,17 +17,17 @@ export async function POST(request: Request) {
     const body = await readJsonObject(request);
     const session = await getVideoSessionByToken(typeof body.token === 'string' ? body.token : '');
     if (!session || !session.providerUploadId || session.expiresAt <= new Date()) {
-      return withCors(NextResponse.json({ error: 'invalid_or_expired_upload' }, { status: 404 }), request);
+      return withAnonymousPublicCors(NextResponse.json({ error: 'invalid_or_expired_upload' }, { status: 404 }));
     }
     sessionId = session.id;
     if (session.status === 'uploaded' || session.status === 'processing') {
-      return withCors(NextResponse.json({ data: { status: 'processing' } }), request);
+      return withAnonymousPublicCors(NextResponse.json({ data: { status: 'processing' } }));
     }
     if (session.status === 'ready') {
-      return withCors(NextResponse.json({ data: { status: session.status } }), request);
+      return withAnonymousPublicCors(NextResponse.json({ data: { status: session.status } }));
     }
     if (session.status !== 'uploading') {
-      return withCors(NextResponse.json({ error: 'upload_not_completable' }, { status: 409 }), request);
+      return withAnonymousPublicCors(NextResponse.json({ error: 'upload_not_completable' }, { status: 409 }));
     }
 
     const job = await prisma.$transaction(async (tx) => {
@@ -47,9 +47,9 @@ export async function POST(request: Request) {
       });
     });
     if (job) await dispatchMediaProviderJob(job.id);
-    return withCors(NextResponse.json({ data: { status: 'processing' } }), request);
+    return withAnonymousPublicCors(NextResponse.json({ data: { status: 'processing' } }));
   } catch (error) {
-    if (error instanceof MediaRequestError) return withCors(NextResponse.json({ error: error.code }, { status: 400 }), request);
+    if (error instanceof MediaRequestError) return withAnonymousPublicCors(NextResponse.json({ error: error.code }, { status: 400 }));
     if (sessionId) {
       try {
         await failSessionAndQueueCleanup(sessionId, 'complete_failed');
@@ -59,6 +59,6 @@ export async function POST(request: Request) {
     }
     Sentry.captureException(error, { tags: { source: 'media-job', task: 'video-complete' } });
     console.error('[video-complete] failed:', error);
-    return withCors(NextResponse.json({ error: 'video_upload_complete_failed' }, { status: 500 }), request);
+    return withAnonymousPublicCors(NextResponse.json({ error: 'video_upload_complete_failed' }, { status: 500 }));
   }
 }

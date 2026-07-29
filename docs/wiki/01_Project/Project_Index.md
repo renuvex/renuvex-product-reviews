@@ -3,7 +3,7 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-28
+updated: 2026-07-29
 tags:
   - quick-reference
 related:
@@ -38,7 +38,7 @@ related:
 - Cleanup orphan AWS image families (cron) → [src/app/api/admin/daily-maintenance/route.ts](src/app/api/admin/daily-maintenance/route.ts), [src/app/api/admin/cleanup-images/route.ts](src/app/api/admin/cleanup-images/route.ts)
 - Example ikas-backed admin call → [src/app/api/ikas/get-merchant/route.ts](src/app/api/ikas/get-merchant/route.ts)
 
-## Public API (CORS-open, called from widget.js)
+## Public API (explicit anonymous or session policy)
 - Reviews list + submit → [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts)
 - Listing badges (bulk avg+count by slug) → [src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts)
 - Widget settings (read by widget.js) → [src/app/api/public/settings/route.ts](src/app/api/public/settings/route.ts)

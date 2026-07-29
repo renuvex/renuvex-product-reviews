@@ -3,8 +3,8 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-28
-last_verified: 2026-06-28
+updated: 2026-07-29
+last_verified: 2026-07-29
 confidence: high
 tags:
   - overview
@@ -53,7 +53,11 @@ Next.js 16 (16.2) App Router · React 19 · TypeScript · Prisma + Postgres (Sup
 
 ## Architecture in One Picture
 - **Merchant** opens the app inside ikas Admin (iframe). AppBridge → JWT → calls `/api/admin/*`.
-- **Storefront** loads `/widget.js?publicApiKey=<merchantId>` injected by ikas. The widget script/static assets can be served from `widget.renuvex.app`; public API calls still target the backend/API origin (`app.renuvex.app`) and remain CORS-open.
+- **Storefront** loads `/widget.js?publicApiKey=<merchantId>` injected by ikas.
+  The widget script/static assets can be served from `widget.renuvex.app`;
+  anonymous API calls target `app.renuvex.app` with wildcard CORS and no
+  credentials. Review-center/session APIs remain isolated to the review host
+  and do not expose CORS.
 - **Preview** runs widget.js on `/preview` route in an iframe; admin posts settings via `postMessage`.
 - **AWS S3/CloudFront** receives signed image uploads and serves public variants. **Upstash Redis** rate-limits public endpoints. **QStash** runs daily maintenance plus monthly orphan-image fallback cleanup through signed internal scheduler calls.
 

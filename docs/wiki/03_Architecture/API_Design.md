@@ -3,7 +3,7 @@ type: api
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-28
+updated: 2026-07-29
 tags:
   - api
   - design
@@ -18,7 +18,11 @@ related:
 # API Design
 
 ## Summary
-Next.js App Router route handlers, partitioned by trust level: `/api/admin/*` (JWT), `/api/public/*` (CORS-open + IP rate-limited), `/api/oauth/*` (install), `/api/preview/*` (preview iframe data), `/api/ikas/*` (server-side ikas Admin GraphQL examples).
+Next.js App Router route handlers, partitioned by trust level: `/api/admin/*`
+(JWT, no CORS), anonymous storefront routes (wildcard CORS without
+credentials), isolated review-center/session routes (exact host/origin, no
+CORS), `/api/oauth/*` (install), `/api/preview/*` (preview iframe data), and
+`/api/ikas/*` (server-side ikas Admin GraphQL examples).
 
 ## Conventions
 
@@ -30,7 +34,16 @@ Next.js App Router route handlers, partitioned by trust level: `/api/admin/*` (J
 ### Response shape
 - Success: `NextResponse.json({ data, ... })`. Public widget code expects `data` envelope.
 - Error: `NextResponse.json({ error: string }, { status })`. Status codes: 400 (bad input), 401 (missing/invalid auth), 404 (not found), 429 (rate limit), 500 (server).
-- CORS: every public-route response goes through `withCors(...)`. OPTIONS preflight handled via `corsOptions()`.
+- CORS is an explicit per-route policy:
+  - anonymous storefront/preview routes use `withAnonymousPublicCors()` and an
+    exact-method `anonymousPublicCorsOptions(...)`;
+  - only `/api/public/widget-error` uses the credentialed beacon policy;
+  - admin, review-center cookie/session, OAuth, internal, and webhook routes do
+    not inherit a general CORS helper.
+- Legacy review-request POSTs require the exact review host and exact Origin
+  before body parsing, rate limiting, session lookup, or mutation. GET session
+  reads remain host-only. RFC 8058 one-click unsubscribe remains token scoped
+  and does not require an Origin header.
 
 ### Validation
 - OAuth callback uses zod ([src/lib/validation.ts](src/lib/validation.ts) + per-route schema).
@@ -81,4 +94,6 @@ Public and admin routes return route-specific, fixed error codes. Unexpected fai
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
+- 2026-07-29: Replaced the generic public CORS convention with explicit
+  anonymous, beacon, and same-origin route policies.
 - 2026-05-10: Documented trusted review image validation as part of the public review POST contract. Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].

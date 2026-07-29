@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-28
-last_verified: 2026-06-28
+updated: 2026-07-29
+last_verified: 2026-07-29
 tags:
   - architecture
   - system
@@ -46,7 +46,7 @@ A Next.js 16 (16.2) app on Vercel (eu-central / fra1) with three primary applica
 │                                                                 │
 │   /api/admin/*    JWT-gated   ───►  Prisma ─► Postgres (Supabase)│
 │   /api/oauth/*    install     ───►  ikas Admin GraphQL          │
-│   /api/public/*   CORS-open   ◄─── widget.js (storefronts)      │
+│   /api/public/*   policy-bound ◄── widget.js / review center    │
 │   /api/preview/*  iframe data                                    │
 │                                                                 │
 │   Cron jobs    ──►  theme sync + daily/monthly maintenance       │
@@ -116,7 +116,12 @@ See [[Auth_And_Installation_Flow]] for full trace.
 
 ## Cross-cutting concerns
 
-- **Auth boundary** at `authenticateIkasAdminRequest`: strict HS256 AppBridge JWT plus exact active installation and matching OAuth token. Mutation paths repeat the installation generation/state fence in their final transaction. Public APIs are CORS-open and rate-limited by IP.
+- **Auth boundary** at `authenticateIkasAdminRequest`: strict HS256 AppBridge
+  JWT plus exact active installation and matching OAuth token. Mutation paths
+  repeat the installation generation/state fence in their final transaction.
+  Anonymous storefront APIs use wildcard CORS without credentials and are
+  rate-limited per route; review-session APIs use exact host/origin with no
+  CORS.
 - **Rate limit / abuse** via Upstash Redis (incr+expire pattern). Detail in [[Security_And_Rate_Limits]].
 - **Caching** via Vercel edge. Detail in [[Caching_And_Performance]].
 - **Image lifecycle**: client uploads directly to S3; `ReviewMedia` stores AWS variant manifests and `Review.images` is compatibility-only; daily maintenance expires abandoned pending uploads and monthly cleanup scans AWS object families from DB evidence.
