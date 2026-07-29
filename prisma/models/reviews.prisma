@@ -1,0 +1,128 @@
+model Review {
+  id                     String                @id @default(uuid())
+  storeId                String
+  productId              String
+  rating                 Int
+  comment                String?               @db.VarChar(2000)
+  author                 String
+  email                  String?
+  status                 String                @default("pending")
+  merchantReply          String?               @db.VarChar(2000)
+  images                 String?
+  hasImages              Boolean               @default(false)
+  hasVideo               Boolean               @default(false)
+  moderationVersion      Int                   @default(0)
+  reviewRequestId        String?               @unique
+  reviewRequestReceiptId String?               @unique
+  verifiedBuyer          Boolean               @default(false)
+  verifiedAt             DateTime?
+  verificationSource     String?               @db.VarChar(64)
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+  productName            String?
+  slug                   String
+  title                  String?
+  media                  ReviewMedia[]
+  reviewRequest          ReviewRequest?        @relation(fields: [reviewRequestId], references: [id], onDelete: SetNull)
+  reviewRequestReceipt   ReviewRequestReceipt? @relation(fields: [reviewRequestReceiptId], references: [id], onDelete: SetNull)
+
+  @@index([storeId, productId, status])
+  @@index([storeId, productId, status, hasVideo])
+  @@index([storeId, status])
+  @@index([storeId, slug, status])
+  @@index([storeId, verifiedBuyer, createdAt])
+}
+
+model ReviewMedia {
+  id                      String    @id @default(uuid())
+  reviewId                String
+  storeId                 String
+  productId               String
+  url                     String    @db.VarChar(2048)
+  publicId                String    @unique @db.VarChar(512)
+  assetId                 String?   @db.VarChar(128)
+  version                 String?   @db.VarChar(64)
+  resourceType            String    @default("image") @db.VarChar(32)
+  provider                String    @default("aws_s3") @db.VarChar(64)
+  providerAssetId         String?   @db.VarChar(512)
+  posterUrl               String?   @db.VarChar(2048)
+  durationMs              Int?
+  processingStatus        String    @default("ready") @db.VarChar(32)
+  sourceProvider          String?   @db.VarChar(64)
+  sourceAssetId           String?   @db.VarChar(1024)
+  format                  String?   @db.VarChar(32)
+  mimeType                String?   @db.VarChar(128)
+  width                   Int?
+  height                  Int?
+  bytes                   Int?
+  sourceChecksumAlgorithm String?   @db.VarChar(16)
+  sourceChecksumSha256    String?   @db.VarChar(128)
+  metadataSource          String    @default("unknown") @db.VarChar(64)
+  metadataStatus          String    @default("pending") @db.VarChar(64)
+  metadataFetchedAt       DateTime?
+  variantStatus           String    @default("pending") @db.VarChar(32)
+  variantGeneratedAt      DateTime?
+  variantPublishedAt      DateTime?
+  variantRevokedAt        DateTime?
+  variantErrorCode        String?   @db.VarChar(128)
+  variantManifest         Json?
+  position                Int
+  visible                 Boolean   @default(false)
+  createdAt               DateTime  @default(now())
+  review                  Review    @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, position])
+  @@index([reviewId, position])
+  @@index([storeId, productId, visible, createdAt])
+  @@index([metadataStatus, createdAt])
+  @@index([provider, providerAssetId])
+  @@index([provider, storeId, providerAssetId])
+  @@index([provider, resourceType, variantStatus, createdAt])
+  @@index([processingStatus, createdAt])
+}
+
+model ProductReviewSummary {
+  id                String    @id @default(uuid())
+  storeId           String
+  productId         String
+  approvedCount     Int       @default(0)
+  ratingSum         Int       @default(0)
+  averageRating     Float     @default(0)
+  rating1Count      Int       @default(0)
+  rating2Count      Int       @default(0)
+  rating3Count      Int       @default(0)
+  rating4Count      Int       @default(0)
+  rating5Count      Int       @default(0)
+  photoReviewCount  Int       @default(0)
+  photoRating1Count Int       @default(0)
+  photoRating2Count Int       @default(0)
+  photoRating3Count Int       @default(0)
+  photoRating4Count Int       @default(0)
+  photoRating5Count Int       @default(0)
+  mediaReviewCount  Int       @default(0)
+  mediaRating1Count Int       @default(0)
+  mediaRating2Count Int       @default(0)
+  mediaRating3Count Int       @default(0)
+  mediaRating4Count Int       @default(0)
+  mediaRating5Count Int       @default(0)
+  lastReviewAt      DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([storeId, productId])
+}
+
+model ProductSnapshot {
+  id            String    @id @default(uuid())
+  storeId       String
+  productId     String
+  slug          String?
+  name          String?
+  ikasUpdatedAt DateTime?
+  lastSyncedAt  DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([storeId, productId])
+  @@index([storeId, slug])
+}

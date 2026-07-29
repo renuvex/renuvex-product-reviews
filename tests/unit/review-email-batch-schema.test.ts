@@ -1,9 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { readCombinedPrismaSchema } from '../helpers/read-prisma-schema';
 
 const root = process.cwd();
-const schema = fs.readFileSync(path.join(root, 'prisma', 'schema.prisma'), 'utf8');
+const schema = readCombinedPrismaSchema(root);
 const migration = fs.readFileSync(
   path.join(root, 'prisma', 'migrations', '20260715120000_add_review_email_batch_envelope_v32', 'migration.sql'),
   'utf8',

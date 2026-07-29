@@ -1,0 +1,209 @@
+// Provider-agnostic registry of uploads that are not yet attached to a Review.
+// The legacy model name is intentionally retained for additive migration
+// safety. Provider-specific cleanup is routed through the media adapters.
+// See ADR_0012 and ADR_0031 for the lifecycle contracts.
+model PendingReviewImage {
+  publicId                String                @id
+  storeId                 String?
+  productId               String?
+  uploadSessionId         String?               @unique
+  url                     String?               @db.VarChar(2048)
+  assetId                 String?               @db.VarChar(128)
+  version                 String?               @db.VarChar(64)
+  resourceType            String                @default("image") @db.VarChar(32)
+  provider                String                @default("aws_s3") @db.VarChar(64)
+  providerAssetId         String?               @db.VarChar(512)
+  posterUrl               String?               @db.VarChar(2048)
+  durationMs              Int?
+  processingStatus        String                @default("ready") @db.VarChar(32)
+  sourceProvider          String?               @db.VarChar(64)
+  sourceAssetId           String?               @db.VarChar(1024)
+  format                  String?               @db.VarChar(32)
+  mimeType                String?               @db.VarChar(128)
+  width                   Int?
+  height                  Int?
+  bytes                   Int?
+  sourceChecksumAlgorithm String?               @db.VarChar(16)
+  sourceChecksumSha256    String?               @db.VarChar(128)
+  metadataSource          String                @default("unknown") @db.VarChar(64)
+  metadataStatus          String                @default("pending") @db.VarChar(64)
+  metadataFetchedAt       DateTime?
+  variantStatus           String                @default("pending") @db.VarChar(32)
+  variantGeneratedAt      DateTime?
+  variantErrorCode        String?               @db.VarChar(128)
+  variantManifest         Json?
+  uploadExpiresAt         DateTime?
+  uploadRegisteredAt      DateTime?
+  reviewRequestId         String?
+  reviewRequestSessionId  String?
+  createdAt               DateTime              @default(now())
+  ipHash                  String?
+  reviewRequest           ReviewRequest?        @relation(fields: [reviewRequestId], references: [id], onDelete: SetNull)
+  reviewRequestSession    ReviewRequestSession? @relation(fields: [reviewRequestSessionId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([storeId, createdAt])
+  @@index([metadataStatus, createdAt])
+  @@index([provider, providerAssetId])
+  @@index([provider, storeId, providerAssetId])
+  @@index([provider, variantStatus, createdAt])
+  @@index([processingStatus, createdAt])
+  @@index([reviewRequestId, createdAt])
+  @@index([reviewRequestSessionId, createdAt])
+}
+
+// Durable state for the video upload -> provider processing lifecycle. The
+// opaque client token is never stored; only its SHA-256 hash is persisted.
+//
+// ADR_0032 (Mux migration): video uploads use Mux direct uploads and Mux asset
+// identifiers. Provider is still written explicitly by the app; no DB default.
+model VideoUploadSession {
+  id                     String                        @id @default(uuid())
+  tokenHash              String                        @unique @db.VarChar(64)
+  storeId                String
+  productId              String
+  status                 String                        @default("initiated") @db.VarChar(32)
+  mimeType               String                        @db.VarChar(128)
+  bytes                  Int
+  fileFingerprint        String?                       @db.VarChar(128)
+  provider               String?                       @db.VarChar(64)
+  providerUploadId       String?                       @db.VarChar(256)
+  providerAssetId        String?                       @db.VarChar(256)
+  signedPlaybackId       String?                       @db.VarChar(256)
+  publicPlaybackId       String?                       @db.VarChar(256)
+  publicId               String?                       @unique @db.VarChar(512)
+  playbackUrl            String?                       @db.VarChar(2048)
+  posterUrl              String?                       @db.VarChar(2048)
+  durationMs             Int?
+  quotaState             String                        @default("reserved") @db.VarChar(32)
+  reservedMonth          DateTime                      @db.Date
+  expiresAt              DateTime
+  consumedAt             DateTime?
+  reviewRequestId        String?
+  reviewRequestSessionId String?
+  errorCode              String?                       @db.VarChar(128)
+  createdAt              DateTime                      @default(now())
+  updatedAt              DateTime                      @updatedAt
+  performanceSample      VideoUploadPerformanceSample?
+  reviewRequest          ReviewRequest?                @relation(fields: [reviewRequestId], references: [id], onDelete: SetNull)
+  reviewRequestSession   ReviewRequestSession?         @relation(fields: [reviewRequestSessionId], references: [id], onDelete: SetNull)
+
+  @@unique([provider, providerUploadId])
+  @@unique([provider, providerAssetId])
+  @@index([storeId, productId, status])
+  @@index([status, expiresAt])
+  @@index([createdAt])
+  @@index([reviewRequestId, createdAt])
+  @@index([reviewRequestSessionId, createdAt])
+}
+
+// Monthly quota counters. Reservations are taken before a Mux direct upload is
+// created so concurrent initiate requests cannot oversubscribe a merchant.
+model StoreVideoUsage {
+  storeId       String
+  month         DateTime @db.Date
+  reservedCount Int      @default(0)
+  consumedCount Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@id([storeId, month])
+  @@index([month])
+}
+
+// Transactional outbox for provider mutations. Provider ids survive review or
+// pending-row deletion and every action is idempotent through dedupeKey.
+model MediaProviderJob {
+  id              String    @id @default(uuid())
+  dedupeKey       String    @unique @db.VarChar(256)
+  storeId         String?
+  reviewId        String?
+  mediaId         String?
+  uploadSessionId String?
+  provider        String    @db.VarChar(64)
+  action          String    @db.VarChar(64)
+  resourceType    String    @db.VarChar(32)
+  payload         Json
+  status          String    @default("pending") @db.VarChar(32)
+  attempts        Int       @default(0)
+  maxAttempts     Int       @default(8)
+  availableAt     DateTime  @default(now())
+  lockedAt        DateTime?
+  completedAt     DateTime?
+  lastErrorCode   String?   @db.VarChar(128)
+  lastErrorAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([status, availableAt])
+  @@index([provider, action, createdAt])
+  @@index([uploadSessionId])
+  @@index([reviewId])
+}
+
+// Short-lived provider mutation lease. The monotonically increasing version is
+// a fencing token, so a worker that outlives its lease cannot be treated as the
+// current owner when it records its result.
+model MediaProviderLease {
+  key          String   @id @db.VarChar(256)
+  ownerJobId   String
+  leaseVersion Int      @default(1)
+  lockedUntil  DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([lockedUntil])
+}
+
+// Provider webhook idempotency + audit (ADR_0032). Dedup/audit ONLY - the
+// actual provider work + retry reuse the MediaProviderJob outbox +
+// MediaProviderLease. Linked to a session by the natural key (sessionId /
+// providerUploadId / providerAssetId). Payload is never persisted (only a
+// digest + normalized ids); signed URLs/tokens are never stored.
+model WebhookEvent {
+  id                     String    @id @default(uuid())
+  provider               String    @db.VarChar(64)
+  providerEventId        String    @db.VarChar(256)
+  eventType              String    @db.VarChar(128)
+  providerUploadId       String?   @db.VarChar(256)
+  providerAssetId        String?   @db.VarChar(256)
+  sessionId              String?
+  providerEventCreatedAt DateTime?
+  receivedAt             DateTime  @default(now())
+  processedAt            DateTime?
+  status                 String    @default("received") @db.VarChar(32)
+  lastError              String?   @db.VarChar(512)
+  payloadDigest          String?   @db.VarChar(64)
+
+  @@unique([provider, providerEventId])
+  @@index([status, receivedAt])
+}
+
+// Non-sensitive client-side upload timing for Mux performance diagnosis.
+// Stores one sanitized sample per video session; never stores tokens, upload
+// URLs, signed playback URLs, raw user-agent, IP, or file names.
+model VideoUploadPerformanceSample {
+  id               String             @id @default(uuid())
+  uploadSessionId  String             @unique
+  storeId          String
+  productId        String
+  provider         String             @db.VarChar(64)
+  fileBytes        Int
+  chunkSizeKb      Int
+  chunkAttempts    Int
+  retryClicks      Int                @default(0)
+  upchunkErrors    Int                @default(0)
+  firstErrorCode   String?            @db.VarChar(128)
+  directUploadMs   Int?
+  completeMs       Int?
+  processingPollMs Int?
+  totalClientMs    Int?
+  finalStatus      String             @db.VarChar(32)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  uploadSession    VideoUploadSession @relation(fields: [uploadSessionId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, productId, createdAt])
+  @@index([provider, finalStatus, createdAt])
+  @@index([createdAt])
+}

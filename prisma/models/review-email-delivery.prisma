@@ -1,0 +1,283 @@
+model ReviewEmailBatch {
+  id                                 String                          @id @default(uuid())
+  storeId                            String
+  installationGeneration             Int
+  orderSnapshotId                    String?
+  deliveryGroupKey                   String                          @db.VarChar(256)
+  deliveryGroupMode                  String                          @db.VarChar(32)
+  groupingVersion                    Int                             @default(1)
+  groupingFrozenAt                   DateTime?
+  membershipVersion                  Int                             @default(1)
+  batchFingerprint                   String                          @db.VarChar(128)
+  fingerprintKeyVersion              Int
+  recipientEmailHash                 String?                         @db.VarChar(128)
+  recipientEmailFoldedHash           String?                         @db.VarChar(128)
+  recipientEmailHashKeyVersion       Int?
+  recipientEmailNormalizationVersion Int                             @default(2)
+  recipientEmailEncrypted            String?                         @db.Text
+  recipientVersion                   Int                             @default(1)
+  recipientFrozenAt                  DateTime?
+  eligibilityStartsAtSnapshot        DateTime?
+  firstDelayDaysSnapshot             Int                             @default(1)
+  reminderDelayDaysSnapshot          Int                             @default(1)
+  maxReminderCountSnapshot           Int                             @default(1)
+  templateVersionSnapshot            String                          @default("default_v1") @db.VarChar(64)
+  localeSnapshot                     String                          @default("tr") @db.VarChar(16)
+  status                             String                          @default("scheduled") @db.VarChar(32)
+  emailAccessStatus                  String                          @default("allowed") @db.VarChar(32)
+  eligibleAt                         DateTime?
+  sendAfter                          DateTime?
+  firstSentAt                        DateTime?
+  firstDeliveredAt                   DateTime?
+  lastReminderSentAt                 DateTime?
+  reminderCount                      Int                             @default(0)
+  completedAt                        DateTime?
+  expiresAt                          DateTime?
+  cancelledAt                        DateTime?
+  cancellationReason                 String?                         @db.VarChar(128)
+  recipientChangedAt                 DateTime?
+  analyticsManifest                  Json?
+  analyticsClosedAt                  DateTime?
+  analyticsCloseReason               String?                         @db.VarChar(64)
+  metricsReversedAt                  DateTime?
+  piiScrubbedAt                      DateTime?
+  detailPurgedAt                     DateTime?
+  createdAt                          DateTime                        @default(now())
+  updatedAt                          DateTime                        @updatedAt
+  orderSnapshot                      IkasOrderSnapshot?              @relation(fields: [orderSnapshotId, storeId], references: [id, storeId], onDelete: Restrict)
+  requests                           ReviewRequest[]
+  jobs                               ReviewEmailJob[]
+  tokens                             ReviewRequestToken[]
+  sessions                           ReviewRequestSession[]
+  contributions                      ReviewEmailMetricContribution[]
+
+  @@unique([storeId, installationGeneration, batchFingerprint], map: "ReviewEmailBatch_fingerprint_key")
+  @@unique([id, storeId], map: "ReviewEmailBatch_id_store_key")
+  @@index([orderSnapshotId])
+  @@index([storeId, installationGeneration, status, sendAfter], map: "ReviewEmailBatch_store_generation_status_send_idx")
+  @@index([storeId, recipientEmailFoldedHash, createdAt], map: "ReviewEmailBatch_recipient_created_idx")
+  @@index([status, expiresAt])
+}
+
+model ReviewRequest {
+  id                                 String                 @id @default(uuid())
+  storeId                            String
+  productId                          String                 @db.VarChar(128)
+  orderSnapshotId                    String
+  orderLineSnapshotId                String
+  batchId                            String?
+  batchPosition                      Int?
+  membershipVersion                  Int                    @default(1)
+  sourceLineItemIds                  Json?
+  receiptId                          String?                @unique
+  status                             String                 @default("scheduled") @db.VarChar(32)
+  eligibleAt                         DateTime?
+  sendAfter                          DateTime?
+  firstDelayDaysSnapshot             Int                    @default(1)
+  reminderDelayDaysSnapshot          Int                    @default(1)
+  maxReminderCountSnapshot           Int                    @default(1)
+  triggerModeSnapshot                String                 @default("delivery") @db.VarChar(32)
+  consentModeSnapshot                String                 @default("current_customer_subscription") @db.VarChar(64)
+  notificationsAcceptedSnapshot      Boolean?
+  templateVersionSnapshot            String                 @default("default_v1") @db.VarChar(64)
+  localeSnapshot                     String                 @default("tr") @db.VarChar(16)
+  recipientEmailHash                 String?                @db.VarChar(128)
+  recipientEmailFoldedHash           String?                @db.VarChar(128)
+  recipientEmailHashKeyVersion       Int?
+  recipientEmailNormalizationVersion Int                    @default(1)
+  recipientEmailEncrypted            String?                @db.Text
+  firstSentAt                        DateTime?
+  lastReminderSentAt                 DateTime?
+  reminderCount                      Int                    @default(0)
+  submittedAt                        DateTime?
+  expiresAt                          DateTime?
+  cancelledAt                        DateTime?
+  cancellationReason                 String?                @db.VarChar(128)
+  skippedAt                          DateTime?
+  skipReason                         String?                @db.VarChar(128)
+  createdAt                          DateTime               @default(now())
+  updatedAt                          DateTime               @updatedAt
+  orderSnapshot                      IkasOrderSnapshot      @relation(fields: [orderSnapshotId], references: [id], onDelete: Restrict)
+  orderLineSnapshot                  IkasOrderLineSnapshot  @relation(fields: [orderLineSnapshotId], references: [id], onDelete: Restrict)
+  batch                              ReviewEmailBatch?      @relation(fields: [batchId, storeId], references: [id, storeId], onDelete: Restrict)
+  receipt                            ReviewRequestReceipt?  @relation(fields: [receiptId], references: [id], onDelete: SetNull)
+  tokens                             ReviewRequestToken[]
+  sessions                           ReviewRequestSession[]
+  jobs                               ReviewEmailJob[]
+  review                             Review?
+  pendingImages                      PendingReviewImage[]
+  videoUploadSessions                VideoUploadSession[]
+
+  @@unique([storeId, orderLineSnapshotId])
+  @@index([orderSnapshotId])
+  @@index([orderLineSnapshotId])
+  @@index([batchId, batchPosition])
+  @@index([status, sendAfter])
+  @@index([storeId, status, sendAfter])
+  @@index([storeId, productId, status])
+}
+
+model ReviewRequestToken {
+  id               String                 @id @default(uuid())
+  requestId        String?
+  batchId          String?
+  attemptId        String                 @unique
+  tokenHash        String                 @unique @db.VarChar(64)
+  tokenKeyVersion  Int                    @default(1)
+  status           String                 @default("prepared") @db.VarChar(32)
+  expiresAt        DateTime?
+  consumedAt       DateTime?
+  revokedAt        DateTime?
+  revocationReason String?                @db.VarChar(128)
+  createdAt        DateTime               @default(now())
+  request          ReviewRequest?         @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  batch            ReviewEmailBatch?      @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  attempt          ReviewEmailAttempt     @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  sessions         ReviewRequestSession[]
+
+  @@index([requestId])
+  @@index([batchId])
+  @@index([status, expiresAt])
+}
+
+model ReviewRequestSession {
+  id                  String               @id @default(uuid())
+  requestId           String?
+  batchId             String?
+  tokenId             String
+  sessionHash         String               @unique @db.VarChar(64)
+  status              String               @default("active") @db.VarChar(32)
+  expiresAt           DateTime
+  consumedAt          DateTime?
+  revokedAt           DateTime?
+  revocationReason    String?              @db.VarChar(128)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  request             ReviewRequest?       @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  batch               ReviewEmailBatch?    @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  token               ReviewRequestToken   @relation(fields: [tokenId], references: [id], onDelete: Cascade)
+  pendingImages       PendingReviewImage[]
+  videoUploadSessions VideoUploadSession[]
+
+  @@index([requestId, status])
+  @@index([batchId, status])
+  @@index([tokenId])
+  @@index([status, expiresAt])
+}
+
+model ReviewEmailJob {
+  id               String               @id @default(uuid())
+  requestId        String?
+  batchId          String?
+  storeId          String
+  productId        String?              @db.VarChar(128)
+  kind             String               @db.VarChar(32)
+  sequence         Int                  @default(0)
+  status           String               @default("pending") @db.VarChar(32)
+  sendAfter        DateTime
+  dedupeKey        String               @unique @db.VarChar(256)
+  leaseOwner       String?              @db.VarChar(128)
+  leaseExpiresAt   DateTime?
+  leaseVersion     Int                  @default(0)
+  dispatchedAt     DateTime?
+  queueMessageId   String?              @db.VarChar(256)
+  completedAt      DateTime?
+  expiresAt        DateTime?
+  dispatchAttempts Int                  @default(0)
+  lastErrorCode    String?              @db.VarChar(128)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  request          ReviewRequest?       @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  batch            ReviewEmailBatch?    @relation(fields: [batchId, storeId], references: [id, storeId], onDelete: Cascade)
+  attemptsLog      ReviewEmailAttempt[]
+
+  @@unique([requestId, kind, sequence])
+  @@index([requestId, kind])
+  @@index([batchId, kind])
+  @@index([storeId, status, sendAfter])
+  @@index([kind, status, sendAfter])
+  @@index([leaseExpiresAt])
+}
+
+model ReviewEmailAttempt {
+  id                                 String                        @id @default(uuid())
+  jobId                              String
+  attemptNumber                      Int
+  correlationId                      String                        @unique @db.VarChar(64)
+  provider                           String                        @default("ses") @db.VarChar(64)
+  providerMessageId                  String?                       @db.VarChar(256)
+  providerMessageIdHash              String?                       @db.VarChar(128)
+  providerMessageIdHashKeyVersion    Int?
+  recipientEmailHash                 String?                       @db.VarChar(128)
+  recipientEmailFoldedHash           String?                       @db.VarChar(128)
+  recipientEmailHashKeyVersion       Int?
+  recipientEmailNormalizationVersion Int                           @default(2)
+  recipientEmailEncrypted            String?                       @db.Text
+  recipientVersion                   Int                           @default(1)
+  templateVersion                    String                        @default("default_v1") @db.VarChar(64)
+  locale                             String                        @default("tr") @db.VarChar(16)
+  contentManifest                    Json?
+  contentDigest                      String?                       @db.VarChar(64)
+  consentSource                      String?                       @db.VarChar(64)
+  consentStatus                      String?                       @db.VarChar(64)
+  consentStatusUpdatedAt             DateTime?
+  consentCheckedAt                   DateTime?
+  status                             String                        @default("prepared") @db.VarChar(32)
+  sendCommittedAt                    DateTime?
+  sendInitiatedAt                    DateTime?
+  confirmationDeadlineAt             DateTime?
+  acceptedAt                         DateTime?
+  firstDeliveryDelayedAt             DateTime?
+  lastDeliveryDelayedAt              DateTime?
+  deliveredAt                        DateTime?
+  bouncedAt                          DateTime?
+  complainedAt                       DateTime?
+  rejectedAt                         DateTime?
+  outcomeUnknownAt                   DateTime?
+  deliveryConfirmedAt                DateTime?
+  analyticsClosedAt                  DateTime?
+  piiScrubbedAt                      DateTime?
+  completedAt                        DateTime?
+  errorCode                          String?                       @db.VarChar(128)
+  createdAt                          DateTime                      @default(now())
+  updatedAt                          DateTime                      @updatedAt
+  job                                ReviewEmailJob                @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  events                             ReviewEmailEvent[]
+  token                              ReviewRequestToken?
+  unsubscribeTokens                  ReviewEmailUnsubscribeToken[]
+
+  @@unique([jobId, attemptNumber])
+  @@index([jobId])
+  @@index([provider, providerMessageId])
+  @@index([provider, providerMessageIdHash])
+  @@index([recipientEmailFoldedHash, sendCommittedAt])
+  @@index([status, createdAt])
+}
+
+model ReviewEmailEvent {
+  id                              String              @id @default(uuid())
+  snsMessageId                    String?             @unique @db.VarChar(256)
+  transport                       String?             @db.VarChar(32)
+  transportEventId                String?             @db.VarChar(256)
+  providerMessageId               String?             @db.VarChar(256)
+  providerMessageIdHash           String?             @db.VarChar(128)
+  providerMessageIdHashKeyVersion Int?
+  eventType                       String?             @db.VarChar(64)
+  attemptId                       String?
+  status                          String              @default("received") @db.VarChar(32)
+  ignoredReason                   String?             @db.VarChar(128)
+  payloadDigest                   String?             @db.VarChar(64)
+  bounceType                      String?             @db.VarChar(64)
+  bounceSubType                   String?             @db.VarChar(64)
+  complaintFeedbackType           String?             @db.VarChar(64)
+  providerTimestamp               DateTime?
+  receivedAt                      DateTime            @default(now())
+  processedAt                     DateTime?
+  attempt                         ReviewEmailAttempt? @relation(fields: [attemptId], references: [id], onDelete: SetNull)
+
+  @@index([attemptId])
+  @@index([transport, transportEventId])
+  @@index([providerMessageId])
+  @@index([eventType, receivedAt])
+  @@index([status, receivedAt])
+}

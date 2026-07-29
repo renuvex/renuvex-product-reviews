@@ -1,0 +1,27 @@
+model ReviewEmailSettings {
+  id                        String    @id @default(uuid())
+  storeId                   String    @unique
+  enabled                   Boolean   @default(false)
+  eligibilityStartsAt       DateTime?
+  triggerMode               String    @default("delivery") @db.VarChar(32)
+  consentMode               String    @default("current_customer_subscription") @db.VarChar(64)
+  firstDelayDays            Int       @default(1)
+  reminderEnabled           Boolean   @default(true)
+  reminderDelayDays         Int       @default(1)
+  maxReminderCount          Int       @default(1)
+  senderDisplayName         String?   @db.VarChar(128)
+  replyToEmailHash          String?   @db.VarChar(128)
+  replyToEmailEncrypted     String?   @db.Text
+  replyToName               String?   @db.VarChar(128)
+  logoUrl                   String?   @db.VarChar(2048)
+  buttonColor               String?   @db.VarChar(32)
+  locale                    String    @default("tr") @db.VarChar(16)
+  templateVersion           String    @default("default_v1") @db.VarChar(64)
+  orderWebhookStatus        String    @default("unregistered") @db.VarChar(32)
+  orderWebhookVerifiedAt    DateTime?
+  orderWebhookLastErrorCode String?   @db.VarChar(128)
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
+  @@index([enabled, updatedAt])
+}

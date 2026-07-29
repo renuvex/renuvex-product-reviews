@@ -1,0 +1,32 @@
+model AuthToken {
+  merchantId      String
+  authorizedAppId String   @id
+  salesChannelId  String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  accessToken     String
+  tokenType       String
+  expiresIn       Int
+  expireDate      DateTime
+  refreshToken    String
+  scope           String?
+
+  @@index([merchantId, updatedAt])
+}
+
+// --- Review request email lifecycle (ADR_0036) ------------------------------
+
+model IkasStoreInstallation {
+  storeId          String    @id
+  authorizedAppId  String    @unique @db.VarChar(128)
+  generation       Int       @default(1)
+  stateVersion     Int       @default(1)
+  status           String    @default("active") @db.VarChar(32)
+  activatedAt      DateTime  @default(now())
+  erasureStartedAt DateTime?
+  erasedAt         DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([status, updatedAt])
+}
