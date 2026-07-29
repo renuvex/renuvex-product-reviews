@@ -3,8 +3,8 @@ type: maintenance
 project: renuvex-product-reviews
 status: active
 created: 2026-06-29
-updated: 2026-07-28
-last_verified: 2026-07-28
+updated: 2026-07-29
+last_verified: 2026-07-29
 confidence: high
 tags:
   - aws
@@ -54,12 +54,6 @@ source_files:
   - "scripts/execute-review-email-foundation-change-set.mjs"
   - "scripts/finalize-review-email-foundation-stack.mjs"
   - "scripts/verify-review-email-foundation-live.mjs"
-  - ".agents/skills/aws-iam/SKILL.md"
-  - ".agents/skills/aws-messaging-and-streaming/SKILL.md"
-  - ".agents/skills/aws-serverless/SKILL.md"
-  - ".agents/skills/creating-secrets-using-best-practices/SKILL.md"
-  - ".agents/skills/securing-s3-buckets/SKILL.md"
-  - ".agents/skills/routing-traffic-with-route53-and-cloudfront/SKILL.md"
 ---
 
 # AWS Setup And Access
@@ -1054,7 +1048,10 @@ infer that the source templates mean the resources are already deployed.
 ## Skill And Documentation Sources
 
 Installed local AWS skills live under `.agents/skills`. Load only the skill that
-matches the task.
+matches the task. This directory is intentionally gitignored, so local skill
+files are operational references rather than repository `source_files`; a clean
+clone and CI must validate the tracked templates, scripts, and policies without
+requiring those files.
 
 | Skill | Use |
 |---|---|
