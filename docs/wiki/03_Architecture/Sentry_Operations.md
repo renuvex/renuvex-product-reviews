@@ -3,7 +3,7 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-11
-updated: 2026-06-09
+updated: 2026-07-29
 tags:
   - sentry
   - observability
@@ -145,6 +145,7 @@ None of the above is a quality-gate blocker. They exist here so future-you (or f
 - [[Phase_1_Widget_Runtime_Audit]]
 
 ## Change Log
+- 2026-07-29: A CI Playwright trace proved that `reviews-widget / missing_after_render` could be false telemetry when SPA navigation intentionally retired the old product before the next product event. Review probes now apply route/product lifecycle relevance without suppressing genuine unexpected removal. See [[Bug_Review_Widget_SPA_Health_Probe_False_Positive]].
 - 2026-05-27: Widget reporter now forwards widget script/chunk resource-load failures and route/visibility/readyState/online context. Classic loader runtime-import failures include the same context, so intermittent "error script" reports after refresh or SPA navigation can be tied to a failed hashed runtime URL instead of remaining browser-only noise.
 - 2026-05-25: RENUVEX-PRODUCT-REVIEWS-6 (`listing-badge` / `missing_after_render`, ~93 events) proven to be a **false positive** — the visibility probe held a stale reference to the pre-self-heal element. Fixed in `core/health.js` (probe re-resolves the live owned node); verified on the dev store (1 report/session → 0). See [[Bug_Listing_Badge_Missing_After_Render]], [[Widget_Architecture]].
 - 2026-05-25: Documented that the Sentry MCP `search_issues` tool under-counts (returns only the latest-active issue, omits other unresolved ones) — enumerate by short ID. Noted that all widget health signals fingerprint into one issue; differentiate via `widgetEventType`/`widgetHealth`. Fixed three issues surfaced this way: `/callback` token-log removal, `setToken` throw→return, dashboard init 401 guard (see [[Debugging_Notes]], [[Auth_And_Installation_Flow]]).

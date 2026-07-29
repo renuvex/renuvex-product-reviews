@@ -98,10 +98,18 @@ export function reportWidgetHealth(type, message, extra) {
   });
 }
 
-export function probeWidgetVisibility(root, surface, extra, resolveCurrent) {
+export function probeWidgetVisibility(root, surface, extra, resolveCurrent, isProbeRelevant) {
   if (typeof window === 'undefined') return;
   setTimeout(function () {
     try {
+      if (typeof isProbeRelevant === 'function') {
+        try {
+          if (!isProbeRelevant()) return;
+        } catch (_) {
+          return;
+        }
+      }
+
       // Evaluate the LIVE owned node, not the originally injected reference. The
       // bounded one-shot self-heal (and the theme's own re-render) can replace the
       // element after injection, so checking the stale `root` would report

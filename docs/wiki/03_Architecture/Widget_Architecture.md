@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-04
-last_verified: 2026-06-30
+updated: 2026-07-29
+last_verified: 2026-07-29
 confidence: high
 tags:
   - widget
@@ -18,6 +18,7 @@ related:
   - "[[ADR_0013_Modular_Widget_Loader_Architecture]]"
   - "[[Bug_Lightbox_Tablet_Viewport_And_Scroll]]"
   - "[[Bug_Cloud_Name_Silent_Image_Filter]]"
+  - "[[Bug_Review_Widget_SPA_Health_Probe_False_Positive]]"
   - "[[Yotpo_Style_Widget_Modular_Architecture]]"
   - "[[Test_Strategy]]"
 source_files:
@@ -37,6 +38,7 @@ source_files:
   - "tests/unit/storefront-theme.test.ts"
   - "tests/unit/widget-icon-sprite.test.ts"
   - "tests/unit/widget-popover-registry.test.ts"
+  - "tests/unit/widget-health.test.ts"
   - "tests/unit/widget-asset-cache.test.ts"
   - ".github/workflows/widget-smoke.yml"
   - "src/widget/classic-loader.js"
@@ -331,7 +333,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - The widget is the **highest-leverage code surface** in the codebase (every storefront load executes it). Bundle size and TTI matter.
 - Don't introduce a framework (React, Preact, Lit) without an explicit ADR. The vanilla approach is a deliberate trade-off — see [[ADR_0002_Widget_Injection_Strategy]].
 - DOM identification (product id, slug, title) uses Storefront Events first and theme/DOM fallbacks second. When fixing a "widget doesn't show on theme X" issue, inspect `core/storefront-context.js`, `product-title.js`, and the active theme adapter before changing review bootstrap.
-- Browser conflict hardening is diagnostic and bounded: badge render paths report visibility/dom-conflict events and try one remount if a rendered badge node is removed; they do not loop against aggressive third-party scripts. The visibility probe re-resolves the **current** owned node when it fires (not the originally injected reference), so a self-heal/theme re-render that swaps the element does not produce a false `missing_after_render`. See [[Bug_Listing_Badge_Missing_After_Render]].
+- Browser conflict hardening is diagnostic and bounded: badge render paths report visibility/dom-conflict events and try one remount if a rendered badge node is removed; they do not loop against aggressive third-party scripts. The visibility probe re-resolves the **current** owned node when it fires (not the originally injected reference), so a self-heal/theme re-render that swaps the element does not produce a false `missing_after_render`. Surfaces with an explicit SPA lifecycle may also provide a relevance predicate: the review surface suppresses only probes retired by an intentional route/product transition, while a relevant missing node still reports. See [[Bug_Listing_Badge_Missing_After_Render]] and [[Bug_Review_Widget_SPA_Health_Probe_False_Positive]].
 - The widget assumes a single product per page on PDP. Multi-product pages (looks/sets) would need a redesign.
 - Review submission has a single runtime path: all write CTAs open the multi-step modal. The legacy inline/page form path was removed to reduce storefront bundle complexity.
 - Icon selection is centralized under [src/widget/icons/](src/widget/icons/): review/rating icons live in `review-icons.js`, filter button icons live in `filter-icons.js`, UI chrome icons live in `ui-icons.js`, and consumers import through `icons/index.js`. The old [icons.js](src/widget/icons.js) file is a compatibility re-export only. `tests/unit/widget-icon-sprite.test.ts` pins the registry to Phosphor 256-grid, `currentColor`, documented stroke weights (regular `16`, compact-only down caret `24`), and no legacy Lucide/Unicode X/arrow glyphs.
@@ -368,6 +370,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [[Yotpo_Protein_Ocean_Widget_Research]]
 
 ## Change Log
+- 2026-07-29: Review-widget visibility probes now carry route/product lifecycle relevance. Intentional SPA retirement no longer emits `missing_after_render`; unexpected removal still does. Unit coverage pins both outcomes and network smoke holds the transition open past the probe window. See [[Bug_Review_Widget_SPA_Health_Probe_False_Positive]].
 - 2026-07-02: Post-deploy manual acceptance confirmed on the real dev storefront after the Worker deploy for commit `6426f631` and runtime `runtime-OUK3LLII.js`: fast PDP product transitions now show the neutral reserved shell instead of the previous product's review cards while the next product data loads.
 - 2026-07-02: Added route- and identity-aware PDP review transition reset. On SPA pathname changes, rendered review shadow content is cleared into the existing reserved shell immediately, even before the next `PRODUCT_VIEW` arrives. On later product identity changes, the previous `productId` content stays cleared while new settings/reviews finish loading; duplicate same-product events remain idempotent and late responses stay guarded by the existing bootstrap token.
 - 2026-07-01: Tightened below-the-fold listing/product-slider badge viewport gating to `rootMargin: "400px 0px"`. This keeps critical PDP surfaces eager while preventing distant product sliders from loading the listing badge chunk or bulk ratings API before the shopper gets close enough to scroll into them.
