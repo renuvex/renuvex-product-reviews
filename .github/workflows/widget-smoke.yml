@@ -168,9 +168,9 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/renuvex_ci?schema=public
-      DIRECT_URL: postgresql://postgres:postgres@127.0.0.1:5432/renuvex_ci?schema=public
-      REVIEW_EMAIL_INTEGRATION_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/renuvex_ci?schema=public
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/renuvex_ci?schema=public&connection_limit=10
+      DIRECT_URL: postgresql://postgres:postgres@127.0.0.1:5432/renuvex_ci?schema=public&connection_limit=10
+      REVIEW_EMAIL_INTEGRATION_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/renuvex_ci?schema=public&connection_limit=10
       SHADOW_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/renuvex_shadow?schema=public
     steps:
       - name: Checkout
