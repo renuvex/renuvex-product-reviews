@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-06-06
-updated: 2026-06-08
-last_verified: 2026-06-08
+updated: 2026-07-30
+last_verified: 2026-07-30
 confidence: high
 tags:
   - adr
@@ -18,7 +18,7 @@ related:
   - "[[Backend_API_Map]]"
   - "[[Database_Schema]]"
 source_files:
-  - "prisma/schema.prisma"
+  - "prisma/models/reviews.prisma"
   - "src/lib/review-summary.ts"
   - "src/app/api/public/reviews/route.ts"
   - "src/app/api/public/ratings/route.ts"
@@ -68,7 +68,7 @@ Add `ProductReviewSummary` as a per `(storeId, productId)` aggregate read model:
 - Review-list cursor/keyset pagination is handled separately by [[ADR_0028_Review_Cursor_Pagination]]; this aggregate ADR does not own the visible row pagination contract.
 
 ## Related Source Files
-- [prisma/schema.prisma](prisma/schema.prisma)
+- [prisma/models/reviews.prisma](prisma/models/reviews.prisma)
 - [src/lib/review-summary.ts](src/lib/review-summary.ts)
 - [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts)
 - [src/app/api/public/ratings/route.ts](src/app/api/public/ratings/route.ts)

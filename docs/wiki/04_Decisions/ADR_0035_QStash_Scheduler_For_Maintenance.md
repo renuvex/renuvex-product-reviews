@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-07-04
-updated: 2026-07-04
-last_verified: 2026-07-04
+updated: 2026-07-30
+last_verified: 2026-07-30
 confidence: high
 tags:
   - adr
@@ -20,7 +20,7 @@ source_files:
   - "src/lib/scheduled-jobs.ts"
   - "src/app/api/admin/daily-maintenance/route.ts"
   - "src/app/api/admin/cleanup-images/route.ts"
-  - "prisma/schema.prisma"
+  - "prisma/models/operations.prisma"
   - "vercel.json"
 ---
 

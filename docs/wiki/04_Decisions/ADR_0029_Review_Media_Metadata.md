@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: superseded
 created: 2026-06-08
-updated: 2026-07-03
-last_verified: 2026-07-03
+updated: 2026-07-30
+last_verified: 2026-07-30
 confidence: high
 tags:
   - adr
@@ -19,7 +19,8 @@ related:
   - "[[Database_Schema]]"
   - "[[Backend_API_Map]]"
 source_files:
-  - "prisma/schema.prisma"
+  - "prisma/models/reviews.prisma"
+  - "prisma/models/media.prisma"
   - "prisma/migrations/20260608203000_add_review_media_metadata/migration.sql"
   - "src/lib/review-media.ts"
   - "src/lib/review-images.ts"
@@ -103,7 +104,8 @@ Revisit when approaching scale; **not a launch blocker** (cosmetic, self-inflict
 [[Open_Questions]] and [[Roadmap]].
 
 ## Related Source Files
-- [prisma/schema.prisma](prisma/schema.prisma)
+- [prisma/models/reviews.prisma](prisma/models/reviews.prisma)
+- [prisma/models/media.prisma](prisma/models/media.prisma)
 - [prisma/migrations/20260608203000_add_review_media_metadata/migration.sql](prisma/migrations/20260608203000_add_review_media_metadata/migration.sql)
 - [src/lib/review-media.ts](src/lib/review-media.ts)
 - [src/lib/review-images.ts](src/lib/review-images.ts)

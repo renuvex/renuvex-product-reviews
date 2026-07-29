@@ -3,7 +3,7 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-12
-updated: 2026-05-18
+updated: 2026-07-30
 tags:
   - adr
   - storage
@@ -97,7 +97,7 @@ Two cron slots, both daily-or-slower: daily maintenance (`0 3 * * *`, pending cl
 - If the register call silently fails for a successful upload, that asset is unknown to the registry until the monthly fallback scan picks it up. Acceptable: the monthly job is exactly the safety net for this case.
 
 ## Source files
-- [schema.prisma](prisma/schema.prisma)
+- [media.prisma](prisma/models/media.prisma)
 - [20260512100000_add_pending_review_image/migration.sql](prisma/migrations/20260512100000_add_pending_review_image/migration.sql)
 - [api/public/upload/register/route.ts](src/app/api/public/upload/register/route.ts)
 - [api/public/upload/sign/route.ts](src/app/api/public/upload/sign/route.ts)

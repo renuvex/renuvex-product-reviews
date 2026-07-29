@@ -3,7 +3,7 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-29
+updated: 2026-07-30
 tags:
   - quick-reference
 related:
@@ -50,7 +50,7 @@ related:
 - Reviews fixture for preview → [src/app/api/preview/reviews/route.ts](src/app/api/preview/reviews/route.ts)
 
 ## Database
-- Schema → [prisma/schema.prisma](prisma/schema.prisma)
+- Schema entrypoint → [prisma/schema.prisma](prisma/schema.prisma); domain models → [prisma/models/](prisma/models/)
 - Migrations → [prisma/migrations/](prisma/migrations/)
 - Prisma client → [src/lib/prisma.ts](src/lib/prisma.ts)
 - AuthToken model wrapper → [src/models/auth-token/](src/models/auth-token/)

@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: superseded
 created: 2026-06-07
-updated: 2026-07-03
-last_verified: 2026-07-03
+updated: 2026-07-30
+last_verified: 2026-07-30
 confidence: high
 tags:
   - adr
@@ -20,7 +20,7 @@ related:
   - "[[Database_Schema]]"
   - "[[Backend_API_Map]]"
 source_files:
-  - "prisma/schema.prisma"
+  - "prisma/models/reviews.prisma"
   - "prisma/migrations/20260607120000_add_review_media_read_model/migration.sql"
   - "src/lib/review-media.ts"
   - "src/lib/review-summary.ts"
@@ -81,7 +81,7 @@ Add a normalized media read model while keeping the public API response shape st
 The test-store apply copied 10 available legacy assets into tenant-scoped paths, dropped 30 missing Cloudinary source URLs with `--dropMissingLegacy`, repaired 1 summary row, and post-apply audit verified 13 tenant-scoped URLs, 13 `ReviewMedia` rows, zero global legacy URLs, zero orphan media, and zero photo-count mismatches.
 
 ## Related Source Files
-- [prisma/schema.prisma](prisma/schema.prisma)
+- [prisma/models/reviews.prisma](prisma/models/reviews.prisma)
 - [prisma/migrations/20260607120000_add_review_media_read_model/migration.sql](prisma/migrations/20260607120000_add_review_media_read_model/migration.sql)
 - [src/lib/review-media.ts](src/lib/review-media.ts)
 - [src/lib/review-summary.ts](src/lib/review-summary.ts)

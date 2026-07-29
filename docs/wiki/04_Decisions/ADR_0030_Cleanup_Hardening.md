@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-06-09
-updated: 2026-07-04
-last_verified: 2026-07-04
+updated: 2026-07-30
+last_verified: 2026-07-30
 confidence: high
 tags:
   - adr
@@ -20,7 +20,9 @@ related:
   - "[[Database_Map]]"
   - "[[Sentry_Operations]]"
 source_files:
-  - "prisma/schema.prisma"
+  - "prisma/models/reviews.prisma"
+  - "prisma/models/media.prisma"
+  - "prisma/models/operations.prisma"
   - "prisma/migrations/20260609120000_add_cleanup_hardening/migration.sql"
   - "src/lib/cleanup-orphan-images.ts"
   - "src/lib/media/providers/aws-review-image.ts"
@@ -145,7 +147,9 @@ a large fraction) are also covered.
   [[Async_Media_Pipeline]]).
 
 ## Related Source Files
-- [prisma/schema.prisma](prisma/schema.prisma)
+- [prisma/models/reviews.prisma](prisma/models/reviews.prisma)
+- [prisma/models/media.prisma](prisma/models/media.prisma)
+- [prisma/models/operations.prisma](prisma/models/operations.prisma)
 - [prisma/migrations/20260609120000_add_cleanup_hardening/migration.sql](prisma/migrations/20260609120000_add_cleanup_hardening/migration.sql)
 - [src/lib/cleanup-orphan-images.ts](src/lib/cleanup-orphan-images.ts)
 - [src/lib/media/providers/aws-review-image.ts](src/lib/media/providers/aws-review-image.ts)
