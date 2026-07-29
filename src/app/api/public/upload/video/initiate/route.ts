@@ -2,7 +2,7 @@ import { createHash } from 'crypto';
 import { NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { prisma } from '@/lib/prisma';
-import { withCors, corsOptions } from '@/lib/cors';
+import { anonymousPublicCorsOptions, withAnonymousPublicCors } from '@/lib/cors';
 import { getClientIp, checkFixedWindowRateLimit } from '@/lib/public-rate-limit';
 import { getVideoFeatureAccess, verifyVideoReviewTarget } from '@/lib/media/access';
 import { getMuxApiConfig, getMuxVideoQuality, getQStashMediaConfig, getVideoUploadClientConfig, MediaConfigError } from '@/lib/media/config';
@@ -26,8 +26,8 @@ function muxCorsOrigin(request: Request): string {
   return new URL(fallback).origin;
 }
 
-export async function OPTIONS(request: Request) {
-  return corsOptions(request);
+export async function OPTIONS() {
+  return anonymousPublicCorsOptions(['POST']);
 }
 
 export async function POST(request: Request) {
@@ -38,9 +38,9 @@ export async function POST(request: Request) {
     const scope = await resolveReviewCenterItemScope(prisma, request, body.itemId);
     const storeId = scope?.storeId ?? (typeof body.storeId === 'string' ? body.storeId.trim().slice(0, 128) : '');
     const productId = scope?.productId ?? (typeof body.productId === 'string' ? body.productId.trim().slice(0, 128) : '');
-    if (!storeId || !productId) return withCors(NextResponse.json({ error: 'missing_parameters' }, { status: 400 }), request);
+    if (!storeId || !productId) return withAnonymousPublicCors(NextResponse.json({ error: 'missing_parameters' }, { status: 400 }));
     const upload = validateVideoUploadInput({ mimeType: body.mimeType, bytes: body.bytes });
-    if (!upload.ok) return withCors(NextResponse.json({ error: upload.code }, { status: 400 }), request);
+    if (!upload.ok) return withAnonymousPublicCors(NextResponse.json({ error: upload.code }, { status: 400 }));
 
     const ipHash = createHash('sha256').update(getClientIp(request)).digest('hex').slice(0, 32);
     const rate = await checkFixedWindowRateLimit({
@@ -52,20 +52,20 @@ export async function POST(request: Request) {
     if (!rate.allowed) {
       const response = NextResponse.json({ error: 'rate_limited' }, { status: 429 });
       response.headers.set('Retry-After', String(rate.retryAfterSec));
-      return withCors(response, request);
+      return withAnonymousPublicCors(response);
     }
 
     const [access, target] = await Promise.all([getVideoFeatureAccess(storeId), verifyVideoReviewTarget(storeId, productId)]);
     if (!access.enabled) {
       if (access.reason === 'quota_exceeded') {
-        return withCors(NextResponse.json({ error: 'video_quota_exceeded' }, { status: 429 }), request);
+        return withAnonymousPublicCors(NextResponse.json({ error: 'video_quota_exceeded' }, { status: 429 }));
       }
       if (access.reason === 'provider_unavailable') {
-        return withCors(NextResponse.json({ error: 'video_provider_unavailable' }, { status: 503 }), request);
+        return withAnonymousPublicCors(NextResponse.json({ error: 'video_provider_unavailable' }, { status: 503 }));
       }
-      return withCors(NextResponse.json({ error: 'video_upload_disabled' }, { status: 403 }), request);
+      return withAnonymousPublicCors(NextResponse.json({ error: 'video_upload_disabled' }, { status: 403 }));
     }
-    if (!target) return withCors(NextResponse.json({ error: 'invalid_product' }, { status: 400 }), request);
+    if (!target) return withAnonymousPublicCors(NextResponse.json({ error: 'invalid_product' }, { status: 400 }));
 
     // Fail closed before reserving quota when provider/job configuration is incomplete.
     getMuxApiConfig();
@@ -99,7 +99,7 @@ export async function POST(request: Request) {
       expiryJob.id,
       Math.max(1, Math.ceil((session.expiresAt.getTime() - Date.now()) / 1000)),
     );
-    return withCors(NextResponse.json({
+    return withAnonymousPublicCors(NextResponse.json({
       data: {
         token,
         uploadUrl: muxUpload.url,
@@ -107,7 +107,7 @@ export async function POST(request: Request) {
         chunkAttempts: uploadClient.chunkAttempts,
         expiresAt: session.expiresAt.toISOString(),
       },
-    }, { status: 201 }), request);
+    }, { status: 201 }));
   } catch (error) {
     if (createdSessionId) {
       try {
@@ -116,17 +116,17 @@ export async function POST(request: Request) {
         console.error('[video-initiate] failed to persist cleanup outbox:', cleanupError);
       }
     }
-    if (error instanceof MediaRequestError) return withCors(NextResponse.json({ error: error.code }, { status: 400 }), request);
+    if (error instanceof MediaRequestError) return withAnonymousPublicCors(NextResponse.json({ error: error.code }, { status: 400 }));
     if (error instanceof ReviewRequestHostError || error instanceof ReviewRequestTokenError) {
-      return withCors(NextResponse.json({ error: error.code }, { status: error.status }), request);
+      return withAnonymousPublicCors(NextResponse.json({ error: error.code }, { status: error.status }));
     }
-    if (error instanceof VideoQuotaError) return withCors(NextResponse.json({ error: 'video_quota_exceeded' }, { status: 429 }), request);
+    if (error instanceof VideoQuotaError) return withAnonymousPublicCors(NextResponse.json({ error: 'video_quota_exceeded' }, { status: 429 }));
     if (error instanceof MediaConfigError) {
       console.error('[video-initiate] provider configuration is incomplete:', error.code);
-      return withCors(NextResponse.json({ error: 'video_provider_unavailable' }, { status: 503 }), request);
+      return withAnonymousPublicCors(NextResponse.json({ error: 'video_provider_unavailable' }, { status: 503 }));
     }
     Sentry.captureException(error, { tags: { source: 'media-job', task: 'video-initiate' } });
     console.error('[video-initiate] failed:', error);
-    return withCors(NextResponse.json({ error: 'video_upload_initiate_failed' }, { status: 500 }), request);
+    return withAnonymousPublicCors(NextResponse.json({ error: 'video_upload_initiate_failed' }, { status: 500 }));
   }
 }

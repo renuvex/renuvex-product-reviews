@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withCors, corsOptions } from '@/lib/cors';
+import { anonymousPublicCorsOptions, withAnonymousPublicCors } from '@/lib/cors';
 
 export async function OPTIONS() {
-  return corsOptions();
+  return anonymousPublicCorsOptions(['GET']);
 }
 
 // ─── Mock yorum datası ────────────────────────────────────────────────────────
@@ -165,5 +165,5 @@ export async function GET(request: NextRequest) {
     avgRating: '4.5',
   };
 
-  return withCors(NextResponse.json({ data }));
+  return withAnonymousPublicCors(NextResponse.json({ data }));
 }

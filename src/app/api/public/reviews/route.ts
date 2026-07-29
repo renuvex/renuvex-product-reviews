@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import type { Prisma } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { withCors, corsOptions } from '@/lib/cors';
+import { anonymousPublicCorsOptions, withAnonymousPublicCors } from '@/lib/cors';
 import { Redis } from '@upstash/redis';
 import {
   buildAwsReviewMediaCreateManyData,
@@ -27,10 +27,10 @@ import {
 } from '@/lib/review-email/tokens';
 import { isReviewEmailEnabled } from '@/lib/review-email/config';
 import {
-  assertReviewRequestPublicHost,
   clearReviewRequestSessionCookie,
   getReviewRequestSessionCookie,
-  isReviewRequestPublicHost,
+  type PublicReviewSubmissionChannel,
+  resolvePublicReviewSubmissionChannel,
   ReviewRequestHostError,
 } from '@/lib/review-email/public-access';
 import { recordReviewEmailMetricContribution } from '@/lib/review-email/analytics';
@@ -368,7 +368,7 @@ function formatPublicReview(review: PublicReviewRow, storeId: string) {
 }
 
 export async function OPTIONS() {
-  return corsOptions();
+  return anonymousPublicCorsOptions(['GET', 'POST']);
 }
 
 /**
@@ -381,7 +381,7 @@ export async function GET(req: Request) {
     const productId = searchParams.get('productId');
 
     if (!storeId || !productId) {
-      return withCors(NextResponse.json({ error: 'Eksik parametre' }, { status: 400 }));
+      return withAnonymousPublicCors(NextResponse.json({ error: 'Eksik parametre' }, { status: 400 }));
     }
 
     const page = positiveIntParam(searchParams.get('page'), 1);
@@ -396,12 +396,12 @@ export async function GET(req: Request) {
     const hasImagesFilter = searchParams.get('hasImages') === 'true';
     const hasMediaFilter = searchParams.get('hasMedia') === 'true';
     if (hasImagesFilter && hasMediaFilter) {
-      return withCors(NextResponse.json({ error: 'hasImages and hasMedia cannot be used together.' }, { status: 400 }));
+      return withAnonymousPublicCors(NextResponse.json({ error: 'hasImages and hasMedia cannot be used together.' }, { status: 400 }));
     }
     const rawCursor = searchParams.get('cursor');
     const cursor = decodeReviewCursor(rawCursor);
     if (rawCursor !== null && !cursor) {
-      return withCors(NextResponse.json({ error: 'Geçersiz cursor' }, { status: 400 }));
+      return withAnonymousPublicCors(NextResponse.json({ error: 'Geçersiz cursor' }, { status: 400 }));
     }
     if (cursor && !cursorMatchesQuery(cursor, {
       storeId,
@@ -411,7 +411,7 @@ export async function GET(req: Request) {
       hasImages: hasImagesFilter,
       hasMedia: hasMediaFilter,
     })) {
-      return withCors(NextResponse.json({ error: 'Cursor bu sorgu ile uyumlu değil' }, { status: 400 }));
+      return withAnonymousPublicCors(NextResponse.json({ error: 'Cursor bu sorgu ile uyumlu değil' }, { status: 400 }));
     }
     const baseWhere = {
       storeId,
@@ -454,7 +454,7 @@ export async function GET(req: Request) {
       : null;
     const formattedReviews = reviews.map((review) => formatPublicReview(review, storeId));
 
-    const res = withCors(NextResponse.json({
+    const res = withAnonymousPublicCors(NextResponse.json({
       data: {
         reviews: formattedReviews,
         totalCount,
@@ -473,10 +473,10 @@ export async function GET(req: Request) {
     return res;
   } catch (error) {
     if (error instanceof Error && error.message === 'invalid_image_ref') {
-      return withCors(NextResponse.json({ error: 'Image upload is not ready, expired, or belongs to another store.' }, { status: 400 }));
+      return withAnonymousPublicCors(NextResponse.json({ error: 'Image upload is not ready, expired, or belongs to another store.' }, { status: 400 }));
     }
     reportServerFailure('public_reviews_fetch_failed');
-    const response = withCors(NextResponse.json({ error: 'reviews_fetch_failed' }, { status: 500 }));
+    const response = withAnonymousPublicCors(NextResponse.json({ error: 'reviews_fetch_failed' }, { status: 500 }));
     response.headers.set('Cache-Control', 'no-store');
     return response;
   }
@@ -487,13 +487,34 @@ export async function GET(req: Request) {
  */
 export async function POST(request: Request) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown';
+  let reviewSubmissionChannel: PublicReviewSubmissionChannel | null = null;
+  const withSubmissionCors = (response: NextResponse): NextResponse =>
+    reviewSubmissionChannel === 'review_request'
+      ? response
+      : withAnonymousPublicCors(response);
 
   try {
+    const rawReviewRequestSession = getReviewRequestSessionCookie(request);
+    try {
+      reviewSubmissionChannel = resolvePublicReviewSubmissionChannel(request, {
+        reviewEmailEnabled: isReviewEmailEnabled(),
+        reviewRequestSession: rawReviewRequestSession,
+      });
+    } catch (error) {
+      if (error instanceof ReviewRequestHostError) {
+        const response = NextResponse.json({ error: 'not_found' }, { status: 404 });
+        response.headers.set('Cache-Control', 'private, no-store');
+        response.headers.set('Referrer-Policy', 'no-referrer');
+        return response;
+      }
+      throw error;
+    }
+
     let body: any;
     try {
       body = await request.json();
     } catch {
-      return withCors(NextResponse.json({ error: 'Geçersiz istek gövdesi.' }, { status: 400 }));
+      return withSubmissionCors(NextResponse.json({ error: 'Geçersiz istek gövdesi.' }, { status: 400 }));
     }
 
     const { storeId, productId, rating, title, comment, author, images, videoToken } = body;
@@ -509,61 +530,58 @@ export async function POST(request: Request) {
 
     // Validasyon — zorunlu alanlar ve tip/aralık kontrolleri
     if (!storeIdText || !productIdText || !authorText) {
-      return withCors(NextResponse.json({ error: 'Lütfen gerekli tüm alanları doldurun.' }, { status: 400 }));
+      return withSubmissionCors(NextResponse.json({ error: 'Lütfen gerekli tüm alanları doldurun.' }, { status: 400 }));
     }
     const ratingNum = Number(rating);
     if (!Number.isInteger(ratingNum) || ratingNum < 1 || ratingNum > 5) {
-      return withCors(NextResponse.json({ error: 'Puan 1 ile 5 arasında olmalıdır.' }, { status: 400 }));
+      return withSubmissionCors(NextResponse.json({ error: 'Puan 1 ile 5 arasında olmalıdır.' }, { status: 400 }));
     }
     if (hasTitleInput && !titleText) {
-      return withCors(NextResponse.json({ error: 'Başlık en fazla 60 karakter olabilir.' }, { status: 400 }));
+      return withSubmissionCors(NextResponse.json({ error: 'Başlık en fazla 60 karakter olabilir.' }, { status: 400 }));
     }
     if (hasCommentInput && !commentText) {
-      return withCors(NextResponse.json({ error: 'Yorum en fazla 2000 karakter olabilir.' }, { status: 400 }));
+      return withSubmissionCors(NextResponse.json({ error: 'Yorum en fazla 2000 karakter olabilir.' }, { status: 400 }));
     }
     if (hasVideoTokenInput && (!videoTokenText || videoTokenText.length < 32)) {
-      return withCors(NextResponse.json({ error: 'Geçersiz video yükleme anahtarı.' }, { status: 400 }));
+      return withSubmissionCors(NextResponse.json({ error: 'Geçersiz video yükleme anahtarı.' }, { status: 400 }));
     }
     if (containsProfanity(titleText ?? '') || containsProfanity(commentText ?? '') || containsProfanity(authorText)) {
-      return withCors(NextResponse.json({ error: 'Yorumunuz uygunsuz ifadeler içeriyor.' }, { status: 400 }));
+      return withSubmissionCors(NextResponse.json({ error: 'Yorumunuz uygunsuz ifadeler içeriyor.' }, { status: 400 }));
     }
 
     // Rate limit — sentaktik olarak geçerli submit denemelerini say.
     if (!await checkRateLimit(ip)) {
-      return withCors(NextResponse.json({ error: 'Çok fazla yorum gönderdiniz. Lütfen birkaç dakika bekleyin.' }, { status: 429 }));
+      return withSubmissionCors(NextResponse.json({ error: 'Çok fazla yorum gönderdiniz. Lütfen birkaç dakika bekleyin.' }, { status: 429 }));
     }
 
     const awsImageRefsResult = sanitizeAwsReviewImageRefs(images);
     if (!awsImageRefsResult.ok) {
-      return withCors(NextResponse.json({ error: 'Invalid review image reference.' }, { status: 400 }));
+      return withSubmissionCors(NextResponse.json({ error: 'Invalid review image reference.' }, { status: 400 }));
     }
     const imageCount = awsImageRefsResult.refs.length;
 
     if (videoTokenText && imageCount > 0) {
-      return withCors(NextResponse.json({ error: 'Aynı yoruma fotoğraf ve video birlikte eklenemez.' }, { status: 400 }));
+      return withSubmissionCors(NextResponse.json({ error: 'Aynı yoruma fotoğraf ve video birlikte eklenemez.' }, { status: 400 }));
     }
 
     const verifiedProduct = await verifyReviewTarget(storeIdText, productIdText);
     if (!verifiedProduct) {
-      return withCors(NextResponse.json({ error: 'Ürün doğrulanamadı. Lütfen sayfayı yenileyip tekrar deneyin.' }, { status: 400 }));
+      return withSubmissionCors(NextResponse.json({ error: 'Ürün doğrulanamadı. Lütfen sayfayı yenileyip tekrar deneyin.' }, { status: 400 }));
     }
 
-    const rawReviewRequestSession = getReviewRequestSessionCookie(request);
-    const reviewRequestHost = isReviewEmailEnabled() && isReviewRequestPublicHost(request);
     let verifiedReviewRequestSession: Awaited<ReturnType<typeof resolveActiveReviewRequestSession>> | null = null;
-    if (rawReviewRequestSession || reviewRequestHost) {
+    if (reviewSubmissionChannel === 'review_request') {
       try {
-        assertReviewRequestPublicHost(request);
         verifiedReviewRequestSession = await resolveActiveReviewRequestSession(prisma, rawReviewRequestSession);
         if (
           verifiedReviewRequestSession.request.storeId !== storeIdText ||
           verifiedReviewRequestSession.request.productId !== productIdText
         ) {
-          return withCors(NextResponse.json({ error: 'Geçersiz yorum bağlantısı.' }, { status: 400 }));
+          return withSubmissionCors(NextResponse.json({ error: 'Geçersiz yorum bağlantısı.' }, { status: 400 }));
         }
       } catch (error) {
         if (error instanceof ReviewRequestTokenError || error instanceof ReviewRequestHostError) {
-          return withCors(NextResponse.json({ error: 'Geçersiz yorum bağlantısı.' }, { status: 400 }));
+          return withSubmissionCors(NextResponse.json({ error: 'Geçersiz yorum bağlantısı.' }, { status: 400 }));
         }
         throw error;
       }
@@ -811,17 +829,17 @@ export async function POST(request: Request) {
       },
     }, { status: 201 });
     if (verifiedReviewRequestSession) clearReviewRequestSessionCookie(response);
-    return withCors(response, request);
+    return withSubmissionCors(response);
   } catch (error: unknown) {
     if (error instanceof Error && error.message === 'invalid_video_session') {
-      return withCors(NextResponse.json({ error: 'Video yüklemesi hazır değil, süresi dolmuş veya bu ürüne ait değil.' }, { status: 400 }));
+      return withSubmissionCors(NextResponse.json({ error: 'Video yüklemesi hazır değil, süresi dolmuş veya bu ürüne ait değil.' }, { status: 400 }));
     }
     if (error instanceof ReviewRequestTokenError || error instanceof ReviewRequestHostError) {
-      return withCors(NextResponse.json({ error: 'Geçersiz yorum bağlantısı.' }, { status: 400 }));
+      return withSubmissionCors(NextResponse.json({ error: 'Geçersiz yorum bağlantısı.' }, { status: 400 }));
     }
     reportServerFailure('public_reviews_submit_failed');
     const response = NextResponse.json({ error: 'reviews_submit_failed' }, { status: 500 });
     response.headers.set('Cache-Control', 'no-store');
-    return withCors(response);
+    return withSubmissionCors(response);
   }
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { withCors, corsOptions } from '@/lib/cors';
+import { anonymousPublicCorsOptions, withAnonymousPublicCors } from '@/lib/cors';
 import { buildPublicThemeRuntime } from '@/lib/storefront-theme';
 import { isStorefrontThemeLazySyncDue } from '@/lib/storefront-theme-lazy-sync';
 import { getWidgetDefaults, sanitizeSettings } from '@/lib/widget-settings';
@@ -13,7 +13,7 @@ import { isVideoReviewsGloballyEnabled } from '@/lib/media/config';
 // descriptors are returned by the reviews API, not by this settings endpoint.
 
 export async function OPTIONS() {
-  return corsOptions();
+  return anonymousPublicCorsOptions(['GET']);
 }
 
 /**
@@ -25,7 +25,7 @@ export async function GET(req: Request) {
   const publicApiKey = searchParams.get('publicApiKey');
 
   if (!publicApiKey) {
-    return withCors(NextResponse.json({ error: 'Missing publicApiKey' }, { status: 400 }), req);
+    return withAnonymousPublicCors(NextResponse.json({ error: 'Missing publicApiKey' }, { status: 400 }));
   }
 
   const store = await prisma.storeSettings.findUnique({
@@ -33,7 +33,7 @@ export async function GET(req: Request) {
   });
 
   if (!store) {
-    return withCors(NextResponse.json({ error: 'Store not found' }, { status: 404 }), req);
+    return withAnonymousPublicCors(NextResponse.json({ error: 'Store not found' }, { status: 404 }));
   }
 
   const rows = await prisma.widgetSettings.findMany({
@@ -57,7 +57,7 @@ export async function GET(req: Request) {
     ...buildPublicThemeRuntime(store.storefrontTheme),
     themeSyncDue: isStorefrontThemeLazySyncDue(store.storefrontTheme),
   };
-  const response = withCors(NextResponse.json({ widgets, runtime }), req);
+  const response = withAnonymousPublicCors(NextResponse.json({ widgets, runtime }));
   response.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=300, stale-if-error=604800');
   return response;
 }

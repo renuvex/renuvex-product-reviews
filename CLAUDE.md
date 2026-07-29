@@ -158,6 +158,12 @@ export async function GET(request: NextRequest) {
 - Development identity bypass requires both dev identifiers and bypasses only
   cryptographic verification. It never bypasses active installation/token
   lookup.
+- Public routes must choose an explicit CORS policy:
+  - anonymous storefront/preview routes use `withAnonymousPublicCors()` and
+    exact-method `anonymousPublicCorsOptions(...)`;
+  - `withWidgetBeaconCors()` is reserved for `/api/public/widget-error`;
+  - admin and review-center cookie/session routes must not emit CORS.
+  Never restore a generic credential-reflecting public helper.
 - **OAuth Callback State and Signature Validation**:
   - OAuth `state` is mandatory and is the login-CSRF boundary.
   - When ikas supplies a `signature`, use `TokenHelpers.validateCodeSignature(code, signature, clientSecret)` before state consumption. Do not make it mandatory without a separately verified provider-contract decision.

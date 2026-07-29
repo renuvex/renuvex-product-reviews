@@ -1,17 +1,17 @@
 import { NextResponse } from 'next/server';
-import { withCors, corsOptions } from '@/lib/cors';
+import { anonymousPublicCorsOptions, withAnonymousPublicCors } from '@/lib/cors';
 import { getVideoSessionByToken } from '@/lib/media/sessions';
 
-export async function OPTIONS(request: Request) {
-  return corsOptions(request);
+export async function OPTIONS() {
+  return anonymousPublicCorsOptions(['GET']);
 }
 
 export async function GET(request: Request) {
   const token = new URL(request.url).searchParams.get('token') ?? '';
   const session = await getVideoSessionByToken(token);
-  if (!session) return withCors(NextResponse.json({ error: 'upload_not_found' }, { status: 404 }), request);
+  if (!session) return withAnonymousPublicCors(NextResponse.json({ error: 'upload_not_found' }, { status: 404 }));
   const publicStatus = session.status === 'completing' || session.status === 'uploaded' ? 'processing' : session.status;
-  return withCors(NextResponse.json({
+  return withAnonymousPublicCors(NextResponse.json({
     data: {
       status: publicStatus,
       errorCode: session.errorCode,
@@ -21,5 +21,5 @@ export async function GET(request: Request) {
       posterUrl: null,
       expiresAt: session.expiresAt.toISOString(),
     },
-  }), request);
+  }));
 }

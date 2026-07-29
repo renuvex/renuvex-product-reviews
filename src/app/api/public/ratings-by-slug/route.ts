@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { withCors, corsOptions } from '@/lib/cors';
+import { anonymousPublicCorsOptions, withAnonymousPublicCors } from '@/lib/cors';
 import { checkFixedWindowRateLimit, getClientIp } from '@/lib/public-rate-limit';
 import { publicRatingFromSummary } from '@/lib/review-summary';
 
@@ -8,11 +8,11 @@ const RATINGS_RATE_LIMIT_MAX = 300;
 const RATINGS_RATE_LIMIT_WINDOW_SEC = 60;
 
 export async function OPTIONS() {
-  return corsOptions();
+  return anonymousPublicCorsOptions(['GET']);
 }
 
 function rateLimitedResponse() {
-  const res = withCors(NextResponse.json({ data: {} }, { status: 429 }));
+  const res = withAnonymousPublicCors(NextResponse.json({ data: {} }, { status: 429 }));
   res.headers.set('Cache-Control', 'no-store');
   res.headers.set('Retry-After', String(RATINGS_RATE_LIMIT_WINDOW_SEC));
   res.headers.set('X-RateLimit-Limit', String(RATINGS_RATE_LIMIT_MAX));
@@ -31,13 +31,13 @@ export async function GET(request: Request) {
     const slugsParam = searchParams.get('slugs');
 
     if (!storeId || typeof storeId !== 'string' || !slugsParam) {
-      return withCors(NextResponse.json({ data: {} }));
+      return withAnonymousPublicCors(NextResponse.json({ data: {} }));
     }
 
     const slugs = slugsParam.split(',').filter(Boolean);
 
     if (slugs.length === 0) {
-      return withCors(NextResponse.json({ data: {} }));
+      return withAnonymousPublicCors(NextResponse.json({ data: {} }));
     }
 
     // Max 100 slug — sonsuz sorgu engeli
@@ -46,7 +46,7 @@ export async function GET(request: Request) {
       .slice(0, 100);
 
     if (safeSlugs.length === 0) {
-      return withCors(NextResponse.json({ data: {} }));
+      return withAnonymousPublicCors(NextResponse.json({ data: {} }));
     }
 
     const rateLimit = await checkFixedWindowRateLimit({
@@ -129,11 +129,11 @@ export async function GET(request: Request) {
       }
     }
 
-    const res = withCors(NextResponse.json({ data }));
+    const res = withAnonymousPublicCors(NextResponse.json({ data }));
     res.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
     return res;
   } catch (error: any) {
     console.error('[ratings-by-slug] ERROR:', error);
-    return withCors(NextResponse.json({ data: {} }, { status: 500 }));
+    return withAnonymousPublicCors(NextResponse.json({ data: {} }, { status: 500 }));
   }
 }

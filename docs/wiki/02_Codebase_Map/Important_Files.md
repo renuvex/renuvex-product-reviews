@@ -3,8 +3,8 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-28
-last_verified: 2026-07-10
+updated: 2026-07-29
+last_verified: 2026-07-29
 tags:
   - critical-files
 related:
@@ -105,8 +105,12 @@ related:
 - **Be careful:** The intent only authorizes tenant-scoped object keys. Do not return AWS credentials, client-chosen object keys, or remove StoreSettings verification.
 
 ### [src/lib/cors.ts](src/lib/cors.ts)
-- **What:** `withCors` adds `Access-Control-Allow-Origin: *` to all `/api/public/*` responses.
-- **Be careful:** Wide-open by design (unknown storefront domains). If you tighten, do it per-merchant via `StoreSettings.allowedOrigins` (not implemented).
+- **What:** Defines two explicit CORS policies: anonymous storefront/preview
+  wildcard responses without credentials, and canonical HTTP(S) Origin
+  reflection for the widget-error beacon.
+- **Be careful:** Do not add credential reflection to anonymous, admin, or
+  review-center cookie/session routes. A merchant Origin allowlist would be a
+  separate abuse-hardening product decision, not a credential boundary.
 
 ## Widget runtime
 
@@ -191,7 +195,9 @@ related:
 - **Be careful:**
   - Always returns 200 — never leak filtering/rate-limit decisions to the caller. Storefronts don't need that information and exposing it just helps attackers shape abuse.
   - Field length caps (`clip`) are deliberate. Lift only if there's a real need.
-  - Don't add CORS strictness here — this endpoint must accept POST from arbitrary merchant storefront origins, same as the rest of `/api/public/*`.
+  - It must accept arbitrary canonical HTTP(S) merchant origins, but only
+    through the dedicated beacon helper. Missing, malformed, and `null`
+    origins intentionally receive no CORS permission.
 
 ## Obsidian Links
 - [[Folder_Structure]]
@@ -202,6 +208,8 @@ related:
 - [[Security_And_Rate_Limits]]
 
 ## Change Log
+- 2026-07-29: Documented the explicit anonymous, widget-beacon, and no-CORS
+  trust boundaries; removed the generic public helper contract.
 - 2026-06-28: Added the split-origin widget helper and Cloudflare Worker asset-delivery files to the critical-file list.
 - 2026-05-12: Added [src/widget/icons/index.js](src/widget/icons/index.js) to the widget runtime hot-list after splitting review/rating and filter icon registries under [src/widget/icons/](src/widget/icons/).
 - 2026-05-11: Added [src/widget/core/error-reporter.js](src/widget/core/error-reporter.js) and [src/app/api/public/widget-error/route.ts](src/app/api/public/widget-error/route.ts) under Observability. Together they close the widget-side visibility gap from ADR_0009 by forwarding uncaught widget errors to Sentry via a 637-byte (gzip) in-widget reporter and a rate-limited server endpoint. See [[ADR_0010_Widget_Error_Forwarding]].

@@ -3,8 +3,8 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-28
-last_verified: 2026-07-28
+updated: 2026-07-29
+last_verified: 2026-07-29
 tags:
   - structure
 related:
@@ -56,7 +56,7 @@ renuvex-product-reviews/
 │  │  │  ├─ ikas/                # Example: get-merchant via ikas Admin GQL
 │  │  │  ├─ oauth/               # authorize + callback
 │  │  │  ├─ preview/             # Settings + fixture data for /preview iframe
-│  │  │  └─ public/              # CORS-open APIs called by widget.js
+│  │  │  └─ public/              # Anonymous widget + isolated review-session APIs
 │  │  ├─ authorize-store/page.tsx
 │  │  ├─ dashboard/page.tsx
 │  │  ├─ hooks/use-base-home-page.ts
@@ -92,7 +92,7 @@ renuvex-product-reviews/
 │  ├─ lib/
 │  │  ├─ api-requests.ts         # Frontend → backend bridge (axios)
 │  │  ├─ auth-helpers.ts         # Strict JWT + exact active installation/token principal
-│  │  ├─ cors.ts                 # withCors / corsOptions — wide-open for /api/public/*
+│  │  ├─ cors.ts                 # Explicit anonymous and widget-beacon CORS policies
 │  │  ├─ design-tokens.ts        # Color tokens shared admin/widget
 │  │  ├─ prisma.ts               # Prisma singleton
 │  │  ├─ review-images.ts        # Trusted review image URL policy (AWS media host allowlist)

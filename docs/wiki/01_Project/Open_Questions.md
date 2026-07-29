@@ -3,8 +3,8 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-10
-last_verified: 2026-07-10
+updated: 2026-07-29
+last_verified: 2026-07-29
 confidence: medium
 tags:
   - questions
@@ -144,7 +144,11 @@ Still open: real authenticated ikas dashboard iframe smoke, live post-deploy dev
 - Question: after launch, should rejected image reviews keep private admin-preview variants for support for a fixed retention period, or should they be queued for immediate object-family cleanup?
 
 ## CORS
-`Access-Control-Allow-Origin: *` on public APIs. Reasonable for read; for POST `/api/public/reviews` consider whether request-origin allowlisting (per merchant configured storefront domains) would meaningfully improve abuse resistance.
+Anonymous storefront APIs use wildcard CORS without credentials; review
+sessions use exact host/origin and the widget-error beacon has its own
+canonical-Origin reflection policy. A per-merchant Origin allowlist for
+anonymous POST `/api/public/reviews` remains an optional abuse-resistance
+product decision, not an unresolved credential-isolation defect.
 
 ## Stale references in pre-existing docs (Needs Verification)
 Discovered while reconciling existing AI rule files (see [[Existing_AI_Rules_And_Ikas_CLI_Instructions]]):

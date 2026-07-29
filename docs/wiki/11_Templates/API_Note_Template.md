@@ -3,8 +3,8 @@ type: api
 project: renuvex-product-reviews
 status: draft
 created: 2026-05-05
-updated: 2026-07-04
-last_verified: 2026-07-04
+updated: 2026-07-29
+last_verified: 2026-07-29
 confidence: medium
 tags:
   - template
@@ -26,7 +26,9 @@ without checking source and tests.
 One-line description.
 
 ## Auth
-Public (CORS-open) | Admin (JWT) | Cron (Bearer) | OAuth
+Public anonymous (wildcard/no credentials) | Public session (exact host/origin,
+no CORS) | Widget beacon (canonical Origin reflection) | Admin (JWT) | Cron
+(Bearer) | OAuth
 
 ## Request
 

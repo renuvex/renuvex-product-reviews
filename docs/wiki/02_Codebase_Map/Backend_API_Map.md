@@ -3,8 +3,8 @@ type: api
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-28
-last_verified: 2026-07-28
+updated: 2026-07-29
+last_verified: 2026-07-29
 confidence: high
 tags:
   - api
@@ -20,12 +20,21 @@ related:
   - "[[ADR_0026_Product_Review_Summary_Read_Model]]"
   - "[[ADR_0028_Review_Cursor_Pagination]]"
 source_files:
+  - "src/lib/cors.ts"
+  - "src/lib/review-email/public-access.ts"
   - "src/app/api/admin/reviews/route.ts"
+  - "src/app/api/admin/inject-scripts/route.ts"
+  - "src/app/api/preview/settings/route.ts"
+  - "src/app/api/preview/reviews/route.ts"
   - "src/app/api/public/reviews/route.ts"
+  - "src/app/api/public/review-request/route.ts"
+  - "src/app/api/public/widget-error/route.ts"
   - "src/app/api/public/ratings/route.ts"
   - "src/app/api/public/ratings-by-slug/route.ts"
   - "src/app/api/public/settings/route.ts"
   - "src/app/api/public/storefront-theme/lazy-sync/route.ts"
+  - "src/app/api/public/upload/sign/route.ts"
+  - "src/app/api/public/upload/register/route.ts"
   - "src/lib/review-media.ts"
   - "src/lib/review-summary.ts"
   - "src/lib/media/access.ts"
@@ -35,6 +44,10 @@ source_files:
   - "src/lib/media/jobs.ts"
   - "src/lib/media/reconciliation.ts"
   - "src/app/api/public/upload/video/capability/route.ts"
+  - "src/app/api/public/upload/video/initiate/route.ts"
+  - "src/app/api/public/upload/video/complete/route.ts"
+  - "src/app/api/public/upload/video/status/route.ts"
+  - "src/app/api/public/upload/video/route.ts"
   - "src/app/api/public/upload/video/metrics/route.ts"
   - "src/lib/media/config.ts"
   - "src/lib/media/constants.ts"
@@ -127,14 +140,15 @@ failure is `503`, all no-store. Writes that follow provider calls repeat the
 installation version fence in the final transaction; losing that race returns
 `401` and cannot recreate local state.
 
-## Public (CORS-open, no auth)
+## Public trust boundaries
 
 | Method + Path | Source | Purpose |
 |---|---|---|
-| OPTIONS `/api/public/*` | each route | CORS preflight via `corsOptions()` |
+| OPTIONS anonymous storefront/preview routes | each route | Exact-method preflight via `anonymousPublicCorsOptions(...)`; wildcard Origin without credentials, and only `Content-Type`, `Cache-Control`, and `Pragma` request headers. |
+| OPTIONS/POST `/api/public/widget-error` | [route.ts](src/app/api/public/widget-error/route.ts) | Dedicated beacon CORS policy. Reflects only canonical HTTP(S) origins with credentials and `Vary: Origin`; missing, malformed, or `null` origins receive no CORS permission. |
 | GET `/api/public/reviews?storeId&productId&page&orderBy&rating&hasImages&hasMedia&limit&cursor` | [route.ts](src/app/api/public/reviews/route.ts) | Approved review rows + `ProductReviewSummary` distribution/average/count with explicit public field whitelist. Exact `totalCount` / `totalPages` for unfiltered/rating/photo/media filters come from summary buckets; `hasMedia=true` means approved `(hasImages OR hasVideo)`. Legacy `page/limit` remains supported; responses include signed `nextCursor` and cursor requests use keyset pagination without `skip`. Tampered, unsigned, or context-mismatched cursors return `400`. `hasImages=true` uses indexed `Review.hasImages`; `hasMedia=true` is used by the media gallery and by the public `Fotoğraf ve Video` filter when summary counts prove the product has approved video media, and cannot be combined with `hasImages`. Response `images` remains image-only; additive `media[]` exposes `{ type, url, posterUrl, thumbnailUrl, durationMs, width, height, position }` without provider ids. Additive `photoReviewCount` and `mediaReviewCount` expose read-model counts so the widget can separate existing video display from new upload capability. |
-| POST `/api/public/reviews` body | same | Submit review (validation + StoreSettings/ProductSnapshot target verification + profanity + rate-limit + AWS image refs or video token + auto-approve). Writes `Review`, compatibility `Review.images` only for render-ready public AWS URLs, `Review.hasImages`, `Review.hasVideo`, `ReviewMedia`, pending media cleanup, and summary update transactionally. On the isolated review-request host, an active HttpOnly session is atomically consumed in the same transaction; DB uniqueness on `Review.reviewRequestId` prevents parallel duplicate verified reviews. Tokenless storefront submissions remain unchanged. Unexpected failures return fixed `reviews_submit_failed` with `no-store`; raw exceptions do not enter response, console, or Sentry. |
-| POST `/api/public/review-request` body `{ token }` | [route.ts](src/app/api/public/review-request/route.ts) | Exchanges a raw token received in the `/request#token=...` fragment for a short-lived, host-only HttpOnly session. The fragment is removed before API navigation; raw tokens are not accepted in query strings or stored in DB/log payloads. |
+| POST `/api/public/reviews` body | same | Submit review (validation + StoreSettings/ProductSnapshot target verification + profanity + rate-limit + AWS image refs or video token + auto-approve). Anonymous storefront mode remains wildcard/no-credentials. On the isolated review host, feature state, exact host, and exact Origin are checked before body/rate-limit/DB work; an active HttpOnly session is then atomically consumed in the review transaction. Feature-disabled review-host requests cannot fall back to anonymous submission. DB uniqueness on `Review.reviewRequestId` prevents parallel duplicate verified reviews. |
+| POST `/api/public/review-request` body `{ token }` | [route.ts](src/app/api/public/review-request/route.ts) | Exchanges a raw token received in the `/request#token=...` fragment for a short-lived, host-only HttpOnly session. Exact host and exact Origin are required before rate limiting or token consumption. The fragment is removed before API navigation; raw tokens are not accepted in query strings or stored in DB/log payloads. |
 | GET `/api/public/review-request` | same | Resolves only the HttpOnly review-request session and returns sanitized store/product/request state. Both methods are host-isolated and return `private, no-store` with `Referrer-Policy: no-referrer`. |
 | POST `/api/public/review-center/session` | [route.ts](src/app/api/public/review-center/session/route.ts) | Exchanges a batch token from the URL fragment for a two-hour host-only HttpOnly session. Multiple devices are allowed; raw token values are never stored. |
 | GET `/api/public/review-center/items?cursor&limit` | [route.ts](src/app/api/public/review-center/items/route.ts) | Returns only the current batch session's product-scoped items using stable position/id pagination (`20` default, `50` max). Tenant/product scope is derived from the session, not query input. |
@@ -204,11 +218,16 @@ Detail in [[Security_And_Rate_Limits]].
 ## Conventions
 - All routes use the App Router signature: `export async function GET/POST/...(request: Request | NextRequest)`.
 - Admin routes return `NextResponse.json({ data, ... })` or `{ error: '...' }` with proper status.
-- Public routes always go through `withCors(...)`.
+- Anonymous storefront and preview routes select the wildcard/no-credentials
+  CORS helper explicitly. `widget-error` alone uses beacon reflection.
+  Admin and cookie/session review-center routes emit no CORS headers.
 - Bodies validated with zod where structured (callback). Public review POST does manual validation in-route — could be migrated to zod for consistency.
 - Don't `console.log` user data; existing code uses `console.error('[scope] ERROR:', err)` for server errors.
 
 ## Notes
+- 2026-07-29: Split CORS policies by trust boundary and moved legacy
+  review-request state-changing checks ahead of parsing, rate limiting, and
+  persistence.
 - **There is no `/api/admin/auth/me` style endpoint.** JWT claims identify the
   candidate principal but are not authorization by themselves; the server
   resolves the active installation/token pair. If the UI needs merchant data,

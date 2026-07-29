@@ -3,7 +3,7 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-11
-updated: 2026-05-27
+updated: 2026-07-29
 tags:
   - adr
   - sentry
@@ -54,7 +54,7 @@ Accepted
 
 ## Consequences
 - New widget module: [src/widget/core/error-reporter.js](src/widget/core/error-reporter.js). Side-effect imported as the first line of [src/widget/index.js](src/widget/index.js) so its listeners are attached before any other widget module evaluates.
-- New public API route: [src/app/api/public/widget-error/route.ts](src/app/api/public/widget-error/route.ts). Uses the existing Upstash Redis client and the existing CORS helper.
+- New public API route: [src/app/api/public/widget-error/route.ts](src/app/api/public/widget-error/route.ts). Uses the existing Upstash Redis client and a dedicated beacon CORS policy.
 - Redis key prefix `renuvex_pr_werr_rl:` is used for rate-limit accounting. Coordinate with [[Security_And_Rate_Limits]] when adding other widget endpoints to avoid prefix collisions.
 - Widget bundle size: 47,219 → 47,856 bytes gzipped (+637 bytes, +1.3%). Recorded for future bundle-budget conversations.
 - Sentry will start receiving issues tagged `source: widget`. Set up a saved query or alert on `tags[source]:widget` to separate widget noise from panel noise.
@@ -64,6 +64,11 @@ Accepted
   `Access-Control-Allow-Credentials: true` for origin-bearing requests. This
   avoids beacon failures where credentialed telemetry requests reject wildcard
   `Access-Control-Allow-Origin`.
+- 2026-07-29: Credential reflection was isolated to the widget-error beacon
+  helper. It reflects only canonical HTTP(S) origins, sets `Vary: Origin`, and
+  grants no CORS permission for missing, malformed, or literal `null` Origin
+  values. Anonymous widget APIs use wildcard CORS without credentials; the
+  beacon helper must not be reused by admin or review-session routes.
 - 2026-05-27: The reporter also captures widget script/chunk resource-load errors (`type: resource-error`) and adds route, `document.visibilityState`, `document.readyState`, and `navigator.onLine` context. The classic loader's runtime-import failure path sends the same context. This is diagnostic coverage for rare DevTools "error script" reports during refresh/navigation, without adding a new endpoint or SDK.
 
 ## Related Source Files

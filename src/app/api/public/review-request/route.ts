@@ -5,6 +5,7 @@ import { checkFixedWindowRateLimit, getClientIp } from '@/lib/public-rate-limit'
 import { isReviewEmailEnabled } from '@/lib/review-email/config';
 import {
   assertReviewRequestPublicHost,
+  assertReviewRequestSameOrigin,
   clearReviewRequestSessionCookie,
   getReviewRequestSessionCookie,
   ReviewRequestHostError,
@@ -69,6 +70,7 @@ export async function POST(request: NextRequest) {
   try {
     if (!featureAvailable()) return noStore(NextResponse.json({ error: 'not_found' }, { status: 404 }));
     assertReviewRequestPublicHost(request);
+    assertReviewRequestSameOrigin(request);
     const limited = await rateLimitResponse(request);
     if (limited) return limited;
 
@@ -83,7 +85,7 @@ export async function POST(request: NextRequest) {
     return noStore(response);
   } catch (error) {
     if (error instanceof ReviewRequestHostError) {
-      return noStore(NextResponse.json({ error: error.code }, { status: error.status }));
+      return noStore(NextResponse.json({ error: 'not_found' }, { status: error.status }));
     }
     if (error instanceof ReviewRequestTokenError) {
       return noStore(NextResponse.json({ error: error.code }, { status: error.status }));

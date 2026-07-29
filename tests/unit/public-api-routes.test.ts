@@ -61,6 +61,8 @@ const afterMock = vi.hoisted(() => vi.fn((callback: () => unknown) => callback))
 const syncStorefrontThemeForTokenMock = vi.hoisted(() => vi.fn());
 const getByMerchantIdMock = vi.hoisted(() => vi.fn());
 const checkFixedWindowRateLimitMock = vi.hoisted(() => vi.fn());
+const resolveActiveReviewRequestSessionMock = vi.hoisted(() => vi.fn());
+const claimReviewRequestForSubmissionMock = vi.hoisted(() => vi.fn());
 const redisMock = vi.hoisted(() => ({
   incr: vi.fn(),
   expire: vi.fn(),
@@ -166,6 +168,15 @@ vi.mock('@/lib/public-rate-limit', () => ({
   checkFixedWindowRateLimit: checkFixedWindowRateLimitMock,
   getClientIp: () => '127.0.0.1',
 }));
+
+vi.mock('@/lib/review-email/tokens', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/review-email/tokens')>();
+  return {
+    ...actual,
+    resolveActiveReviewRequestSession: resolveActiveReviewRequestSessionMock,
+    claimReviewRequestForSubmission: claimReviewRequestForSubmissionMock,
+  };
+});
 
 vi.mock('@upstash/redis', () => ({
   Redis: vi.fn(function Redis() {
@@ -367,6 +378,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   prismaMock.$queryRaw.mockReset();
   process.env.REVIEW_CURSOR_SECRET = 'unit-test-review-cursor-secret';
+  process.env.REVIEW_REQUEST_PUBLIC_BASE_URL = 'https://reviews.renuvex.app';
+  delete process.env.REVIEW_EMAIL_ENABLED;
   delete process.env.VIDEO_REVIEWS_ENABLED;
   prismaMock.storeSettings.findUnique.mockReset();
   prismaMock.widgetSettings.findMany.mockReset();
@@ -409,6 +422,8 @@ beforeEach(() => {
   syncStorefrontThemeForTokenMock.mockReset();
   getByMerchantIdMock.mockReset();
   checkFixedWindowRateLimitMock.mockReset();
+  resolveActiveReviewRequestSessionMock.mockReset();
+  claimReviewRequestForSubmissionMock.mockReset();
   redisMock.incr.mockReset();
   redisMock.expire.mockReset();
   sentryCaptureExceptionMock.mockReset();
@@ -839,6 +854,98 @@ describe('/api/public/upload/register', () => {
 });
 
 describe('/api/public/reviews', () => {
+  it('rejects review-host submits before parsing, rate limiting, or storage when the feature is disabled', async () => {
+    const { POST } = await import('@/app/api/public/reviews/route');
+
+    const response = await POST(new Request('https://reviews.renuvex.app/api/public/reviews', {
+      method: 'POST',
+      body: 'not-json',
+      headers: {
+        Host: 'reviews.renuvex.app',
+        Origin: 'https://reviews.renuvex.app',
+        'x-forwarded-for': '203.0.113.5',
+      },
+    }));
+
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toEqual({ error: 'not_found' });
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBeNull();
+    expect(redisMock.incr).not.toHaveBeenCalled();
+    expect(prismaMock.storeSettings.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('rejects a legacy-session wrong Origin before parsing, rate limiting, or storage', async () => {
+    process.env.REVIEW_EMAIL_ENABLED = 'true';
+    const { POST } = await import('@/app/api/public/reviews/route');
+
+    const response = await POST(new Request('https://reviews.renuvex.app/api/public/reviews', {
+      method: 'POST',
+      body: 'not-json',
+      headers: {
+        Host: 'reviews.renuvex.app',
+        Origin: 'https://attacker.example',
+        Cookie: 'renuvex-review-request=legacy-session',
+        'x-forwarded-for': '203.0.113.5',
+      },
+    }));
+
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toEqual({ error: 'not_found' });
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBeNull();
+    expect(redisMock.incr).not.toHaveBeenCalled();
+    expect(prismaMock.storeSettings.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('preserves verified legacy review submission on the exact review Origin', async () => {
+    process.env.REVIEW_EMAIL_ENABLED = 'true';
+    setupVerifiedReviewTarget('all');
+    resolveActiveReviewRequestSessionMock.mockResolvedValue({
+      id: 'session-1',
+      tokenId: 'token-1',
+      requestId: 'request-1',
+      request: {
+        id: 'request-1',
+        storeId: 'store-1',
+        productId: 'product-1',
+        receiptId: null,
+      },
+      token: { attemptId: 'attempt-1' },
+    });
+
+    const { POST } = await import('@/app/api/public/reviews/route');
+    const response = await POST(new Request('https://reviews.renuvex.app/api/public/reviews', {
+      method: 'POST',
+      headers: {
+        Host: 'reviews.renuvex.app',
+        Origin: 'https://reviews.renuvex.app',
+        Cookie: 'renuvex-review-request=legacy-session',
+        'Content-Type': 'application/json',
+        'x-forwarded-for': '203.0.113.5',
+      },
+      body: JSON.stringify(validReviewPayload()),
+    }));
+
+    expect(response.status).toBe(201);
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBeNull();
+    expect(response.headers.get('Access-Control-Allow-Credentials')).toBeNull();
+    expect(claimReviewRequestForSubmissionMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        sessionId: 'session-1',
+        tokenId: 'token-1',
+        requestId: 'request-1',
+      }),
+    );
+    expect(prismaMock.review.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        reviewRequestId: 'request-1',
+        verifiedBuyer: true,
+        verificationSource: 'review_request_email',
+      }),
+    }));
+    expect(response.headers.get('Set-Cookie')).toContain('renuvex-review-request=');
+  });
+
   it('rejects invalid JSON review submit bodies before rate limit or storage', async () => {
     const { POST } = await import('@/app/api/public/reviews/route');
 
@@ -851,6 +958,8 @@ describe('/api/public/reviews', () => {
 
     expect(response.status).toBe(400);
     expect(body.error).toBeTruthy();
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
+    expect(response.headers.get('Access-Control-Allow-Credentials')).toBeNull();
     expect(redisMock.incr).not.toHaveBeenCalled();
     expect(prismaMock.storeSettings.findUnique).not.toHaveBeenCalled();
     expect(prismaMock.review.create).not.toHaveBeenCalled();

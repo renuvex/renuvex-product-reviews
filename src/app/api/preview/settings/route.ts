@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { withCors, corsOptions } from '@/lib/cors';
+import { anonymousPublicCorsOptions, withAnonymousPublicCors } from '@/lib/cors';
 
 export async function OPTIONS() {
-  return corsOptions();
+  return anonymousPublicCorsOptions(['GET']);
 }
 
 /**
@@ -34,7 +34,7 @@ export async function GET() {
   // Preview iframe lives inside the Renuvex admin dashboard. There is no
   // merchant theme to gate against; both ADR_0022 flags are forced ON so
   // every surface renders against the preview fixture HTML.
-  return withCors(NextResponse.json({
+  return withAnonymousPublicCors(NextResponse.json({
     widgets,
     runtime: {
       themeAdapterKey: 'ozy',
