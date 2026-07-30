@@ -41,7 +41,10 @@ Review image URLs are trusted only when they match the configured Cloudinary clo
 
 The server rejects untrusted image URLs on public review submission and filters legacy stored image data before public or admin responses. The widget receives the trusted cloud name as a build-time constant injected by [scripts/build-widget.mjs](scripts/build-widget.mjs) (see [[ADR_0008_Cloud_Name_Build_Time_Only]]) and uses the same allowlist before rendering review photos or opening the photo lightbox. The cloud name is no longer threaded through the settings response, an `imagePolicy` field, or any runtime cache; ADR_0008 supersedes that portion of the runtime contract.
 
-Preview fixtures may use `placehold.co` images only when `window.__ikasPreviewMode === true`; this exception is not active on storefronts.
+Preview fixtures use only the three committed same-origin
+`/preview-assets/review-photo-*.svg` files while
+`window.__ikasPreviewMode === true`. No remote preview-image exception is
+active on storefronts.
 
 ## Reasoning
 The durable boundary must be server-side because public storefront clients are not trusted. The widget-side filter is still needed as defense in depth and to protect cached or legacy rows. Restricting to the app-owned, tenant-scoped Cloudinary upload folder removes the third-party tracking-image class and prevents cross-tenant storage mixing without changing the direct-upload architecture.

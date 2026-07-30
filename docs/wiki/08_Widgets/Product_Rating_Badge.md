@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-29
-last_verified: 2026-05-29
+updated: 2026-07-30
+last_verified: 2026-07-30
 tags:
   - widget
   - badge
@@ -31,7 +31,10 @@ Fields:
 - `enabled` — toggle; also gates the listing/card badges.
 - `size` — small / medium / large; applies to **both** the PDP title badge and listing-card badges via shared `SIZE_MAP` (icon + text together). See [[ADR_0016_Rating_Visual_System]].
 - `mobileOverride` (toggle) + `mobileSize` (small/medium/large) — opt-in mobile preset. When on, an `@media (max-width:640px)` block in `<style id="renuvex-pr-badge-tokens">` overrides desktop tokens. See [[ADR_0017_Badge_Architecture]].
-- `alignment`, `showValue`, `showCount` — additional display knobs introduced in PR-1; consumed by future iterations.
+- `alignment` — explicitly controls the badge row alignment on PDP and listing
+  surfaces.
+- `showValue`, `showCount` — independently control the visible numeric rating
+  and review count while the accessible rating label remains available.
 
 The star **icon** and **color** are NOT on this widget. They come from the
 global rating visual system - the `reviews` widget's `reviewIcon` /
@@ -50,6 +53,12 @@ and passes it into `injectRatingBadge`; the star color is applied through the
 - If a merchant theme has unusual title markup, the badge may attach to the wrong element. The fix is in [product-title.js](src/widget/core/product-title.js).
 - The badge uses `/api/public/ratings?productIds=<id>` instead of the full review payload. That keeps badge-only PDPs off the heavy review-section fetch/render path. See [[ADR_0024_Badge_Review_Surface_Separation]].
 - Star glyphs render via a shared SVG `<symbol>` sprite (`<use>` into `#renuvex-pr-icon-sprite`), not inline `<path>`. The badge is a real link named by an sr-only `aria-labelledby` span (no `role="figure"`, no static `id`); alignment comes from `data-renuvex-align`. See [[ADR_0019_Icon_Sprite_Rendering]].
+- Admin customization uses the shared production-renderer iframe. The `Ürün`
+  scene invokes `injectRatingBadge`; the `Liste` scene invokes the listing
+  badge injector on three fixture cards. There is no separate React badge mock.
+- `ensureBadgeTokens()` establishes base badge CSS before writing configured
+  size tokens. This order is required so a cold first render applies the saved
+  desktop/mobile size instead of letting base defaults win the cascade.
 
 ## Related Source Files
 - [src/widget/rating-badge/index.js](src/widget/rating-badge/index.js)
@@ -65,6 +74,10 @@ and passes it into `injectRatingBadge`; the star color is applied through the
 - [[Bug_Product_Widget_Missing_Auto_Mount]]
 
 ## Change Log
+- 2026-07-30: `alignment`, `showValue`, and `showCount` became active on PDP and
+  listing renderers. Badge preview moved to the shared iframe scene registry
+  with production PDP/listing injectors, and token insertion order was fixed
+  so the configured size wins on first render.
 - 2026-05-29: JSON-LD moved out of the badge into `structured-data/`; badge cleanup now owns only visual badge DOM.
 - 2026-05-27: [[ADR_0024_Badge_Review_Surface_Separation]] split the PDP badge into its own product surface and lazy chunk. It now fetches summary data through `/api/public/ratings`.
 - 2026-05-25: PDP title badge was decoupled from the review-section mount. It injects before the opt-in `<div data-renuvex-widget="reviews"></div>` check and remains controlled by the `badge` widget toggle.

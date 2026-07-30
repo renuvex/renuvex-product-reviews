@@ -56,7 +56,6 @@ renuvex-product-reviews/
 │  │  │  ├─ admin/               # JWT-gated merchant APIs (reviews, settings, inject, cleanup)
 │  │  │  ├─ ikas/                # Example: get-merchant via ikas Admin GQL
 │  │  │  ├─ oauth/               # authorize + callback
-│  │  │  ├─ preview/             # Settings + fixture data for /preview iframe
 │  │  │  └─ public/              # Anonymous widget + isolated review-session APIs
 │  │  ├─ authorize-store/page.tsx
 │  │  ├─ dashboard/page.tsx

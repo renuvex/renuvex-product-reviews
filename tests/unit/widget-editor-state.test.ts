@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { WIDGETS } from '../../src/components/home-page/widgets/widgetDefs';
 import {
+  buildWidgetPreviewSettings,
   mergeWithDefaults,
   sameSettingsDraft,
   shouldSyncDraftFromSaved,
@@ -8,9 +9,10 @@ import {
 } from '../../src/components/home-page/widgets/editor/WidgetEditorState';
 
 const reviewsWidget = WIDGETS.find((widget) => widget.id === 'reviews');
+const badgeWidget = WIDGETS.find((widget) => widget.id === 'badge');
 
-if (!reviewsWidget) {
-  throw new Error('reviews widget definition is missing');
+if (!reviewsWidget || !badgeWidget) {
+  throw new Error('implemented widget definition is missing');
 }
 
 describe('WidgetEditor state helpers', () => {
@@ -61,5 +63,29 @@ describe('WidgetEditor state helpers', () => {
     };
 
     expect(shouldSyncDraftFromSaved(currentDraft, previousSavedDraft, true)).toBe(true);
+  });
+
+  it('builds a complete preview settings map while overlaying only the active draft', () => {
+    const result = buildWidgetPreviewSettings(
+      {
+        reviews: { title: 'Kayitli baslik', reviewStarColor: '#123456' },
+        badge: { size: 'small', showCount: false },
+      },
+      badgeWidget,
+      { size: 'large', alignment: 'right' },
+    );
+
+    expect(result.reviews).toEqual(expect.objectContaining({
+      title: 'Kayitli baslik',
+      reviewStarColor: '#123456',
+      summaryLayout: 'classic',
+    }));
+    expect(result.badge).toEqual(expect.objectContaining({
+      size: 'large',
+      alignment: 'right',
+      showCount: false,
+      showValue: true,
+    }));
+    expect(result.carousel).toBeUndefined();
   });
 });

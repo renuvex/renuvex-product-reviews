@@ -6,8 +6,8 @@ const SURFACE_DIR = path.join(process.cwd(), 'src', 'widget', 'surfaces');
 
 const SURFACE_TEST_CONTRACTS: Record<string, { layers: string[]; tests: string[] }> = {
   'rating-badge': {
-    layers: ['network'],
-    tests: ['tests/widget-network-smoke.spec.ts'],
+    layers: ['network', 'admin-preview'],
+    tests: ['tests/widget-network-smoke.spec.ts', 'tests/admin-preview-smoke.spec.ts'],
   },
   'reviews-main': {
     layers: ['network', 'runtime', 'interaction', 'admin-preview'],
@@ -19,8 +19,8 @@ const SURFACE_TEST_CONTRACTS: Record<string, { layers: string[]; tests: string[]
     ],
   },
   'listing-badge': {
-    layers: ['network'],
-    tests: ['tests/widget-network-smoke.spec.ts'],
+    layers: ['network', 'admin-preview'],
+    tests: ['tests/widget-network-smoke.spec.ts', 'tests/admin-preview-smoke.spec.ts'],
   },
   'structured-data': {
     layers: ['network', 'unit', 'deployed-verifier'],

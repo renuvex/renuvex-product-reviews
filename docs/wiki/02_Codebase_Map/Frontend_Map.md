@@ -81,21 +81,30 @@ src/components/
 │     │  ├─ SettingsPanel.tsx     # Renders fields from widgetDefs
 │     │  ├─ IconSelect.tsx        # SVG grid icon picker
 │     │  └─ VisualSelectGrid.tsx  # Visual choice cards for layout select fields
-│     ├─ previews/                # Static admin-side previews (BadgePreview, ReviewsPreview)
-│     └─ widget-previews/         # Iframe-driven live previews (BadgeWidgetPreview, ReviewsWidgetPreview)
+│     ├─ previews/                # Small schema-choice illustrations, not live widget renderers
+│     └─ editor/WidgetEditor.tsx  # Shared iframe shell for implemented live previews
 └─ ui/                            # shadcn/ui primitives (button, card, dialog, input, label,
                                   # select, slider, sonner, table, tabs, textarea, accordion,
                                   # badge, dropdown-menu)
 ```
 
 ### Live preview pattern (settings)
-1. `WidgetEditor` renders settings panel + an iframe pointed at `/preview`.
-2. On any setting change -> `postMessage({ type: 'RENUVEX_PR_SETTINGS_UPDATE', settings })` to iframe.
-3. Inside iframe, `widget.js` running in preview mode merges + re-renders.
-4. The iframe acks ready with `RENUVEX_PR_WIDGET_READY` from [src/widget/index.js](src/widget/index.js).
-5. Settings save: `PUT /api/admin/settings` (debounced or on-blur; check `WidgetEditor` for the exact strategy).
+1. `WidgetEditor` selects a registered widget scene and mounts
+   `/preview?widget=<id>&scene=<scene>` in one common iframe shell.
+2. The iframe sends versioned `RENUVEX_PR_WIDGET_READY` to its exact
+   same-origin parent.
+3. The parent sends `RENUVEX_PR_PREVIEW_RENDER` with the complete resolved
+   settings map. This preserves cross-widget dependencies such as Badge
+   icon/color coming from Reviews settings.
+4. The preview runtime renders fixture content through the production Reviews,
+   PDP Badge, or Listing Badge renderer and acknowledges
+   `RENUVEX_PR_PREVIEW_RENDERED` or a fixed preview error.
+5. Settings save remains `PUT /api/admin/settings`; preview fixture data is not
+   persisted and no `/api/preview/*` endpoint exists.
 
-This pattern keeps preview pixel-identical to production widget without duplicating render code.
+The output renderer and widget CSS are production code. The surrounding
+fixture page and data are intentionally deterministic preview inputs, not a
+claim that every merchant theme will be pixel-identical.
 
 ## Storefront Widget (overview, links to dedicated map)
 

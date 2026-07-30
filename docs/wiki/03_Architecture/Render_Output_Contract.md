@@ -96,7 +96,12 @@ Required because ikas gives no stable mount point/slot ([[ADR_0018_Widget_Owners
 - PDP Product `AggregateRating` JSON-LD is owned by the independent structured-data surface ([src/widget/structured-data/jsonld.js](src/widget/structured-data/jsonld.js)); the visual rating badge no longer writes schema. `<time datetime>` on review dates complements it. This is **shipped** (previous competitor matrix notes listed it as planned).
 
 ## Admin vs storefront
-Storefront HTML is **not** reused verbatim in the admin panel (React/TSX `PreviewStars`, `BadgePreview`). Share the *source* (ICONS registry, design tokens, settings) — not the markup. True-fidelity preview is the `/preview` iframe rendering the real widget.
+Small schema-choice illustrations in the settings UI may remain React/TSX,
+but live widget preview does not maintain a second renderer. The `/preview`
+iframe invokes the production Reviews, PDP Badge, and Listing Badge renderers
+against deterministic fixture markup/data. Therefore renderer markup, CSS,
+icons, and settings behavior are shared; fixture merchant-page structure is
+not presented as a universal storefront-theme guarantee.
 
 ## Verify after changes
 `pnpm build:widget` (HMR does not rebundle the widget) → live check on the dev store (`dev-mertcopper.ikas.shop`) that surfaces render, read-more/image work by **keyboard**, badges intact, no `missing_after_render` regression → `pnpm exec tsc --noEmit` + `pnpm lint` + `node scripts/wiki-audit.mjs`.

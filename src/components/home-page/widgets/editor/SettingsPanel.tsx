@@ -43,6 +43,7 @@ interface SettingsPanelProps {
   settings: WidgetSettingsDraft;
   settingsMeta: WidgetSettingsMeta;
   onChange: (s: WidgetSettingsDraft) => void;
+  onReset?: () => void;
 }
 
 type PanelView =
@@ -50,7 +51,7 @@ type PanelView =
   | { type: 'group'; title: string; groups: SettingsGroup[] }
   | { type: 'colors' };
 
-export function SettingsPanel({ groups, settings, settingsMeta, onChange }: SettingsPanelProps) {
+export function SettingsPanel({ groups, settings, settingsMeta, onChange, onReset }: SettingsPanelProps) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [view, setView] = useState<PanelView>({ type: 'main' });
 
@@ -84,6 +85,7 @@ export function SettingsPanel({ groups, settings, settingsMeta, onChange }: Sett
     });
 
     onChange({ ...settings, ...defaults });
+    onReset?.();
     setShowConfirm(false);
   };
 

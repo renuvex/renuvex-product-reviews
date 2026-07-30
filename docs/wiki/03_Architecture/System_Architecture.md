@@ -47,7 +47,7 @@ A Next.js 16 (16.2) app on Vercel (eu-central / fra1) with three primary applica
 │   /api/admin/*    JWT-gated   ───►  Prisma ─► Postgres (Supabase)│
 │   /api/oauth/*    install     ───►  ikas Admin GraphQL          │
 │   /api/public/*   policy-bound ◄── widget.js / review center    │
-│   /api/preview/*  iframe data                                    │
+│   /preview        fixture-only production-renderer iframe        │
 │                                                                 │
 │   Cron jobs    ──►  theme sync + daily/monthly maintenance       │
 └──────────────────────┬───────────────┬──────────────┬───────────┘

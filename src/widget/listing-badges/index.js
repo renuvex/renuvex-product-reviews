@@ -100,7 +100,7 @@ export async function renderListingBadges() {
     reserveBadgeSlots(slugNameMap);
 
     var ratings = await ratingsPromise;
-    injectBadges(slugNameMap, ratings, iconPair);
+    injectBadges(slugNameMap, ratings, iconPair, badgeSettings);
   } finally {
     ls.inProgress = false;
     if (ls.queued) {

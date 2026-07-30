@@ -3,6 +3,12 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { buildPreviewDocument } from '../src/widget/preview/document.js';
+import {
+  PREVIEW_PROTOCOL_VERSION,
+  getDefaultWidgetPreviewScene,
+  isWidgetPreviewScene,
+} from '../src/widget/preview/scenes.js';
 
 export const WIDGET_ORIGIN = 'https://widget.test';
 export const API_ORIGIN = resolveWidgetApiOrigin();
@@ -42,6 +48,8 @@ export type SmokeOptions = {
     delayMs?: number;
   };
   badgeSettings?: Record<string, unknown>;
+  previewWidgetId?: string;
+  previewScene?: string;
   listingOffsetTop?: number;
   hasMore?: boolean;
   approvedReviewCount?: number;
@@ -136,6 +144,9 @@ export function settingsResponse(options: SmokeOptions): unknown {
         size: 'medium',
         mobileOverride: false,
         mobileSize: 'small',
+        alignment: 'auto',
+        showValue: true,
+        showCount: true,
         ...(options.badgeSettings || {}),
       },
       reviews: baseReviewsSettings({
@@ -332,9 +343,15 @@ export async function fulfillLocalPublicAsset(route: Route): Promise<void> {
   const publicPath = url.pathname.replace(/^\/+/, '').replace(/\//g, path.sep);
   const filePath = path.join(process.cwd(), 'public', publicPath);
   const body = await readFile(filePath, 'utf8');
+  const extension = path.extname(filePath).toLowerCase();
+  const headers = extension === '.svg'
+    ? imageHeaders()
+    : extension === '.json'
+      ? jsonHeaders()
+      : jsHeaders();
   await route.fulfill({
     status: 200,
-    headers: jsHeaders(),
+    headers,
     body,
   });
 }
@@ -432,34 +449,60 @@ export async function setupWidgetRoutes(page: Page, options: SmokeOptions = {}):
 
 export async function setupPreviewRoutes(page: Page, options: SmokeOptions = {}): Promise<RequestLog> {
   const log = createRequestLog(page);
+  const widgetId = options.previewWidgetId || 'reviews';
+  const scene = options.previewScene || getDefaultWidgetPreviewScene(widgetId);
+  if (!isWidgetPreviewScene(widgetId, scene)) {
+    throw new Error(`Unsupported preview fixture: ${widgetId}/${scene}`);
+  }
+  const context = {
+    version: PREVIEW_PROTOCOL_VERSION,
+    widgetId,
+    scene,
+  };
+  const widgets = (settingsResponse(options) as { widgets: Record<string, Record<string, unknown>> }).widgets;
 
-  await page.route(`${WIDGET_ORIGIN}/widget.js**`, fulfillLocalPublicAsset);
-  await page.route(`${WIDGET_ORIGIN}/widget-runtime/**`, fulfillLocalPublicAsset);
-  await page.route('https://media.renuvex.app/**', fulfillImage);
-  await routeWidgetApi(page, '/api/preview/settings**', async (route) => {
-    await route.fulfill({
-      status: 200,
-      headers: jsonHeaders(),
-      body: JSON.stringify(settingsResponse(options)),
+  await page.addInitScript(({ initialWidgets, protocolVersion }) => {
+    type PreviewTestWindow = Window & {
+      __renuvexPreviewContext?: { version: number; widgetId: string; scene: string };
+      __renuvexPreviewTestWidgets?: Record<string, Record<string, unknown>>;
+    };
+    const previewWindow = window as PreviewTestWindow;
+    previewWindow.__renuvexPreviewTestWidgets = initialWidgets;
+    window.addEventListener('message', (event) => {
+      const current = previewWindow.__renuvexPreviewContext;
+      const data = event.data as { version?: unknown; type?: unknown; widgetId?: unknown; scene?: unknown } | null;
+      if (!current || event.source !== window || event.origin !== window.location.origin) return;
+      if (
+        !data ||
+        data.version !== protocolVersion ||
+        data.type !== 'RENUVEX_PR_WIDGET_READY' ||
+        data.widgetId !== current.widgetId ||
+        data.scene !== current.scene
+      ) return;
+      window.postMessage({
+        version: protocolVersion,
+        type: 'RENUVEX_PR_PREVIEW_RENDER',
+        widgetId: current.widgetId,
+        scene: current.scene,
+        widgets: previewWindow.__renuvexPreviewTestWidgets,
+      }, window.location.origin);
     });
-  });
-  await routeThemeLazySync(page);
-  await routeWidgetApi(page, '/api/preview/reviews**', async (route) => {
-    const url = new URL(route.request().url());
-    await route.fulfill({
-      status: 200,
-      headers: jsonHeaders(),
-      body: JSON.stringify(reviewsResponse(url.searchParams.get('hasImages') === 'true', options.hasMore === true, 'preview')),
-    });
-  });
+  }, { initialWidgets: widgets, protocolVersion: PREVIEW_PROTOCOL_VERSION });
+
+  await page.route(`${MERCHANT_ORIGIN}/widget.js**`, fulfillLocalPublicAsset);
+  await page.route(`${MERCHANT_ORIGIN}/widget-runtime/**`, fulfillLocalPublicAsset);
+  await page.route(`${MERCHANT_ORIGIN}/preview-assets/**`, fulfillLocalPublicAsset);
   await routeWidgetApi(page, '/api/public/widget-error**', async (route) => {
     await route.fulfill({ status: 204, headers: jsonHeaders(), body: '' });
   });
-  await page.route(`${MERCHANT_ORIGIN}/preview`, async (route) => {
+  await page.route((url) => (
+    url.origin === MERCHANT_ORIGIN &&
+    url.pathname === '/preview'
+  ), async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'text/html; charset=utf-8',
-      body: previewHtml(options.reviewsSettings || {}),
+      body: buildPreviewDocument(context, 'playwright'),
     });
   });
   return log;
@@ -867,28 +910,6 @@ function productLikeLinksWithoutMediaHtml(): string {
 </html>`;
 }
 
-function previewHtml(settingsOverride: Record<string, unknown>): string {
-  return `<!doctype html>
-<html lang="tr">
-  <head>
-    <meta charset="utf-8">
-    <title>Preview</title>
-    <script>
-      window.__ikasPreviewMode = true;
-      window.__ikasPreviewBaseUrl = '${WIDGET_ORIGIN}';
-      window.__renuvexProductReviewsPreviewSettings = ${JSON.stringify(JSON.stringify(settingsOverride))};
-      window.__ikasPreviewSettings = window.__renuvexProductReviewsPreviewSettings;
-    </script>
-    <script src="${WIDGET_ORIGIN}/widget.js?publicApiKey=preview" data-renuvex-app="product-reviews"></script>
-  </head>
-  <body>
-    <main>
-      <div data-renuvex-widget="reviews"></div>
-    </main>
-  </body>
-</html>`;
-}
-
 export async function waitForWidgetIdle(page: Page): Promise<void> {
   await page.waitForLoadState('domcontentloaded');
   await page.waitForTimeout(800);
@@ -1044,9 +1065,28 @@ export async function clickInReviewsShadow(page: Page, selector: string): Promis
 }
 
 export async function dispatchPreviewSettingsUpdate(page: Page, settings: Record<string, unknown>): Promise<void> {
-  await page.evaluate((settings) => {
-    window.postMessage({ type: 'RENUVEX_PR_SETTINGS_UPDATE', settings }, '*');
-  }, settings);
+  await page.evaluate(({ settings, protocolVersion }) => {
+    type PreviewTestWindow = Window & {
+      __renuvexPreviewContext?: { version: number; widgetId: string; scene: string };
+      __renuvexPreviewTestWidgets?: Record<string, Record<string, unknown>>;
+    };
+    const previewWindow = window as PreviewTestWindow;
+    const context = previewWindow.__renuvexPreviewContext;
+    if (!context) throw new Error('Preview context is missing');
+    const widgets = previewWindow.__renuvexPreviewTestWidgets || {};
+    widgets[context.widgetId] = {
+      ...(widgets[context.widgetId] || {}),
+      ...settings,
+    };
+    previewWindow.__renuvexPreviewTestWidgets = widgets;
+    window.postMessage({
+      version: protocolVersion,
+      type: 'RENUVEX_PR_PREVIEW_RENDER',
+      widgetId: context.widgetId,
+      scene: context.scene,
+      widgets,
+    }, window.location.origin);
+  }, { settings, protocolVersion: PREVIEW_PROTOCOL_VERSION });
 }
 
 export async function hasOverlay(page: Page, selector: string): Promise<boolean> {

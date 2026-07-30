@@ -1,50 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
+import {
+  PREVIEW_PROTOCOL_VERSION,
+  getDefaultWidgetPreviewScene,
+  isWidgetPreviewScene,
+} from '@/widget/preview/scenes.js';
+import { buildPreviewDocument } from '@/widget/preview/document.js';
 
 /**
- * GET /preview
- * Returns a standalone HTML page for iframe widget preview.
- * Uses route handler to bypass Next.js root layout.
+ * Standalone, same-origin iframe document used by the widget editor.
+ * Fixture data is local; rendered widget output comes from production modules.
  */
 export async function GET(request: NextRequest) {
-  const host = request.headers.get('host') || 'localhost:3000';
-  const protocol = host.includes('localhost') ? 'http' : 'https';
-  const baseUrl = `${protocol}://${host}`;
+  const widgetId = request.nextUrl.searchParams.get('widget') || 'reviews';
+  const scene = request.nextUrl.searchParams.get('scene') || getDefaultWidgetPreviewScene(widgetId);
 
-  const html = `<!DOCTYPE html>
-<html lang="tr">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { background: transparent; scrollbar-width: thin; scrollbar-color: rgba(17,17,17,0.45) transparent; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; overflow-x: hidden; }
-    body::-webkit-scrollbar { width: 12px; }
-    body::-webkit-scrollbar-track { background: transparent; }
-    body::-webkit-scrollbar-thumb { background: rgba(17,17,17,0.45); border-radius: 999px; border: 3px solid transparent; background-clip: content-box; }
-    .preview-container { max-width: 100%; padding: 24px; }
-  </style>
-</head>
-<body>
-  <div class="preview-container">
-    <div data-renuvex-widget="reviews"></div>
-  </div>
+  if (!isWidgetPreviewScene(widgetId, scene)) {
+    return new NextResponse('Not Found', {
+      status: 404,
+      headers: {
+        'Cache-Control': 'no-store',
+        'Content-Type': 'text/plain; charset=utf-8',
+      },
+    });
+  }
 
-  <script>
-    window.__ikasPreviewMode = true;
-    window.__ikasPreviewBaseUrl = '${baseUrl}';
-    window.__renuvexProductReviewsPreviewSettings = sessionStorage.getItem('renuvex_pr_preview_settings') || '';
-    window.__ikasPreviewSettings = window.__renuvexProductReviewsPreviewSettings || '';
-  </script>
-  <!-- v= timestamp -> her preview acılısında widget.js bypass cache; admin
-       degisiklik yapınca anında güncel goruntu (sadece preview, prod widget'a
-       dokunulmaz). Endustri pratigi: Shopify themes ?v={{now|date}}, Industry standard
-       benzer pattern. -->
-  <script src="${baseUrl}/widget.js?publicApiKey=preview&v=${Date.now()}" async></script>
-</body>
-</html>`;
+  const context = {
+    version: PREVIEW_PROTOCOL_VERSION,
+    widgetId,
+    scene,
+  };
+  const html = buildPreviewDocument(context, Date.now());
 
   return new NextResponse(html, {
-    headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    headers: {
+      'Cache-Control': 'no-store',
+      'Content-Type': 'text/html; charset=utf-8',
+      'Referrer-Policy': 'no-referrer',
+      'X-Content-Type-Options': 'nosniff',
+    },
   });
 }

@@ -89,6 +89,7 @@ export function WidgetsContainer({ settings, settingsMeta, settingsStatus, onCha
           <WidgetEditor
             widget={editingWidget}
             savedSettings={editingWidgetSettings}
+            allSettings={settings}
             settingsMeta={settingsMeta}
             saving={saving}
             onCommit={(committed) => handleCommit(editingWidget.id, committed)}

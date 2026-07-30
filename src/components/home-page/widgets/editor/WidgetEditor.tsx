@@ -1,14 +1,16 @@
 'use client';
 
-import React, { Suspense, lazy, useState, useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef } from 'react';
 import { AlertCircle, ArrowLeft, Loader2, RefreshCw, Save, Smartphone, Tablet, Monitor } from 'lucide-react';
 import { InfoTooltip } from './InfoTooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { colors, componentStyles, radii, typography, opacity } from '@/lib/design-tokens';
+import type { WidgetSettingsMap } from '../../types';
 import type { WidgetDef } from '../widgetDefs';
 import { SettingsPanel } from './SettingsPanel';
 import { ColorPickerField } from './ColorPickerField';
 import {
+  buildWidgetPreviewSettings,
   mergeWithDefaults,
   sameSettingsDraft,
   shouldSyncDraftFromSaved,
@@ -21,12 +23,20 @@ import {
   type WidgetPreviewStatus,
 } from './WidgetPreviewLoadState';
 import type { WidgetSettingsMeta } from './WidgetSettingsLoadState';
+import {
+  RENUVEX_PR_PREVIEW_ERROR,
+  RENUVEX_PR_PREVIEW_RENDER,
+  RENUVEX_PR_PREVIEW_RENDERED,
+  RENUVEX_PR_PREVIEW_RESET_SCROLL,
+  RENUVEX_PR_WIDGET_READY,
+} from '@/widget/core/namespace.js';
+import {
+  PREVIEW_PROTOCOL_VERSION,
+  getDefaultWidgetPreviewScene,
+  getWidgetPreviewScenes,
+  isWidgetPreviewScene,
+} from '@/widget/preview/scenes.js';
 
-// Widgets that support iframe preview (real widget.js)
-const IFRAME_PREVIEW_WIDGETS = ['reviews'];
-const RENUVEX_PR_WIDGET_READY = 'RENUVEX_PR_WIDGET_READY';
-const RENUVEX_PR_SETTINGS_UPDATE = 'RENUVEX_PR_SETTINGS_UPDATE';
-const RENUVEX_PR_PREVIEW_SETTINGS_KEY = 'renuvex_pr_preview_settings';
 const PREVIEW_SLOW_TIMEOUT_MS = 2500;
 const PREVIEW_ERROR_TIMEOUT_MS = 15000;
 
@@ -48,23 +58,12 @@ function PreviewBackgroundInfo() {
   );
 }
 
-// ─── Lazy preview map ────────────────────────────────────────────────────────
-// Yeni widget eklenince buraya 1 satır ekle, başka hiçbir şeye dokunma.
-
-const PREVIEW_MAP: Record<string, React.LazyExoticComponent<React.ComponentType<PreviewProps>>> = {
-  reviews: lazy(() => import('../widget-previews/ReviewsWidgetPreview').then(m => ({ default: m.ReviewsWidgetPreview }))),
-  badge:   lazy(() => import('../widget-previews/BadgeWidgetPreview').then(m => ({ default: m.BadgeWidgetPreview }))),
-};
-
 // ─── Types ───────────────────────────────────────────────────────────────────
-
-export interface PreviewProps {
-  settings: WidgetSettingsDraft;
-}
 
 interface WidgetEditorProps {
   widget: WidgetDef;
   savedSettings: WidgetSettingsDraft;
+  allSettings: WidgetSettingsMap;
   settingsMeta: WidgetSettingsMeta;
   saving: boolean;
   onCommit: (committed: WidgetSettingsDraft) => Promise<void>;
@@ -77,26 +76,53 @@ function isDirty(a: WidgetSettingsDraft, b: WidgetSettingsDraft): boolean {
   return !sameSettingsDraft(a, b);
 }
 
-function isWidgetReadyMessage(data: unknown): boolean {
+type PreviewMessage = {
+  version?: unknown;
+  type?: unknown;
+  widgetId?: unknown;
+  scene?: unknown;
+};
+
+function isMatchingPreviewMessage(
+  event: MessageEvent,
+  iframeWindow: Window | null | undefined,
+  widgetId: string,
+  scene: string,
+): event is MessageEvent<PreviewMessage> {
+  const data = event.data as PreviewMessage | null;
   return (
+    event.origin === window.location.origin &&
+    event.source === iframeWindow &&
     typeof data === 'object' &&
     data !== null &&
-    'type' in data &&
-    (data as { type?: unknown }).type === RENUVEX_PR_WIDGET_READY
+    data.version === PREVIEW_PROTOCOL_VERSION &&
+    data.widgetId === widgetId &&
+    data.scene === scene
   );
 }
 
-function postPreviewSettingsUpdate(targetWindow: Window, settings: WidgetSettingsDraft) {
-  targetWindow.postMessage({ type: RENUVEX_PR_SETTINGS_UPDATE, settings }, '*');
+function postPreviewRender(
+  targetWindow: Window,
+  widgetId: string,
+  scene: string,
+  widgets: Record<string, WidgetSettingsDraft>,
+) {
+  targetWindow.postMessage({
+    version: PREVIEW_PROTOCOL_VERSION,
+    type: RENUVEX_PR_PREVIEW_RENDER,
+    widgetId,
+    scene,
+    widgets,
+  }, window.location.origin);
 }
 
-function hasRenderedIframePreview(targetWindow: Window | null): boolean {
-  try {
-    const mount = targetWindow?.document.querySelector('[data-renuvex-widget="reviews"]');
-    return Boolean(mount?.shadowRoot?.childNodes.length);
-  } catch {
-    return false;
-  }
+function postPreviewResetScroll(targetWindow: Window, widgetId: string, scene: string) {
+  targetWindow.postMessage({
+    version: PREVIEW_PROTOCOL_VERSION,
+    type: RENUVEX_PR_PREVIEW_RESET_SCROLL,
+    widgetId,
+    scene,
+  }, window.location.origin);
 }
 
 function PreviewLoadOverlay({ status, onRetry }: { status: WidgetPreviewStatus; onRetry: () => void }) {
@@ -154,7 +180,15 @@ function PreviewLoadOverlay({ status, onRetry }: { status: WidgetPreviewStatus; 
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function WidgetEditor({ widget, savedSettings, settingsMeta, saving, onCommit, onBack }: WidgetEditorProps) {
+export function WidgetEditor({
+  widget,
+  savedSettings,
+  allSettings,
+  settingsMeta,
+  saving,
+  onCommit,
+  onBack,
+}: WidgetEditorProps) {
   const [draft, setDraft] = useState<WidgetSettingsDraft>(() => mergeWithDefaults(widget, savedSettings));
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
   const [viewport, setViewport] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
@@ -163,14 +197,23 @@ export function WidgetEditor({ widget, savedSettings, settingsMeta, saving, onCo
     reduceWidgetPreviewLoadState,
     INITIAL_WIDGET_PREVIEW_LOAD_STATE,
   );
+  const previewScenes = useMemo(() => getWidgetPreviewScenes(widget.id), [widget.id]);
+  const [previewScene, setPreviewScene] = useState(() => getDefaultWidgetPreviewScene(widget.id));
+  const activePreviewScene = isWidgetPreviewScene(widget.id, previewScene)
+    ? previewScene
+    : getDefaultWidgetPreviewScene(widget.id);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const widgetReadyRef = useRef(false);
-  const draftRef = useRef<WidgetSettingsDraft>({});
+  const previewWidgets = useMemo(
+    () => buildWidgetPreviewSettings(allSettings, widget, draft),
+    [allSettings, draft, widget],
+  );
+  const previewWidgetsRef = useRef<Record<string, WidgetSettingsDraft>>(previewWidgets);
   const previewRequestKeyRef = useRef(previewLoadState.requestKey);
   const savedDraft = useMemo(() => mergeWithDefaults(widget, savedSettings), [widget, savedSettings]);
   const previousSavedDraftRef = useRef<WidgetSettingsDraft>(savedDraft);
   const previousWidgetIdRef = useRef(widget.id);
-  const useIframe = IFRAME_PREVIEW_WIDGETS.includes(widget.id);
+  const useIframe = previewScenes.length > 0;
 
   // Sync late saved settings only while the local draft is still untouched.
   useLayoutEffect(() => {
@@ -186,10 +229,11 @@ export function WidgetEditor({ widget, savedSettings, settingsMeta, saving, onCo
     });
   }, [savedDraft, widget.id]);
 
-  // draft'ı ref'te tut — ready event geldiğinde stale closure olmasın
+  // Keep the complete widget map current so cross-widget dependencies (badge
+  // icon/color from reviews) are never rendered from stale saved settings.
   useEffect(() => {
-    draftRef.current = draft;
-  }, [draft]);
+    previewWidgetsRef.current = previewWidgets;
+  }, [previewWidgets]);
 
   useEffect(() => {
     previewRequestKeyRef.current = previewLoadState.requestKey;
@@ -213,54 +257,87 @@ export function WidgetEditor({ widget, savedSettings, settingsMeta, saving, onCo
       window.clearTimeout(slowTimer);
       window.clearTimeout(errorTimer);
     };
-  }, [useIframe, previewLoadState.requestKey]);
+  }, [activePreviewScene, useIframe, previewLoadState.requestKey]);
 
-  // Widget iframe'i hazır olduğunu bildirdiğinde mevcut draft'ı gönder.
+  // The iframe protocol is exact-origin, exact-source and scene-bound.
   useEffect(() => {
     if (!useIframe) return;
     function onMessage(event: MessageEvent) {
-      if (!isWidgetReadyMessage(event.data)) return;
-      if (event.source !== iframeRef.current?.contentWindow) return;
+      if (!isMatchingPreviewMessage(
+        event,
+        iframeRef.current?.contentWindow,
+        widget.id,
+        activePreviewScene,
+      )) return;
+
       const requestKey = previewRequestKeyRef.current;
-      dispatchPreviewLoadState({ type: 'ready', requestKey });
-      widgetReadyRef.current = true;
-      if (iframeRef.current?.contentWindow) {
-        postPreviewSettingsUpdate(iframeRef.current.contentWindow, draftRef.current);
+      if (event.data.type === RENUVEX_PR_WIDGET_READY) {
+        widgetReadyRef.current = true;
+        if (iframeRef.current?.contentWindow) {
+          postPreviewRender(
+            iframeRef.current.contentWindow,
+            widget.id,
+            activePreviewScene,
+            previewWidgetsRef.current,
+          );
+        }
+        return;
+      }
+      if (event.data.type === RENUVEX_PR_PREVIEW_RENDERED) {
+        widgetReadyRef.current = true;
+        dispatchPreviewLoadState({ type: 'ready', requestKey });
+        return;
+      }
+      if (event.data.type === RENUVEX_PR_PREVIEW_ERROR) {
+        dispatchPreviewLoadState({ type: 'error', requestKey });
       }
     }
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [useIframe]);
+  }, [activePreviewScene, useIframe, widget.id]);
 
-  // Draft değişince iframe'e postMessage gönder — debounced (slider spam koruması)
+  // Debounce slider/color updates while keeping one complete settings snapshot.
   useEffect(() => {
     if (!useIframe) return;
     if (!widgetReadyRef.current) return;
     const timer = setTimeout(() => {
       if (iframeRef.current?.contentWindow) {
-        postPreviewSettingsUpdate(iframeRef.current.contentWindow, draft);
+        postPreviewRender(
+          iframeRef.current.contentWindow,
+          widget.id,
+          activePreviewScene,
+          previewWidgets,
+        );
       }
     }, 50);
     return () => clearTimeout(timer);
-  }, [draft, useIframe]);
-
-  // draft değişince sessionStorage'a yaz — iframe flash önlemek için (effect içinde, render'da değil)
-  useEffect(() => {
-    sessionStorage.setItem(RENUVEX_PR_PREVIEW_SETTINGS_KEY, JSON.stringify(draft));
-  }, [draft]);
+  }, [activePreviewScene, previewWidgets, useIframe, widget.id]);
 
   const dirty = isDirty(draft, savedDraft);
 
-  const PreviewComponent = PREVIEW_MAP[widget.id] ?? null;
   const viewportWidth = VIEWPORT_PRESETS.find(v => v.key === viewport)?.width ?? '100%';
   const isDesktopPreview = viewport === 'desktop';
   const previewBackground = OPAQUE_HEX_COLOR_RE.test(previewBgColor) ? previewBgColor : DEFAULT_PREVIEW_BG;
 
-  const iframeSrc = '/preview';
+  const iframeSrc = `/preview?widget=${encodeURIComponent(widget.id)}&scene=${encodeURIComponent(activePreviewScene)}`;
   const handlePreviewRetry = useCallback(() => {
     widgetReadyRef.current = false;
     dispatchPreviewLoadState({ type: 'retry' });
   }, []);
+  const handlePreviewSceneChange = useCallback((nextScene: string) => {
+    if (nextScene === activePreviewScene) return;
+    widgetReadyRef.current = false;
+    setPreviewScene(nextScene);
+    dispatchPreviewLoadState({ type: 'retry' });
+  }, [activePreviewScene]);
+  const handlePreviewReset = useCallback(() => {
+    window.requestAnimationFrame(() => {
+      const targetWindow = iframeRef.current?.contentWindow;
+      if (targetWindow) {
+        postPreviewResetScroll(targetWindow, widget.id, activePreviewScene);
+      }
+    });
+  }, [activePreviewScene, widget.id]);
 
   // Kaydet: draft'ı commit et → parent + DB güncellenir
   const handleSave = useCallback(async () => {
@@ -398,6 +475,7 @@ export function WidgetEditor({ widget, savedSettings, settingsMeta, saving, onCo
               settings={draft}
               settingsMeta={settingsMeta}
               onChange={setDraft}
+              onReset={handlePreviewReset}
             />
           </div>
 
@@ -427,7 +505,49 @@ export function WidgetEditor({ widget, savedSettings, settingsMeta, saving, onCo
             }}>
               {useIframe && (
                 <>
-                  <div aria-hidden />
+                  {previewScenes.length > 1 ? (
+                    <div
+                      role="group"
+                      aria-label="Önizleme sahnesi"
+                      style={{
+                        display: 'inline-flex',
+                        width: 'fit-content',
+                        padding: 2,
+                        border: `1px solid ${colors.borderDefault}`,
+                        borderRadius: radii.default,
+                        backgroundColor: colors.bgPage,
+                      }}
+                    >
+                      {previewScenes.map((scene) => {
+                        const selected = scene.id === activePreviewScene;
+                        return (
+                          <button
+                            key={scene.id}
+                            type="button"
+                            aria-pressed={selected}
+                            onClick={() => handlePreviewSceneChange(scene.id)}
+                            style={{
+                              minWidth: 58,
+                              height: 26,
+                              padding: '0 9px',
+                              border: 0,
+                              borderRadius: radii.default,
+                              backgroundColor: selected ? colors.bgWhite : 'transparent',
+                              boxShadow: selected ? '0 1px 3px rgba(18, 25, 38, 0.12)' : 'none',
+                              color: selected ? colors.textPrimary : colors.textMuted,
+                              cursor: 'pointer',
+                              fontSize: typography.fontSize.sm,
+                              fontWeight: selected ? typography.fontWeight.medium : typography.fontWeight.regular,
+                            }}
+                          >
+                            {scene.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div aria-hidden />
+                  )}
                   <ColorPickerField
                     label="Önizleme Arka Planı"
                     value={previewBgColor}
@@ -480,7 +600,7 @@ export function WidgetEditor({ widget, savedSettings, settingsMeta, saving, onCo
                   position: 'relative',
                 }}>
                   <iframe
-                    key={previewLoadState.requestKey}
+                    key={`${widget.id}:${activePreviewScene}:${previewLoadState.requestKey}`}
                     ref={iframeRef}
                     src={iframeSrc}
                     style={{
@@ -497,16 +617,14 @@ export function WidgetEditor({ widget, savedSettings, settingsMeta, saving, onCo
                     title="Widget Önizleme"
                     onLoad={(event) => {
                       const frameWindow = event.currentTarget.contentWindow;
-                      // Ready event zaten geldiyse veya gelmezse 100ms sonra fallback gönder.
-                      setTimeout(() => {
-                        if (frameWindow && iframeRef.current?.contentWindow === frameWindow) {
-                          widgetReadyRef.current = true;
-                          postPreviewSettingsUpdate(frameWindow, draftRef.current);
-                          if (hasRenderedIframePreview(frameWindow)) {
-                            dispatchPreviewLoadState({ type: 'ready', requestKey: previewRequestKeyRef.current });
-                          }
-                        }
-                      }, 100);
+                      if (frameWindow && iframeRef.current?.contentWindow === frameWindow) {
+                        postPreviewRender(
+                          frameWindow,
+                          widget.id,
+                          activePreviewScene,
+                          previewWidgetsRef.current,
+                        );
+                      }
                     }}
                   />
                   {shouldShowPreviewOverlay(previewLoadState.status) && (
@@ -516,14 +634,6 @@ export function WidgetEditor({ widget, savedSettings, settingsMeta, saving, onCo
                     />
                   )}
                 </div>
-              ) : PreviewComponent ? (
-                <Suspense fallback={
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: colors.textMuted }}>
-                    Yükleniyor...
-                  </div>
-                }>
-                  <PreviewComponent settings={draft} />
-                </Suspense>
               ) : (
                 <div style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center',

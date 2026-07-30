@@ -4,7 +4,7 @@ project: renuvex-product-reviews
 status: active
 created: 2026-05-05
 updated: 2026-07-01
-last_verified: 2026-07-01
+last_verified: 2026-07-30
 confidence: high
 source_files:
   - "scripts/build-widget.mjs"
@@ -18,6 +18,7 @@ source_files:
   - "src/widget/core/storefront-context.js"
   - "src/widget/core/registry.js"
   - "src/widget/core/settings.js"
+  - "src/widget/core/namespace.js"
   - "src/widget/core/rating-summary.js"
   - "src/widget/core/link-scope.js"
   - "src/widget/core/listing-viewport-gate.js"
@@ -25,6 +26,10 @@ source_files:
   - "src/widget/listing-badges/dom.js"
   - "src/widget/listing-badges/collect.js"
   - "src/widget/listing-badges/ratings.js"
+  - "src/widget/preview/scenes.js"
+  - "src/widget/preview/index.js"
+  - "src/widget/preview/document.js"
+  - "src/widget/preview/fixtures.js"
   - "src/widget/reviews-section/bootstrap.js"
   - "src/widget/reviews-section/reviews-api.js"
   - "src/widget/reviews-section/render.js"
@@ -181,10 +186,20 @@ src/widget/
 `classic-loader.js` -> `public/widget.js` -> dynamic import of `widget-runtime/runtime.js`. The runtime initializes base styles/error reporting, then `loader.js` registers lightweight surfaces, subscribes to Storefront Events through `core/storefront-context.js`, and lazy-loads modules through `core/lazy-modules.js`.
 
 ### Preview mode
-`index.js` checks `window.__ikasPreviewMode === true`. In preview:
-- Listens for `RENUVEX_PR_SETTINGS_UPDATE` postMessage
-- Posts back `RENUVEX_PR_WIDGET_READY` once mounted
-- Bootstraps with `'mock-product'` and a fixture product name
+`index.js` checks `window.__ikasPreviewMode === true` and delegates to
+`loader.js`. The preview path is scene-driven:
+- `preview/scenes.js` is the registry (`reviews/reviews`, `badge/pdp`,
+  `badge/listing`) and owns protocol version `1`.
+- The iframe accepts only exact-parent, exact-same-origin messages that match
+  its frozen widget/scene context.
+- `RENUVEX_PR_WIDGET_READY` starts the handshake;
+  `RENUVEX_PR_PREVIEW_RENDER` carries the complete resolved widget settings
+  map; `RENUVEX_PR_PREVIEW_RENDERED` / `RENUVEX_PR_PREVIEW_ERROR` finish it.
+- `preview/index.js` calls the real Reviews, PDP Badge, or Listing Badge
+  renderer against deterministic local fixtures. Settings and review pages
+  stay in memory; preview does not call public settings/reviews APIs.
+- `RENUVEX_PR_PREVIEW_RESET_SCROLL` restores the iframe to the top after an
+  editor reset without remounting or persisting preview state.
 
 ### Layout-aware settings (important)
 - `summary-layouts/index.js` and `review-layouts/index.js` each export a registry where every layout declares support metadata such as `supports: { title: true, thumbnailSize: false, ... }`.

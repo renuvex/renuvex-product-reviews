@@ -59,7 +59,11 @@ A new module [src/widget/icons/star-sprite.js](src/widget/icons/star-sprite.js) 
 
 The read-only star renderers in [src/widget/core/helpers.js](src/widget/core/helpers.js) (`partialStarsHTML`, `starsHTML`) and [src/widget/icons/review-icons.js](src/widget/icons/review-icons.js) (`renderStarRow`) call `ensureStarSprite` at the top (so the symbol exists before the returned `<use>` markup is inserted — **correct-by-construction**, no race, no rollout gate) and emit `starUseSvg(...)` instead of the inline string. The `clip-path` half-star engine is unchanged: bg layer `<use href="#…outline">`, fg layer `<use href="#…full">` + `clip-path:inset(0 50% 0 0)` on the wrapper.
 
-The `ICONS` registry strings stay intact — they remain the single source the symbols are derived from **and** the source the admin React preview (`icon-preview.tsx`, `IconSelect.tsx`) renders directly. Single source of truth (ADR_0016) is preserved; only widget-side delivery changed.
+The `ICONS` registry strings stay intact — they remain the single source the
+symbols are derived from, the source `IconSelect.tsx` renders directly, and the
+geometry used by production renderers inside the admin preview iframe. The
+former standalone `icon-preview.tsx` path was removed with the duplicate React
+badge preview. Single source of truth (ADR_0016) is preserved.
 
 ### 2. Accessibility: sr-only label + aria-labelledby (decorative stars)
 Adopted from Yotpo's class-leading pattern:

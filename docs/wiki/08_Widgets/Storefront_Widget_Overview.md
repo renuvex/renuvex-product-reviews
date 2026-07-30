@@ -46,7 +46,9 @@ A single ikas-injected `widget.js` URL that runs on every storefront page. As of
 ## Where the widget runs
 - **Product detail pages** — independent PDP rating badge near title plus optional explicit-mount review block with summary, list, media gallery, photo/video detail lightbox, and "Write a Review" CTA.
 - **Collection / search / listing pages** — small star+count badges injected next to product titles in cards.
-- **Preview iframe** (`/preview`) — same code, with `window.__ikasPreviewMode = true`.
+- **Preview iframe** (`/preview?widget=<id>&scene=<scene>`) — production
+  renderer modules against deterministic fixture markup/data, with
+  `window.__ikasPreviewMode = true`.
 
 ## Six widget ids (from `widgetDefs.ts`)
 | id | Status | Description |
@@ -80,7 +82,9 @@ See [[Widget_Architecture]] for full details. Key points:
 - Asset imports stay on the script origin (`https://widget.renuvex.app`). Upload, submit, metrics, video, widget-error, and theme lazy-sync calls use the explicit API origin (`https://app.renuvex.app`) when `STOREFRONT_WIDGET_API_BASE_URL` is set; unset falls back to script origin for rollback/local compatibility. Settings, ratings, and reviews list reads use `STOREFRONT_WIDGET_READ_API_BASE_URL` when set; after Worker V2 cutover the build also falls back to `STOREFRONT_WIDGET_BASE_URL`, and only then to the API origin.
 - MutationObserver re-bootstraps on SPA-style theme nav.
 - Layout-aware settings via `supports` declarations on each layout — admin hides irrelevant fields.
-- Real-time preview via `RENUVEX_PR_SETTINGS_UPDATE` postMessage.
+- Real-time preview through the versioned, exact-same-origin scene protocol.
+  The implemented scene registry covers Reviews plus Badge PDP/listing and
+  carries the complete resolved settings map.
 
 ## Cloudflare Worker Delivery Target
 Cloudflare Worker Static Assets is the live delivery layer for `widget.renuvex.app`. V1 is asset-only:

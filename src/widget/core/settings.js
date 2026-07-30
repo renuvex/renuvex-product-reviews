@@ -8,7 +8,7 @@ import { PUBLIC_API_KEY, API_BASE, READ_API_BASE } from './config.js';
 import { cacheGet, cacheSet } from './cache.js';
 import { fetchWithTimeout } from './fetch.js';
 import { setAutoPlacementEnabled, setReviewsMountEnabled, setThemeAdapterKey } from '../themes/current-adapter.js';
-import { getPreviewSettingsStorage } from './namespace.js';
+import { getPreviewSettingsPayload } from './namespace.js';
 import { markWidgetPerf } from './perf-timeline.js';
 
 var SETTINGS_CACHE_KEY = 'renuvex_pr_settings_' + PUBLIC_API_KEY;
@@ -78,23 +78,8 @@ function resetInflightSettings() {
 }
 
 async function loadPreviewSettings() {
-  try {
-    var previewBase = window.__ikasPreviewBaseUrl || API_BASE;
-    var savedSettings = getPreviewSettingsStorage();
-    var settingsOverride = {};
-    if (savedSettings) {
-      try { settingsOverride = JSON.parse(savedSettings); } catch (_) {}
-    }
-    var previewRes = await fetchWithTimeout(previewBase + '/api/preview/settings');
-    if (previewRes.ok) {
-      var previewData = await previewRes.json();
-      if (previewData.widgets && previewData.widgets.reviews && Object.keys(settingsOverride).length) {
-        previewData.widgets.reviews = Object.assign({}, previewData.widgets.reviews, settingsOverride);
-      }
-      return applyRuntimeSettings(previewData);
-    }
-  } catch (_) {}
-  return null;
+  var previewSettings = getPreviewSettingsPayload();
+  return previewSettings ? applyRuntimeSettings(previewSettings) : null;
 }
 
 async function loadSettings() {

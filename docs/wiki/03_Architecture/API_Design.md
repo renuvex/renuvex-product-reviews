@@ -21,8 +21,9 @@ related:
 Next.js App Router route handlers, partitioned by trust level: `/api/admin/*`
 (JWT, no CORS), anonymous storefront routes (wildcard CORS without
 credentials), isolated review-center/session routes (exact host/origin, no
-CORS), `/api/oauth/*` (install), `/api/preview/*` (preview iframe data), and
-`/api/ikas/*` (server-side ikas Admin GraphQL examples).
+CORS), `/api/oauth/*` (install), and `/api/ikas/*` (server-side ikas Admin
+GraphQL examples). The admin live preview is a same-origin `/preview` document,
+not an API family; its settings and fixtures are in-memory.
 
 ## Conventions
 
@@ -35,7 +36,7 @@ CORS), `/api/oauth/*` (install), `/api/preview/*` (preview iframe data), and
 - Success: `NextResponse.json({ data, ... })`. Public widget code expects `data` envelope.
 - Error: `NextResponse.json({ error: string }, { status })`. Status codes: 400 (bad input), 401 (missing/invalid auth), 404 (not found), 429 (rate limit), 500 (server).
 - CORS is an explicit per-route policy:
-  - anonymous storefront/preview routes use `withAnonymousPublicCors()` and an
+  - anonymous storefront routes use `withAnonymousPublicCors()` and an
     exact-method `anonymousPublicCorsOptions(...)`;
   - only `/api/public/widget-error` uses the credentialed beacon policy;
   - admin, review-center cookie/session, OAuth, internal, and webhook routes do

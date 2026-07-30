@@ -14,27 +14,20 @@ import {
 } from './core/storefront-context.js';
 import { mountMatching, mountSurfaceByKey } from './core/registry.js';
 import { registerCoreSurfaces } from './surfaces/index.js';
-import { loadReviewsRenderModule, loadReviewsMainModule } from './core/lazy-modules.js';
 import { scheduleListingBadgeHydration } from './core/listing-viewport-gate.js';
 import { hasListingFallbackCandidates } from './listing-badges/fallback-candidates.js';
 import {
-  dispatchPreviewSettingsUpdated,
-  isPreviewSettingsUpdateMessage,
+  isPreviewContext,
+  isPreviewRenderMessage,
+  isPreviewResetScrollMessage,
+  postPreviewError,
+  postPreviewRendered,
   postPreviewWidgetReady,
 } from './core/namespace.js';
 import { ls } from './core/state.js';
-import {
-  currentSettings,
-  currentProductId,
-  currentProductName,
-  currentOrderBy,
-  currentPage,
-  currentReviewsData,
-} from './core/state.js';
 
-var lastPreviewSettingsFingerprint = '';
-var lastPreviewSettingsAt = 0;
 var reviewMountReplayObserver = null;
+var previewRuntimePromise = null;
 
 function collectReviewMountsFromNode(node, mounts) {
   if (!node || node.nodeType !== 1) return;
@@ -146,34 +139,51 @@ export function startWidget() {
   }
 }
 
+function getPreviewContext() {
+  var context = window.__renuvexPreviewContext;
+  return isPreviewContext(context) ? context : null;
+}
+
+function loadPreviewRuntime() {
+  if (!previewRuntimePromise) {
+    previewRuntimePromise = import('./preview/index.js');
+  }
+  return previewRuntimePromise;
+}
+
+function matchesPreviewContext(data, context) {
+  return Boolean(
+    context &&
+    data.widgetId === context.widgetId &&
+    data.scene === context.scene,
+  );
+}
+
 function onPreviewMessage(event) {
+  var context = getPreviewContext();
+  if (!context) return;
+  if (event.source !== window.parent || event.origin !== window.location.origin) return;
+
   var data = event.data;
-  if (!isPreviewSettingsUpdateMessage(data)) return;
-  var s = data.settings;
-  if (!s || !currentSettings) return;
-  var fingerprint = '';
-  try { fingerprint = JSON.stringify(s); } catch (_) {}
-  var now = Date.now();
-  if (fingerprint && fingerprint === lastPreviewSettingsFingerprint && now - lastPreviewSettingsAt < 100) return;
-  lastPreviewSettingsFingerprint = fingerprint;
-  lastPreviewSettingsAt = now;
-  var merged = Object.assign({}, currentSettings, s);
-  loadReviewsRenderModule().then(function (mod) {
-    mod.render(currentProductId, merged, currentReviewsData, currentProductName, currentOrderBy, currentPage);
-    dispatchPreviewSettingsUpdated(merged);
-  }).catch(function (err) {
-    console.error('[renuvex-pr] preview render load error:', err);
+  if (isPreviewResetScrollMessage(data) && matchesPreviewContext(data, context)) {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    return;
+  }
+  if (!isPreviewRenderMessage(data) || !matchesPreviewContext(data, context)) return;
+
+  loadPreviewRuntime().then(function (mod) {
+    return mod.renderPreview(data);
+  }).then(function () {
+    postPreviewRendered(window.parent, window.location.origin, context);
+  }).catch(function () {
+    postPreviewError(window.parent, window.location.origin, context);
   });
 }
 
 function initPreview() {
-  loadReviewsMainModule().then(function (mod) {
-    return mod.bootstrap('mock-product', 'Ornek Urun');
-  }).then(function () {
-    try { postPreviewWidgetReady(window.parent); } catch (e) {}
-  }).catch(function (err) {
-    console.error('[renuvex-pr] preview bootstrap load error:', err);
-  });
+  var context = getPreviewContext();
+  if (!context) return;
+  postPreviewWidgetReady(window.parent, window.location.origin, context);
 }
 
 export function startPreview() {

@@ -105,8 +105,6 @@ describe('CORS policy boundaries', () => {
     expect(injectScripts).not.toContain('export async function OPTIONS');
 
     const optionContracts = new Map<string, string>([
-      ['app/api/preview/settings/route.ts', "anonymousPublicCorsOptions(['GET'])"],
-      ['app/api/preview/reviews/route.ts', "anonymousPublicCorsOptions(['GET'])"],
       ['app/api/public/ratings/route.ts', "anonymousPublicCorsOptions(['GET'])"],
       ['app/api/public/ratings-by-slug/route.ts', "anonymousPublicCorsOptions(['GET'])"],
       ['app/api/public/settings/route.ts', "anonymousPublicCorsOptions(['GET'])"],

@@ -9,7 +9,13 @@ import { partialStarsHTML, buildRatingA11yLabel } from '../core/helpers.js';
 // aynı SIZE_MAP'i kullanır; merchant'ın badge.size seçimi her iki yüzeye uygulanır.
 // PR-3: sizing artık CSS variable üzerinden akıyor; ensureBadgeTokens scope'lu
 // `<style>` etiketine yazar, .renuvex-pr-rating-badge .renuvex-pr-star CSS'i değişkenden okur.
-import { SIZE_MAP, ensureBadgeTokens, ensureBadgeStyles } from '../core/badge.js';
+import {
+  SIZE_MAP,
+  ensureBadgeTokens,
+  ensureBadgeStyles,
+  formatVisibleBadgeLabel,
+  resolveBadgeJustify,
+} from '../core/badge.js';
 import { probeWidgetVisibility, reportWidgetHealth, watchOneTimeRemoval } from '../core/health.js';
 import { createOwnedSlot, removeOwnedSlots, setSlotContext } from '../core/slot.js';
 import { getAfterElementMountPoint, placeOwnedSlot, watchOwnedSlotPosition } from '../core/slot-position.js';
@@ -142,17 +148,26 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
   // Alignment follows the product title, expressed as a data-attr + CSS
   // (Loox-style data-alignment) instead of an inline style.
   var titleAlign = window.getComputedStyle(titleEl).textAlign;
-  var badgeAlign = titleAlign === 'center' ? 'center' : titleAlign === 'right' ? 'right' : 'left';
-  badge.setAttribute('data-renuvex-align', badgeAlign);
+  var titleJustify = titleAlign === 'center' ? 'center' : titleAlign === 'right' ? 'flex-end' : 'flex-start';
+  var badgeJustify = resolveBadgeJustify(badgeSettings && badgeSettings.alignment, titleJustify);
+  var alignMap = { 'center': 'center', 'flex-end': 'right', 'flex-start': 'left' };
+  badge.setAttribute('data-renuvex-align', alignMap[badgeJustify] || 'left');
 
   badge.insertAdjacentHTML('beforeend', a11y.html + buildStars(avgRating, iconPair));
 
-  var labelEl = document.createElement('span');
-  labelEl.className = 'renuvex-pr-rating-badge__label';
-  // Font-size .renuvex-pr-rating-badge { font-size:var(--renuvex-pr-badge-text-size) } üzerinden
-  // gelir (inheritance). Inline yok — ensureBadgeTokens merchant değerini set eder.
-  labelEl.textContent = avgRating + ' (' + totalCount + ' yorum)';
-  badge.appendChild(labelEl);
+  var visibleLabel = formatVisibleBadgeLabel(
+    { avg: avgRating, count: totalCount },
+    badgeSettings,
+    'pdp',
+  );
+  if (visibleLabel) {
+    var labelEl = document.createElement('span');
+    labelEl.className = 'renuvex-pr-rating-badge__label';
+    // Font-size .renuvex-pr-rating-badge { font-size:var(--renuvex-pr-badge-text-size) } üzerinden
+    // gelir (inheritance). Inline yok — ensureBadgeTokens merchant değerini set eder.
+    labelEl.textContent = visibleLabel;
+    badge.appendChild(labelEl);
+  }
 
   badge.onclick = function(e) {
     e.preventDefault();

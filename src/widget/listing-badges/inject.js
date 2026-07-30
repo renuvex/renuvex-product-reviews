@@ -153,9 +153,13 @@ function insertPlaceholder(mountPoint, justify, slug, productId) {
   placeOwnedSlot(placeholder, mountPoint);
 }
 
-function createListingBadge(rating, justify, iconPair, slug) {
+function createListingBadge(rating, justify, iconPair, slug, badgeSettings) {
   var productId = rating && rating._productId ? rating._productId : '';
-  return createBadgeEl(rating, justify, iconPair, { slug: slug || '', productId: productId });
+  return createBadgeEl(rating, justify, iconPair, {
+    slug: slug || '',
+    productId: productId,
+    badgeSettings: badgeSettings || {},
+  });
 }
 
 function setupListingBadgeGuards(badge, mountPoint, slug, remount) {
@@ -220,7 +224,7 @@ export function clearBadgePlaceholders() {
   document.querySelectorAll('[data-renuvex-listing-badge-placeholder]').forEach(function(el) { el.remove(); });
 }
 
-export function injectBadgeOnLink(a, rating, productName, currentSlug, iconPair) {
+export function injectBadgeOnLink(a, rating, productName, currentSlug, iconPair, badgeSettings) {
   if (isLinkProcessed(a)) return;
   var adapter = getThemeAdapter();
   var slug = extractSlug(a.href);
@@ -242,10 +246,18 @@ export function injectBadgeOnLink(a, rating, productName, currentSlug, iconPair)
     var mountNested = resolveMount(nameEl);
     if (!mountNested) return;
     if (mountNested.parent && hasOwnedListingBadge(mountNested.parent, slug)) return;
-    var nestedBadge = replacePlaceholderOrPlace(mountNested, createListingBadge(rating, getJustify(nameEl), iconPair, slug), slug);
+    var nestedBadge = replacePlaceholderOrPlace(
+      mountNested,
+      createListingBadge(rating, getJustify(nameEl), iconPair, slug, badgeSettings),
+      slug,
+    );
     if (nestedBadge) {
       setupListingBadgeGuards(nestedBadge, mountNested, slug, function () {
-        replacePlaceholderOrPlace(mountNested, createListingBadge(rating, getJustify(nameEl), iconPair, slug), slug);
+        replacePlaceholderOrPlace(
+          mountNested,
+          createListingBadge(rating, getJustify(nameEl), iconPair, slug, badgeSettings),
+          slug,
+        );
       });
     }
     return;
@@ -256,25 +268,41 @@ export function injectBadgeOnLink(a, rating, productName, currentSlug, iconPair)
   if (mountTitle && mountTitle.parent && hasOwnedListingBadge(mountTitle.parent, slug)) return;
 
   if (titleEl) {
-    var titleBadge = replacePlaceholderOrPlace(mountTitle, createListingBadge(rating, getJustify(titleEl), iconPair, slug), slug);
+    var titleBadge = replacePlaceholderOrPlace(
+      mountTitle,
+      createListingBadge(rating, getJustify(titleEl), iconPair, slug, badgeSettings),
+      slug,
+    );
     if (titleBadge) {
       setupListingBadgeGuards(titleBadge, mountTitle, slug, function () {
-        replacePlaceholderOrPlace(mountTitle, createListingBadge(rating, getJustify(titleEl), iconPair, slug), slug);
+        replacePlaceholderOrPlace(
+          mountTitle,
+          createListingBadge(rating, getJustify(titleEl), iconPair, slug, badgeSettings),
+          slug,
+        );
       });
     }
   } else {
     var fallbackMount = { parent: a, beforeEl: a.firstElementChild || null, position: 'before' };
     if (hasOwnedListingBadge(a, slug)) return;
-    var badge = replacePlaceholderOrPlace(fallbackMount, createListingBadge(rating, 'flex-start', iconPair, slug), slug);
+    var badge = replacePlaceholderOrPlace(
+      fallbackMount,
+      createListingBadge(rating, 'flex-start', iconPair, slug, badgeSettings),
+      slug,
+    );
     if (badge) {
       setupListingBadgeGuards(badge, fallbackMount, slug, function () {
-        replacePlaceholderOrPlace(fallbackMount, createListingBadge(rating, 'flex-start', iconPair, slug), slug);
+        replacePlaceholderOrPlace(
+          fallbackMount,
+          createListingBadge(rating, 'flex-start', iconPair, slug, badgeSettings),
+          slug,
+        );
       });
     }
   }
 }
 
-function injectModalBadge(slugNameMap, ratings, iconPair) {
+function injectModalBadge(slugNameMap, ratings, iconPair, badgeSettings) {
   var adapter = getThemeAdapter();
   var modal = adapter.findModal();
   if (!modal) return;
@@ -327,18 +355,24 @@ function injectModalBadge(slugNameMap, ratings, iconPair) {
   }
 
   if (!slug || !ratings[slug] || ratings[slug]._empty || ratings[slug].count === 0) return;
-  var modalBadge = createBadgeEl(ratings[slug], 'flex-start', iconPair, { slug: slug || '' });
+  var modalBadge = createBadgeEl(ratings[slug], 'flex-start', iconPair, {
+    slug: slug || '',
+    badgeSettings: badgeSettings || {},
+  });
   h1.appendChild(modalBadge);
   probeWidgetVisibility(modalBadge, 'listing-modal-badge', { slug: slug || '' }, function () {
     return h1 && h1.isConnected ? h1.querySelector('[data-renuvex-listing-badge]') : null;
   });
   watchListingBadgeRemoval(modalBadge, 'listing-modal-badge', function () {
     if (!h1.isConnected || h1.querySelector('[data-renuvex-listing-badge]')) return;
-    h1.appendChild(createBadgeEl(ratings[slug], 'flex-start', iconPair, { slug: slug || '' }));
+    h1.appendChild(createBadgeEl(ratings[slug], 'flex-start', iconPair, {
+      slug: slug || '',
+      badgeSettings: badgeSettings || {},
+    }));
   }, { slug: slug || '' });
 }
 
-export function injectBadges(slugNameMap, ratings, iconPair) {
+export function injectBadges(slugNameMap, ratings, iconPair, badgeSettings) {
   // ADR_0022 — Auto-placed listing badges + modal badge share the placement
   // allowlist gate. On unknown themes the listing surface stays empty;
   // explicit-mount review section is independent and unaffected.
@@ -353,10 +387,10 @@ export function injectBadges(slugNameMap, ratings, iconPair) {
     var productName = slugNameMap[slug];
     links.forEach(function(a) {
       if (extractSlug(a.href) !== slug) return;
-      injectBadgeOnLink(a, rating, productName, currentSlug, iconPair);
+      injectBadgeOnLink(a, rating, productName, currentSlug, iconPair, badgeSettings);
     });
   });
 
   clearBadgePlaceholders();
-  injectModalBadge(slugNameMap, ratings, iconPair);
+  injectModalBadge(slugNameMap, ratings, iconPair, badgeSettings);
 }

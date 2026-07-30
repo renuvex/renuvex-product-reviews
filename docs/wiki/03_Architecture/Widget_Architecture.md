@@ -139,7 +139,7 @@ origin.
 | Module | Purpose |
 |---|---|
 | [src/widget/index.js](src/widget/index.js) | Thin entry. Side-effect inits (ADR_0011 order) + preview/prod branch. Delegates to `loader.js`. |
-| [loader.js](src/widget/loader.js) | Orchestration. `startWidget()` (prod) / `startPreview()` (admin iframe). Wires context -> registry (ADR_0013) and replays only `reviews-main` when an explicit review mount is inserted after the latest product context. |
+| [loader.js](src/widget/loader.js) | Orchestration. `startWidget()` (prod) / `startPreview()` (admin iframe). Production wires context -> registry (ADR_0013); preview enforces the versioned same-origin parent protocol and lazy-loads the selected scene renderer. |
 | [core/storefront-context.js](src/widget/core/storefront-context.js) | Single owner of `window.IkasEvents` subscription; exposes page/product context (`onProductView`/`onPageView`) + DOM fallback (ADR_0013). `PAGE_VIEW` duplicates are suppressed by semantic `pageType + pathname/search`, not by global time alone. |
 | [core/registry.js](src/widget/core/registry.js) | Surface registry (`rating-badge`, `reviews-main`, `structured-data`, `listing-badge`) with guarded async mounts plus key-targeted mounting for explicit review-mount replay. |
 | [core/lazy-modules.js](src/widget/core/lazy-modules.js) | Dynamic import boundary owner for reviews, listing, badge, structured-data, and preview render modules. |
@@ -165,6 +165,7 @@ origin.
 | [reviews-section/review-modal.js](src/widget/reviews-section/review-modal.js) | Photo review detail lightbox. Distinct from the submission wizard. |
 | [reviews-section/review-form-modal/](src/widget/reviews-section/review-form-modal/) | Multi-step submission wizard (steps + progress + state machine). |
 | [listing-badges/](src/widget/listing-badges/) | Listing-page badge bootstrap, scoped link discovery, bulk fetch, slot reservation, injection. |
+| [preview/](src/widget/preview/) | Preview scene registry, deterministic local fixtures, shared fixture document, and adapters that invoke production Reviews/PDP Badge/Listing Badge renderers without DB or provider reads. |
 | [review-layouts/](src/widget/review-layouts/) | `card` / `gallery` / `list` review item layouts (registry in `index.js`). |
 | [summary-layouts/](src/widget/summary-layouts/) | `classic` / `compact` / `hero` / `minimal` / `split` summary layouts. |
 | [summary-layouts/shared/](src/widget/summary-layouts/shared/) | Shared summary primitives: rating bar chart, write/filter actions, write-form opener, and popover registry. |
@@ -192,7 +193,7 @@ index.js  (error-reporter / base-reset / input-modality side-effects)
         │
         ▼
 loader.js
-  ├── if preview: startPreview() -> RENUVEX_PR_SETTINGS_UPDATE listener; bootstrap('mock-product')
+  ├── if preview: exact-origin/versioned scene handshake -> lazy preview renderer
   └── else: startWidget()
         ├── registerCoreSurfaces()      (rating-badge, reviews-main, structured-data, listing-badge)
         ├── initStorefrontContext()     (subscribe window.IkasEvents + DOM fallback)
@@ -290,15 +291,32 @@ This rule set comes from the 2026-06-29/30 storefront performance and chunk-grap
 ## Preview mode protocol
 
 ```
-admin iframe          widget.js (preview)
-   │                       │
-   │  window.postMessage   │
-   ├── RENUVEX_PR_SETTINGS_UPDATE→│ merge into currentSettings → re-render
-   │                       │
-   │ ←── RENUVEX_PR_WIDGET_READY ─│ once mounted
+admin editor                         widget.js (preview iframe)
+   │                                          │
+   │ ←── RENUVEX_PR_WIDGET_READY v1 ──────────│
+   │                                          │
+   ├── RENUVEX_PR_PREVIEW_RENDER v1 ─────────►│
+   │   widgetId + scene + full settings map   │ production renderer + fixtures
+   │                                          │
+   │ ←── PREVIEW_RENDERED / PREVIEW_ERROR ────│
+   │                                          │
+   ├── RENUVEX_PR_PREVIEW_RESET_SCROLL v1 ───►│ scroll to top
 ```
 
-Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(preview)/preview/route.ts). It loads `widget.js?publicApiKey=preview&v=<timestamp>` (timestamp busts cache so admin sees fresh code on each open).
+Preview iframe HTML lives at
+[src/app/(preview)/preview/route.ts](src/app/(preview)/preview/route.ts).
+`widget` and `scene` must exist in the registry or the route returns `404`.
+The document loads `widget.js?publicApiKey=preview&v=<timestamp>` so each open
+uses a fresh loader. Both directions require the exact same origin, exact
+window source, protocol version, widget id, and scene. Wildcard target origins,
+sessionStorage handoff, and `/api/preview/*` storage are not part of the
+contract.
+
+The preview invokes production render functions and CSS, but it intentionally
+uses a controlled fixture page and deterministic review/rating data. This
+proves renderer/settings behavior without charging or mutating Postgres,
+Ikas, AWS, Mux, Redis, or QStash. It does not prove compatibility with every
+merchant theme DOM; real storefront smoke remains a separate acceptance layer.
 
 ## Caching strategy
 - `PRODUCT_VIEW` does not invalidate review browser cache directly. Review cache keys and the 60 second TTL contract are owned by `reviews-api.js`; `storefront-context.js` must not write non-matching base keys or add broad prefix invalidation without a separate cache-contract change.

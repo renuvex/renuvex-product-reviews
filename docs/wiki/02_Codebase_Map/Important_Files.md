@@ -109,8 +109,8 @@ related:
 - **Be careful:** The intent only authorizes tenant-scoped object keys. Do not return AWS credentials, client-chosen object keys, or remove StoreSettings verification.
 
 ### [src/lib/cors.ts](src/lib/cors.ts)
-- **What:** Defines two explicit CORS policies: anonymous storefront/preview
-  wildcard responses without credentials, and canonical HTTP(S) Origin
+- **What:** Defines two explicit CORS policies: anonymous storefront wildcard
+  responses without credentials, and canonical HTTP(S) Origin
   reflection for the widget-error beacon.
 - **Be careful:** Do not add credential reflection to anonymous, admin, or
   review-center cookie/session routes. A merchant Origin allowlist would be a
@@ -134,6 +134,13 @@ related:
 ### [src/widget/core/origins.js](src/widget/core/origins.js)
 - **What:** Separates the script/static asset origin, backend/API origin, and optional public-read origin. `STOREFRONT_WIDGET_API_BASE_URL` and `STOREFRONT_WIDGET_READ_API_BASE_URL` are embedded at build time; if the read origin is unset, the build falls back to `STOREFRONT_WIDGET_BASE_URL`, then runtime falls back to the API origin.
 - **Be careful:** Keep the helper origin-only. Do not allow path/query/hash API bases or arbitrary protocols. Localhost/private origins are only for explicit local-development overrides in the build script.
+
+### [src/widget/preview/scenes.js](src/widget/preview/scenes.js)
+- **What:** Registry and protocol version for implemented admin live-preview
+  scenes. The shared shell currently supports Reviews plus Badge PDP/listing.
+- **Be careful:** New live-preview widgets must add an explicit scene and
+  production-renderer adapter. Do not add a parallel React mock or restore
+  preview API/sessionStorage persistence.
 
 ### [public/widget.js](public/widget.js)
 - **What:** Built bundle.

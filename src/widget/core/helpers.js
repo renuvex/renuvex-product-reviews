@@ -244,11 +244,12 @@ var AWS_REVIEW_IMAGE_VARIANTS = {
 function isPreviewPlaceholderImage(url) {
   return typeof window !== 'undefined' &&
     window.__ikasPreviewMode === true &&
-    url.protocol === 'https:' &&
-    url.hostname === 'placehold.co' &&
+    url.origin === window.location.origin &&
+    !url.username &&
+    !url.password &&
     !url.search &&
     !url.hash &&
-    /\.(png|jpe?g|webp|gif|avif)$/i.test(url.pathname);
+    /^\/preview-assets\/review-photo-[1-3]\.svg$/.test(url.pathname);
 }
 
 function isTrustedAwsReviewImageUrl(url) {

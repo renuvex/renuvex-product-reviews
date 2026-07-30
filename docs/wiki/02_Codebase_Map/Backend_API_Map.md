@@ -24,8 +24,8 @@ source_files:
   - "src/lib/review-email/public-access.ts"
   - "src/app/api/admin/reviews/route.ts"
   - "src/app/api/admin/inject-scripts/route.ts"
-  - "src/app/api/preview/settings/route.ts"
-  - "src/app/api/preview/reviews/route.ts"
+  - "src/app/(preview)/preview/route.ts"
+  - "src/widget/preview/document.js"
   - "src/app/api/public/reviews/route.ts"
   - "src/app/api/public/review-request/route.ts"
   - "src/app/api/public/widget-error/route.ts"
@@ -97,7 +97,9 @@ Main API route groups:
   called by the merchant admin UI.
 - **`/api/public/*`** — storefront/widget endpoints are CORS-open where documented; review-center endpoints are host-isolated and session scoped. Public writes are rate-limited via Upstash Redis.
 - **`/api/oauth/*`** — install / callback flow.
-- **`/api/preview/*`** — settings + fixtures for the admin live-preview iframe.
+- **`/preview`** — same-origin, fixture-only admin preview document. Preview
+  settings and review fixtures stay in memory inside the iframe; there is no
+  preview API or database-backed preview storage.
 - **`/api/ikas/*`** — server-side calls to the ikas Admin GraphQL API (example: `get-merchant`).
 
 ## Admin (JWT-gated)
@@ -144,7 +146,7 @@ installation version fence in the final transaction; losing that race returns
 
 | Method + Path | Source | Purpose |
 |---|---|---|
-| OPTIONS anonymous storefront/preview routes | each route | Exact-method preflight via `anonymousPublicCorsOptions(...)`; wildcard Origin without credentials, and only `Content-Type`, `Cache-Control`, and `Pragma` request headers. |
+| OPTIONS anonymous storefront routes | each route | Exact-method preflight via `anonymousPublicCorsOptions(...)`; wildcard Origin without credentials, and only `Content-Type`, `Cache-Control`, and `Pragma` request headers. The same-origin `/preview` document is not a CORS API. |
 | OPTIONS/POST `/api/public/widget-error` | [route.ts](src/app/api/public/widget-error/route.ts) | Dedicated beacon CORS policy. Reflects only canonical HTTP(S) origins with credentials and `Vary: Origin`; missing, malformed, or `null` origins receive no CORS permission. |
 | GET `/api/public/reviews?storeId&productId&page&orderBy&rating&hasImages&hasMedia&limit&cursor` | [route.ts](src/app/api/public/reviews/route.ts) | Approved review rows + `ProductReviewSummary` distribution/average/count with explicit public field whitelist. Exact `totalCount` / `totalPages` for unfiltered/rating/photo/media filters come from summary buckets; `hasMedia=true` means approved `(hasImages OR hasVideo)`. Legacy `page/limit` remains supported; responses include signed `nextCursor` and cursor requests use keyset pagination without `skip`. Tampered, unsigned, or context-mismatched cursors return `400`. `hasImages=true` uses indexed `Review.hasImages`; `hasMedia=true` is used by the media gallery and by the public `Fotoğraf ve Video` filter when summary counts prove the product has approved video media, and cannot be combined with `hasImages`. Response `images` remains image-only; additive `media[]` exposes `{ type, url, posterUrl, thumbnailUrl, durationMs, width, height, position }` without provider ids. Additive `photoReviewCount` and `mediaReviewCount` expose read-model counts so the widget can separate existing video display from new upload capability. |
 | POST `/api/public/reviews` body | same | Submit review (validation + StoreSettings/ProductSnapshot target verification + profanity + rate-limit + AWS image refs or video token + auto-approve). Anonymous storefront mode remains wildcard/no-credentials. On the isolated review host, feature state, exact host, and exact Origin are checked before body/rate-limit/DB work; an active HttpOnly session is then atomically consumed in the review transaction. Feature-disabled review-host requests cannot fall back to anonymous submission. DB uniqueness on `Review.reviewRequestId` prevents parallel duplicate verified reviews. |
@@ -211,15 +213,14 @@ Detail in [[Security_And_Rate_Limits]].
 
 | Method + Path | Source | Purpose |
 |---|---|---|
-| GET `/preview` | [route.ts](src/app/(preview)/preview/route.ts) | Standalone HTML; loads `widget.js?publicApiKey=preview&v=<ts>` |
-| GET/PUT `/api/preview/settings` | [route.ts](src/app/api/preview/settings/route.ts) | Storage for ad-hoc preview settings |
-| GET `/api/preview/reviews` | [route.ts](src/app/api/preview/reviews/route.ts) | Mock reviews for preview render |
+| GET `/preview?widget=<id>&scene=<scene>` | [route.ts](src/app/(preview)/preview/route.ts) | Validates the registered widget/scene pair, returns a no-store fixture document, and loads the production widget runtime. Settings and deterministic fixture reviews arrive through the exact-origin versioned preview protocol; this route performs no DB or provider read. |
 
 ## Conventions
 - All routes use the App Router signature: `export async function GET/POST/...(request: Request | NextRequest)`.
 - Admin routes return `NextResponse.json({ data, ... })` or `{ error: '...' }` with proper status.
-- Anonymous storefront and preview routes select the wildcard/no-credentials
-  CORS helper explicitly. `widget-error` alone uses beacon reflection.
+- Anonymous storefront API routes select the wildcard/no-credentials CORS
+  helper explicitly. The same-origin `/preview` document is not a public CORS
+  API. `widget-error` alone uses beacon reflection.
   Admin and cookie/session review-center routes emit no CORS headers.
 - Bodies validated with zod where structured (callback). Public review POST does manual validation in-route — could be migrated to zod for consistency.
 - Don't `console.log` user data; existing code uses `console.error('[scope] ERROR:', err)` for server errors.

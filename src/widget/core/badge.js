@@ -15,6 +15,30 @@ export var SIZE_MAP = {
   large:  { icon: 20, text: '16px' },
 };
 
+export function resolveBadgeJustify(alignment, fallbackJustify) {
+  if (alignment === 'left') return 'flex-start';
+  if (alignment === 'center') return 'center';
+  if (alignment === 'right') return 'flex-end';
+  return fallbackJustify === 'center' || fallbackJustify === 'flex-end'
+    ? fallbackJustify
+    : 'flex-start';
+}
+
+export function formatVisibleBadgeLabel(rating, badgeSettings, surface) {
+  var settings = badgeSettings || {};
+  var showValue = settings.showValue !== false;
+  var showCount = settings.showCount !== false;
+  if (!showValue && !showCount) return '';
+
+  var value = String(rating && rating.avg !== undefined ? rating.avg : '');
+  var count = String(rating && rating.count !== undefined ? rating.count : '');
+  if (showValue && showCount) {
+    return surface === 'pdp' ? value + ' (' + count + ' yorum)' : value + ' (' + count + ')';
+  }
+  if (showValue) return value;
+  return surface === 'pdp' ? count + ' yorum' : count;
+}
+
 // Layout (display, align, gap, margin, line-height, color, font-weight,
 // font-family/letter-spacing reset, pointer-events) PR-2'den itibaren
 // .renuvex-pr-rating-badge + .renuvex-pr-rating-badge--listing class'larından okunuyor.
@@ -40,6 +64,10 @@ function buildBadgeStars(rating, iconPair) {
 // (PR-4'te admin mobileOverride toggle'ı buraya bağlanır).
 export function ensureBadgeTokens(sizes, mobileSizes) {
   if (!sizes || typeof sizes.icon !== 'number' || typeof sizes.text !== 'string') return;
+  // The base stylesheet defines fallback token values. Insert it first so the
+  // dedicated token style always wins in the cascade, regardless of whether a
+  // cold PDP/listing caller resolves settings before creating its first badge.
+  ensureBadgeStyles();
   var el = document.getElementById('renuvex-pr-badge-tokens');
   if (!el) {
     el = document.createElement('style');
@@ -80,6 +108,8 @@ export function ensureBadgeStyles() {
 export function createBadgeEl(rating, justify, iconPair) {
   ensureBadgeStyles();
   var meta = arguments[3] || {};
+  var badgeSettings = meta.badgeSettings || {};
+  var resolvedJustify = resolveBadgeJustify(badgeSettings.alignment, justify);
   var slot = createOwnedSlot({
     slot: 'listing-rating',
     className: 'renuvex-pr-listing-badge-slot',
@@ -104,17 +134,20 @@ export function createBadgeEl(rating, justify, iconPair) {
   // Alignment via data-attr + CSS (Loox-style) instead of an inline style.
   // font-size + icon size come from .renuvex-pr-rating-badge CSS variables.
   var alignMap = { 'center': 'center', 'flex-end': 'right', 'flex-start': 'left' };
-  el.setAttribute('data-renuvex-align', alignMap[justify] || 'left');
+  el.setAttribute('data-renuvex-align', alignMap[resolvedJustify] || 'left');
 
   // Stars: existing engine returns trusted SVG markup from a closed icon set;
   // insertAdjacentHTML is the public, mutation-observer-friendly DOM API. The
   // sr-only label is inserted first so aria-labelledby resolves to it.
   el.insertAdjacentHTML('beforeend', a11y.html + buildBadgeStars(rating.avg, iconPair));
 
-  var labelEl = document.createElement('span');
-  labelEl.className = 'renuvex-pr-rating-badge__label';
-  labelEl.textContent = rating.avg + ' (' + rating.count + ')';
-  el.appendChild(labelEl);
+  var visibleLabel = formatVisibleBadgeLabel(rating, badgeSettings, 'listing');
+  if (visibleLabel) {
+    var labelEl = document.createElement('span');
+    labelEl.className = 'renuvex-pr-rating-badge__label';
+    labelEl.textContent = visibleLabel;
+    el.appendChild(labelEl);
+  }
 
   slot.appendChild(el);
   return slot;

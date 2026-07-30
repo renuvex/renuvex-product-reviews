@@ -1,5 +1,7 @@
+import type { WidgetSettingsMap } from '../../types';
+import { getWidgetPreviewScenes } from '@/widget/preview/scenes.js';
 import type { WidgetDef } from '../widgetDefs';
-import { collectSettingFields } from '../widgetDefs';
+import { WIDGETS, collectSettingFields } from '../widgetDefs';
 
 export type WidgetSettingsDraft = Record<string, unknown>;
 
@@ -9,6 +11,26 @@ export function mergeWithDefaults(widget: WidgetDef, savedSettings: WidgetSettin
     defaults[field.key] = field.default;
   }
   return { ...defaults, ...savedSettings };
+}
+
+export function buildWidgetPreviewSettings(
+  allSettings: WidgetSettingsMap,
+  editingWidget: WidgetDef,
+  draft: WidgetSettingsDraft,
+): Record<string, WidgetSettingsDraft> {
+  const previewSettings: Record<string, WidgetSettingsDraft> = {};
+
+  for (const widget of WIDGETS) {
+    if (getWidgetPreviewScenes(widget.id).length === 0) continue;
+    const saved = (allSettings[widget.id] ?? {}) as WidgetSettingsDraft;
+    previewSettings[widget.id] = mergeWithDefaults(widget, saved);
+  }
+
+  previewSettings[editingWidget.id] = {
+    ...(previewSettings[editingWidget.id] ?? {}),
+    ...draft,
+  };
+  return previewSettings;
 }
 
 export function stableStringify(value: unknown): string {

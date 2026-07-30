@@ -40,7 +40,87 @@ test('admin preview applies layout, toggle, and color updates through preview me
   await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-review-gallery')).toBe(true);
   expect(await hasInReviewsShadow(page, '.renuvex-pr-media-gallery-section')).toBe(false);
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--renuvex-pr-review-star-color').trim())).toBe('#22c55e');
+  expect(log.urls.some((url) => url.includes('/api/preview/'))).toBe(false);
   expect(widgetErrors(log)).toEqual([]);
+});
+
+test('badge preview uses production PDP renderer and applies content and alignment settings', async ({ page }) => {
+  const log = await setupPreviewRoutes(page, {
+    previewWidgetId: 'badge',
+    previewScene: 'pdp',
+    reviewsSettings: { reviewStarColor: '#2563eb', reviewIcon: 'star' },
+    badgeSettings: {
+      alignment: 'right',
+      showValue: false,
+      showCount: true,
+      size: 'large',
+    },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/preview?widget=badge&scene=pdp`);
+  const badge = page.locator('.renuvex-pr-rating-badge--pdp');
+  await expect(badge).toHaveCount(1);
+  await expect(badge).toHaveAttribute('data-renuvex-align', 'right');
+  await expect(badge.locator('.renuvex-pr-rating-badge__label')).toHaveText('42 yorum');
+  await expect(badge.locator('.renuvex-pr-star').first()).toHaveCSS('width', '20px');
+  expect(log.urls.some((url) => url.includes('/api/preview/'))).toBe(false);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('badge listing scene renders production badges and updates visibility without mock components', async ({ page }) => {
+  const log = await setupPreviewRoutes(page, {
+    previewWidgetId: 'badge',
+    previewScene: 'listing',
+    badgeSettings: {
+      alignment: 'center',
+      showValue: true,
+      showCount: true,
+    },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/preview?widget=badge&scene=listing`);
+  const badges = page.locator('.renuvex-pr-rating-badge--listing');
+  await expect(badges).toHaveCount(3);
+  await expect(badges.first()).toHaveAttribute('data-renuvex-align', 'center');
+  await expect(badges.first().locator('.renuvex-pr-rating-badge__label')).toHaveText('4.8 (42)');
+
+  await dispatchPreviewSettingsUpdate(page, {
+    showValue: false,
+    showCount: false,
+  });
+  await expect(badges).toHaveCount(3);
+  await expect(page.locator('.renuvex-pr-rating-badge--listing .renuvex-pr-rating-badge__label')).toHaveCount(0);
+
+  await dispatchPreviewSettingsUpdate(page, { enabled: false });
+  await expect(badges).toHaveCount(0);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('preview reset-scroll message returns a scrolled reviews scene to the top', async ({ page }) => {
+  await setupPreviewRoutes(page);
+  await page.goto(`${MERCHANT_ORIGIN}/preview`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+
+  await page.evaluate(() => {
+    const spacer = document.createElement('div');
+    spacer.style.height = '1200px';
+    document.body.appendChild(spacer);
+    window.scrollTo(0, 500);
+  });
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(500);
+
+  await page.evaluate(() => {
+    const previewWindow = window as Window & {
+      __renuvexPreviewContext?: { version: number; widgetId: string; scene: string };
+    };
+    const context = previewWindow.__renuvexPreviewContext;
+    if (!context) throw new Error('Preview context is missing');
+    window.postMessage({
+      ...context,
+      type: 'RENUVEX_PR_PREVIEW_RESET_SCROLL',
+    }, window.location.origin);
+  });
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
 });
 
 test('pre-scrolled admin preview keeps wheel input after a modal pointer lock cycle', async ({ page }) => {

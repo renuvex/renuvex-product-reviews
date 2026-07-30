@@ -11,7 +11,14 @@ source_files:
   - "src/components/home-page/widgets/editor/WidgetEditor.tsx"
   - "src/components/home-page/widgets/editor/WidgetPreviewLoadState.ts"
   - "src/components/home-page/widgets/editor/SettingsPanel.tsx"
+  - "src/components/home-page/widgets/editor/WidgetEditorState.ts"
   - "src/lib/widget-settings.ts"
+  - "src/app/(preview)/preview/route.ts"
+  - "src/widget/core/namespace.js"
+  - "src/widget/preview/scenes.js"
+  - "src/widget/preview/document.js"
+  - "src/widget/preview/index.js"
+  - "src/widget/preview/fixtures.js"
   - "src/widget/reviews-section/render/size-presets.js"
   - "src/widget/reviews-section/render/pagination.js"
   - "src/widget/reviews-section/styles/review-primitives.js"
@@ -106,24 +113,52 @@ admin UI changes a field
 ```
 
 ## Live preview
-- Admin renders an iframe pointing at `/preview` (route at [src/app/(preview)/preview/route.ts](src/app/(preview)/preview/route.ts)).
-- On any setting change -> `postMessage({ type: 'RENUVEX_PR_SETTINGS_UPDATE', settings })` to iframe.
-- Inside iframe, [src/widget/index.js](src/widget/index.js) (preview branch) merges and re-renders, then emits `RENUVEX_PR_SETTINGS_UPDATED_PREVIEW` with merged settings in `event.detail.settings` for open overlay surfaces.
-- Iframe acks via `RENUVEX_PR_WIDGET_READY` once mounted.
+- All implemented live previews use one admin iframe shell in
+  [WidgetEditor.tsx](src/components/home-page/widgets/editor/WidgetEditor.tsx).
+  The registry currently exposes Reviews (`reviews`) plus Badge product-detail
+  (`pdp`) and listing (`listing`) scenes. Future widgets add an explicit scene
+  adapter instead of introducing a parallel React mock preview.
+- The route is `/preview?widget=<id>&scene=<scene>` at
+  [src/app/(preview)/preview/route.ts](src/app/(preview)/preview/route.ts).
+  Unknown widget/scene combinations fail with `404`.
+- The iframe announces `RENUVEX_PR_WIDGET_READY`; the parent responds with
+  versioned `RENUVEX_PR_PREVIEW_RENDER`, including the complete resolved
+  settings map. Complete-map delivery preserves cross-widget dependencies such
+  as Badge icon/color being owned by Reviews.
+- Preview accepts only the exact parent window, exact same origin, protocol
+  version, widget id, and scene. The parent applies the same checks to
+  `RENUVEX_PR_PREVIEW_RENDERED` and `RENUVEX_PR_PREVIEW_ERROR`. No wildcard
+  target origin or sessionStorage settings handoff is used.
+- Reviews and Badge scenes invoke production renderer modules against local,
+  deterministic fixtures. Preview settings/review pages are in-memory; the
+  deleted `/api/preview/settings` and `/api/preview/reviews` routes are not
+  replaced by another persistence channel.
+- The internal `RENUVEX_PR_SETTINGS_UPDATED_PREVIEW` custom event remains
+  scoped to already-open Reviews overlays so a lightbox can update without
+  remounting; it is not the parent/iframe transport.
 - Preview background color is local editor state in [WidgetEditor.tsx](src/components/home-page/widgets/editor/WidgetEditor.tsx). It changes only the admin preview surface and is not saved to `WidgetSettings`.
 - Preview background uses the same opaque admin color picker as widget colors. Transparent/alpha values are intentionally not user-selectable in the admin UI.
 - Desktop preview fills the available preview panel width and height without a device-frame shadow, so it behaves like a browser viewport; mobile and tablet keep fixed device widths.
 - The nested preview iframe explicitly owns `pointer-events:auto`. Radix modal scroll locking temporarily sets the app body to `pointer-events:none`; allowing that value to inherit into an already-scrolled iframe can leave Chrome wheel input detached after the reset dialog closes. The modal overlay remains above the iframe and keeps outside interaction blocked while the dialog is open.
+- Resetting widget settings also sends the versioned reset-scroll command, so
+  an already-scrolled preview returns to the top without recreating the iframe.
 
-This pattern means the preview is **pixel-identical** to production — same `widget.js` runs in both contexts.
+The widget renderer and CSS are production code. The host page and data are
+fixtures, so the preview is renderer-faithful rather than a guarantee that
+every merchant theme's DOM will be pixel-identical.
 
 Preview iframe loading is independent from settings loading. A blank or slow
 preview iframe does not by itself mean widget settings are still loading; the
 settings editor is gated separately by the admin settings fetch status. The
-`reviews` iframe preview uses its own `loading` / `slow` / `ready` / `error`
+implemented iframe preview uses its own `loading` / `slow` / `ready` / `error`
 state so slow widget assets show an overlay instead of a blank white panel.
 Preview retry remounts only the iframe preview; it does not change the settings
 draft, dirty state, or save behavior.
+
+Preview rendering has no per-interaction DB or external-provider cost. It
+serves one no-store document, committed local SVG fixtures, and the local
+widget runtime. Review submission/upload behavior inside fixture scenes is
+simulated by the existing preview runtime; it does not create reviews or media.
 
 The `/preview` route still cache-busts `widget.js` on each preview HTML response
 with its timestamp query. That freshness behavior is intentionally separate from
@@ -181,6 +216,11 @@ Merchant-controlled CTA/count copy also has a targeted long-word contract. `writ
 - [[Roadmap]]
 
 ## Change Log
+- 2026-07-30: Replaced the Reviews-only iframe plus React Badge mock split with
+  one scene registry and shared iframe shell. Reviews, Badge PDP, and Badge
+  listing scenes now call production renderers with deterministic local
+  fixtures through an exact-origin, exact-source, versioned protocol. Preview
+  APIs/sessionStorage were removed; reset returns a scrolled iframe to the top.
 - 2026-06-24: Added the `Video Oynatıcı` color group for the product review lightbox Mux Player, then narrowed it to play icon, progress color, and progress track color. The runtime maps those `reviewLightboxVideo*` keys through `theme-vars.js` into the storefront Mux Player theme; play button background and hover background stay transparent fixed values. Admin moderation playback and future video surfaces are intentionally not coupled to these keys.
 - 2026-06-21: Documented that existing merchant copy settings are Turkish-first single-value fields, not an i18n layer. Future English/German support needs a locale-aware string catalog and settings model.
 - 2026-06-12: Review pagination sizing was compacted on desktop and mobile now uses the visible control box as the clickable target instead of a separate invisible tap halo. No new admin setting was added; `Widget Boyutu` remains the single control.
@@ -195,7 +235,10 @@ Merchant-controlled CTA/count copy also has a targeted long-word contract. `writ
 - 2026-06-01: Review form wizard close (X) color was decoupled from `formPrimaryTextColor`; runtime derives close icon and hover colors from `formBgColor` with deterministic contrast helpers in `theme-vars.js`.
 - 2026-05-14: **Filter Icon Registry Clarified**: Replaced the filter `star` option with `funnel`, kept `star -> funnel` only as a filter-only legacy alias, and separated admin preview rendering by review vs filter registry.
 - 2026-05-12: **Icon Registries Simplified**: Filter icons reduced to 4 core choices; Review icons modernized with unified Phosphor weight. Existing legacy keys fall back safely via registry.
-- 2026-05-25: **Renuvex Namespace Cleanup**: Preview protocol is now canonical-only: `RENUVEX_PR_SETTINGS_UPDATE`, `RENUVEX_PR_SETTINGS_UPDATED_PREVIEW`, and `RENUVEX_PR_WIDGET_READY`.
+- 2026-05-25: **Renuvex Namespace Cleanup**: The original canonical preview
+  event family used `RENUVEX_PR_*`. The 2026-07-30 protocol supersedes the
+  parent/iframe transport while retaining
+  `RENUVEX_PR_SETTINGS_UPDATED_PREVIEW` as an iframe-internal overlay event.
 - 2026-05-12: **Live Preview for Overlays**: Introduced the preview settings-updated event payload so active overlays (like the lightbox or review modal) can live-sync admin changes without re-mounting.
 - 2026-05-08: **Visual Select Cards**: Added `preview` metadata to `select` fields in schema to drive image-based visual choice cards in admin panel.
 - 2026-05-05/06: **Color & Token Refactor**: Removed `reviewFormStyle`, `Marka Kimliği` cascade, and all legacy CSS variables (`--ikr-bg`, etc). Admin color picker now emits strict opaque `#rrggbb`, while structural translucency is hardcoded in frontend styles.

@@ -3,10 +3,11 @@
 // Kept separate from bootstrap/render so orchestration and UI code can share
 // review fetching without creating a bootstrap <-> render ownership cycle.
 
-import { PUBLIC_API_KEY, API_BASE, READ_API_BASE } from '../core/config.js';
+import { PUBLIC_API_KEY, READ_API_BASE } from '../core/config.js';
 import { cacheGet, cacheSet } from '../core/cache.js';
 import { fetchWithTimeout } from '../core/fetch.js';
 import { markWidgetPerf } from '../core/perf-timeline.js';
+import { getPreviewReviewsPage } from '../core/namespace.js';
 
 var MEDIA_GALLERY_LIMIT = 15;
 var REVIEWS_CACHE_TTL = 60 * 1000;
@@ -34,16 +35,11 @@ export async function fetchReviews(productId, orderBy, page, ratingFilter, media
     hasCursor: !!cursor,
   });
   if (window.__ikasPreviewMode) {
-    try {
-      var previewBase = window.__ikasPreviewBaseUrl || API_BASE;
-      var previewUrl = previewBase + '/api/preview/reviews?page=' + encodeURIComponent(page || 1);
-      var previewRes = await fetchWithTimeout(previewUrl);
-      if (previewRes.ok) {
-        var previewData = await previewRes.json();
-        markWidgetPerf('reviews-api-done', { source: 'preview' });
-        return previewData;
-      }
-    } catch (_) {}
+    var previewData = getPreviewReviewsPage(page || 1);
+    if (previewData) {
+      markWidgetPerf('reviews-api-done', { source: 'preview-fixture' });
+      return previewData;
+    }
     markWidgetPerf('reviews-api-error', { source: 'preview' });
     return createReviewsFetchError();
   }

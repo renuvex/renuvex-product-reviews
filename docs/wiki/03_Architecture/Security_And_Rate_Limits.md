@@ -160,16 +160,21 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 - Public review POST stores only server-created AWS image refs that match the tenant/upload session. Third-party HTTPS URLs, cross-tenant object refs, and `data:image` payloads are rejected.
 - Public/admin read paths parse legacy `Review.images` defensively and expose only trusted URLs; invalid legacy image data becomes `images: []`.
 - Widget rendering uses AWS public media descriptors and `getTrustedReviewMedia()` before rendering photos or opening the lightbox.
-- Preview fixtures may use `placehold.co` images only when `window.__ikasPreviewMode === true`.
+- Preview fixtures may use only the committed same-origin
+  `/preview-assets/review-photo-*.svg` allowlist while
+  `window.__ikasPreviewMode === true`.
 - Daily `/api/admin/daily-maintenance` expires abandoned `PendingReviewImage` rows and reconciles storefront scripts; monthly `/api/admin/cleanup-images` remains the AWS image object-family fallback scan. Cron routes require `CRON_SECRET` and return 500 if it is missing.
 - Image URLs remain stored as a JSON-stringified array in `Review.images`; all parsing and validation belongs in [src/lib/review-images.ts](src/lib/review-images.ts).
 
 ## CORS
-- Anonymous storefront and preview routes explicitly use
+- Anonymous storefront API routes explicitly use
   `withAnonymousPublicCors()`: `Access-Control-Allow-Origin: *`, no
   credentials, and no `Vary: Origin`. Their OPTIONS handlers list only the
   route's real method and accept only `Content-Type`, `Cache-Control`, and
   `Pragma`; `Authorization` is not part of this public contract.
+- The admin `/preview` document and its parent/iframe message transport are
+  same-origin. They do not use CORS; both directions validate exact origin,
+  exact window source, protocol version, widget id, and scene.
 - `/api/public/widget-error` is the only credential-reflecting CORS route.
   Its beacon-specific helper reflects only a parseable canonical `http` or
   `https` Origin, adds `Vary: Origin`, and emits no CORS permission for a

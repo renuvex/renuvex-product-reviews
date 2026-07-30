@@ -212,8 +212,7 @@ Each rule corresponds to a structural risk surfaced in the audit:
   [src/components/home-page/widgets/widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts);
   `WidgetSettings.settings` is JSON, so no Prisma migration is needed and old
   rows merge with defaults via `getWidgetDefaults`. `alignment`, `showValue`,
-  and `showCount` are recorded as merchant-tunable preferences for the badge
-  surface (consumed by future iterations).
+  and `showCount` are consumed by both PDP and listing badge renderers.
 - Listing and PDP badges share one DOM contract — a `.renuvex-pr-rating-badge` root
   with surface modifier, `role="figure"`, `aria-label`, and three
   `data-renuvex-*` attributes. Existing observers / cleanup that key off
@@ -236,6 +235,12 @@ Each rule corresponds to a structural risk surfaced in the audit:
   `.renuvex-pr-rating-badge` + a `--<variant>` modifier; size tokens should flow
   through `ensureBadgeTokens` or its successor. Do not introduce
   surface-specific size sources.
+- `ensureBadgeTokens()` must establish base badge styles before appending the
+  configured token rule. Reversing that insertion order lets the later base
+  defaults override a saved size on the first cold render.
+- The admin uses the same production injectors in the shared preview iframe:
+  one PDP scene and one listing scene. A separate React badge renderer is not a
+  supported architecture because it can drift from runtime settings.
 - **Amended in part by [[ADR_0019_Icon_Sprite_Rendering]] (2026-05-24):** the
   PDP badge is now a plain link (no `role="figure"`) named via an sr-only
   `aria-labelledby` span, carries no static duplicate-prone badge id, and takes
