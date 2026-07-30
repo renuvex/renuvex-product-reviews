@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-02
-last_verified: 2026-07-02
+updated: 2026-07-30
+last_verified: 2026-07-30
 confidence: high
 source_files:
   - "src/components/home-page/widgets/widgetDefs.ts"
@@ -113,6 +113,7 @@ admin UI changes a field
 - Preview background color is local editor state in [WidgetEditor.tsx](src/components/home-page/widgets/editor/WidgetEditor.tsx). It changes only the admin preview surface and is not saved to `WidgetSettings`.
 - Preview background uses the same opaque admin color picker as widget colors. Transparent/alpha values are intentionally not user-selectable in the admin UI.
 - Desktop preview fills the available preview panel width and height without a device-frame shadow, so it behaves like a browser viewport; mobile and tablet keep fixed device widths.
+- The nested preview iframe explicitly owns `pointer-events:auto`. Radix modal scroll locking temporarily sets the app body to `pointer-events:none`; allowing that value to inherit into an already-scrolled iframe can leave Chrome wheel input detached after the reset dialog closes. The modal overlay remains above the iframe and keeps outside interaction blocked while the dialog is open.
 
 This pattern means the preview is **pixel-identical** to production — same `widget.js` runs in both contexts.
 

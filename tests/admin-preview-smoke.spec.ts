@@ -43,6 +43,103 @@ test('admin preview applies layout, toggle, and color updates through preview me
   expect(widgetErrors(log)).toEqual([]);
 });
 
+test('pre-scrolled admin preview keeps wheel input after a modal pointer lock cycle', async ({ page }) => {
+  const editorSource = await readFile(
+    path.join(process.cwd(), 'src/components/home-page/widgets/editor/WidgetEditor.tsx'),
+    'utf8',
+  );
+  const previewFrameMarkup = editorSource.match(/<iframe[\s\S]*?title="Widget Önizleme"/)?.[0] || '';
+  const explicitPointerEvents = previewFrameMarkup.match(/pointerEvents:\s*'([^']+)'/)?.[1];
+
+  expect(explicitPointerEvents).toBe('auto');
+
+  await page.setContent(`
+    <style>
+      html, body { margin: 0; width: 100%; height: 100%; }
+      iframe { border: 0; }
+    </style>
+    <iframe name="admin-editor" style="width: 900px; height: 800px"></iframe>
+  `);
+
+  const adminFrame = page.frame({ name: 'admin-editor' });
+  expect(adminFrame).not.toBeNull();
+  if (!adminFrame) throw new Error('admin editor frame missing');
+
+  await adminFrame.setContent(`
+    <style>
+      html, body { margin: 0; width: 100%; height: 100%; }
+    </style>
+    <iframe
+      name="widget-preview"
+      title="Widget Önizleme"
+      style="width: 760px; height: 640px; pointer-events: ${explicitPointerEvents}"
+    ></iframe>
+  `);
+
+  const previewFrame = page.frame({ name: 'widget-preview' });
+  expect(previewFrame).not.toBeNull();
+  if (!previewFrame) throw new Error('widget preview frame missing');
+
+  await previewFrame.setContent(`
+    <style>
+      html { scroll-behavior: auto; }
+      body {
+        margin: 0;
+        min-height: 2200px;
+        background: linear-gradient(#ffffff, #111827);
+      }
+    </style>
+  `);
+  await previewFrame.evaluate(() => window.scrollTo(0, 420));
+
+  const initialScrollTop = await previewFrame.evaluate(
+    () => document.scrollingElement?.scrollTop || 0,
+  );
+  expect(initialScrollTop).toBe(420);
+
+  await adminFrame.evaluate(() => {
+    document.body.style.pointerEvents = 'none';
+    document.body.dataset.scrollLocked = '1';
+
+    const overlay = document.createElement('div');
+    overlay.id = 'dialog-overlay';
+    Object.assign(overlay.style, {
+      position: 'fixed',
+      inset: '0',
+      zIndex: '50',
+      pointerEvents: 'auto',
+    });
+    document.body.append(overlay);
+  });
+
+  const modalPointerState = await adminFrame.locator('iframe[name="widget-preview"]').evaluate(
+    (frame) => getComputedStyle(frame).pointerEvents,
+  );
+  expect(modalPointerState).toBe('auto');
+
+  await adminFrame.evaluate(() => {
+    document.querySelector('#dialog-overlay')?.remove();
+    document.body.style.pointerEvents = '';
+    delete document.body.dataset.scrollLocked;
+  });
+
+  const appFrameBox = await page.locator('iframe[name="admin-editor"]').boundingBox();
+  const previewFrameBox = await adminFrame.locator('iframe[name="widget-preview"]').boundingBox();
+  expect(appFrameBox).not.toBeNull();
+  expect(previewFrameBox).not.toBeNull();
+  if (!appFrameBox || !previewFrameBox) throw new Error('preview frame bounds missing');
+
+  await page.mouse.move(
+    appFrameBox.x + previewFrameBox.x + previewFrameBox.width / 2,
+    appFrameBox.y + previewFrameBox.y + previewFrameBox.height / 2,
+  );
+  await page.mouse.wheel(0, 300);
+
+  await expect.poll(
+    () => previewFrame.evaluate(() => document.scrollingElement?.scrollTop || 0),
+  ).toBeGreaterThan(initialScrollTop);
+});
+
 test('admin widget schema stays aligned with summary and review layout registries', async () => {
   const reviewsWidget = WIDGETS.find((widget) => widget.id === 'reviews');
   expect(reviewsWidget).toBeTruthy();

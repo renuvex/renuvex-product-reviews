@@ -483,7 +483,17 @@ export function WidgetEditor({ widget, savedSettings, settingsMeta, saving, onCo
                     key={previewLoadState.requestKey}
                     ref={iframeRef}
                     src={iframeSrc}
-                    style={{ width: '100%', height: '100%', border: 'none', display: 'block', backgroundColor: 'transparent' }}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      border: 'none',
+                      display: 'block',
+                      backgroundColor: 'transparent',
+                      // Radix modal scroll locking temporarily sets the app body to
+                      // pointer-events:none. Keep that inherited transition off the
+                      // nested frame so Chrome retains its wheel target after close.
+                      pointerEvents: 'auto',
+                    }}
                     title="Widget Önizleme"
                     onLoad={(event) => {
                       const frameWindow = event.currentTarget.contentWindow;
