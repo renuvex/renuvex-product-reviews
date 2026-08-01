@@ -10,6 +10,7 @@ source_files:
   - "src/lib/widgets/catalog.ts"
   - "src/app/dashboard/widgets/[widgetId]/page.tsx"
   - "src/features/widget-management/WidgetSettingsProvider.tsx"
+  - "src/features/widget-management/components/WidgetCard.tsx"
   - "src/features/widget-management/components/editor/WidgetEditor.tsx"
   - "src/features/widget-management/components/editor/WidgetPreviewLoadState.ts"
   - "src/features/widget-management/components/editor/SettingsPanel.tsx"
@@ -114,9 +115,13 @@ server-only unavailable view. Only a canonical configurable ID can mount the
 client editor, request settings, or create a preview iframe. The client and
 settings APIs repeat the capability check as independent fail-closed layers.
 The catalog opts into the normal admin workspace header/sidebar, while the
-editor route uses a focused full-width layout. Both remain under the same
-persistent AppBridge auth boundary and widget-settings provider, so the focused
-presentation does not create a second auth flow or settings cache.
+editor route uses a focused full-width layout. Configurable catalog cards use a
+deliberate document navigation for the editor link. The new editor document
+re-establishes the same AppBridge auth and widget-settings boundaries; a valid
+session token cache avoids a second token request, while merchant, theme-sync,
+and authoritative settings bootstrap each run once for that document. This
+bounded restart is the explicit cost of making browser Back an unload boundary
+without custom history interception or draft persistence.
 
 ## Unsaved editor navigation
 - The focused editor has no workspace sidebar. Its Geri command uses the
@@ -124,13 +129,17 @@ presentation does not create a second auth flow or settings cache.
 - Successful Save and `Kaydetmeden Çık` leave the editor. A failed save keeps
   the editor open and the draft dirty.
 - While dirty, a native `beforeunload` listener protects reload, tab/window
-  close, and hard navigation. The browser controls the warning text.
+  close, hard navigation, and browser Back from the document-isolated editor.
+  The browser controls the warning text.
 - Save, discard, clean state, and unmount remove the listener. There is no
   session/local storage, IndexedDB, backend draft, automatic recovery,
   `popstate`, history sentinel, or router-history manipulation.
-- Same-document App Router browser Back is not guaranteed to show the native
-  warning. A draft can be lost on that path; the product does not promise full
-  browser-Back interception.
+- Future catalog/editor entry points must preserve the native document
+  navigation contract; changing the Customize link back to a Next.js client
+  transition would restore the same-document browser-Back data-loss gap.
+- Native `beforeunload` remains browser-controlled and is not a durable-save
+  mechanism. Mobile process termination can still bypass it; no automatic
+  recovery is promised.
 
 ## Read path (client / admin / widget)
 ```

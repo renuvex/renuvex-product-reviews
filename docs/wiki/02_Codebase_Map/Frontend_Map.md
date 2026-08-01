@@ -25,6 +25,7 @@ source_files:
   - "src/features/review-moderation/ReviewModerationScreen.tsx"
   - "src/features/widget-management/WidgetCatalogScreen.tsx"
   - "src/features/widget-management/WidgetEditorScreen.tsx"
+  - "src/features/widget-management/components/WidgetCard.tsx"
   - "src/lib/admin-review-summary.ts"
   - "src/lib/widgets/catalog.ts"
   - "src/features/widget-management/WidgetSettingsLoadState.ts"
@@ -38,7 +39,7 @@ source_files:
 
 ## Agent Brief
 - `/` delegates iframe entry to the persistent `AdminAuthBoundary`; only that boundary owns AppBridge loader/token bootstrap.
-- Reviews and the widget catalog opt into `AdminWorkspaceShell`; the widget editor keeps the same auth/settings boundaries but uses a focused, sidebar-free route layout.
+- Reviews and the widget catalog opt into `AdminWorkspaceShell`; the widget editor uses the same auth/settings architecture in a focused, sidebar-free document reached through an intentional native navigation.
 - The admin-dashboard suite uses a protocol stub for route tests; the real `/preview` renderer remains covered by `test:admin-preview`.
 
 ## Summary
@@ -57,7 +58,7 @@ Next.js 16 (16.2), React 19, TypeScript, Tailwind CSS v4 (`@tailwindcss/postcss`
 | `/dashboard` | [src/app/dashboard/page.tsx](src/app/dashboard/page.tsx) | Server redirect to `/dashboard/reviews` |
 | `/dashboard/reviews` | [src/app/dashboard/reviews/page.tsx](src/app/dashboard/reviews/page.tsx) | Review moderation route; owns review list, summary and action state |
 | `/dashboard/widgets` | [src/app/dashboard/widgets/(catalog)/page.tsx](src/app/dashboard/widgets/(catalog)/page.tsx) | Widget catalog route inside the workspace shell; loads settings only after entering the widget route group |
-| `/dashboard/widgets/[widgetId]` | [src/app/dashboard/widgets/[widgetId]/page.tsx](src/app/dashboard/widgets/[widgetId]/page.tsx) | Focused sidebar-free editor route with server-first capability admission; only configurable widgets mount the client editor |
+| `/dashboard/widgets/[widgetId]` | [src/app/dashboard/widgets/[widgetId]/page.tsx](src/app/dashboard/widgets/[widgetId]/page.tsx) | Focused sidebar-free editor route with server-first capability admission; configurable catalog links cross a document boundary so native unload protection also covers browser Back |
 | `/preview` | [src/app/(preview)/preview/route.ts](src/app/(preview)/preview/route.ts) | Standalone HTML iframe — no root layout |
 
 ### Top-level Layout
@@ -92,8 +93,12 @@ or valid editor route requests it. Leaving the widget route group discards the
 cache, so returning from Reviews performs one new authoritative settings GET.
 The Reviews and catalog layouts add the shared workspace header/sidebar below
 that auth boundary. The editor route deliberately omits the workspace shell and
-uses the full iframe width; this changes neither its URL nor its auth/settings
-provider lifetime.
+uses the full iframe width. Its catalog link is a semantic native anchor rather
+than a Next.js client transition. The inner Renuvex URL remains unchanged, but
+the editor gets a new document and therefore a new auth/settings-provider
+lifetime. With a valid session token cache this does not request a second token;
+the current bounded restart performs one merchant lookup, one best-effort theme
+sync, and one authoritative settings GET before the preview starts.
 
 Review list pagination and moderation counts are separate contracts. The first
 Reviews load requests one paginated list and one `/api/admin/reviews/summary`;

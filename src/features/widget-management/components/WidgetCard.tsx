@@ -1,6 +1,5 @@
 import React from 'react';
 import { Settings2 } from 'lucide-react';
-import Link from 'next/link';
 import { colors, componentStyles, radii, shadows, typography } from '@/lib/design-tokens';
 import type { WidgetDefinition } from '@/lib/widgets/catalog';
 
@@ -87,14 +86,13 @@ export function WidgetCard({ widget, enabled, preview, customizeHref }: WidgetCa
         {/* Butonlar */}
         {customizeHref ? (
           <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-            <Link
+            <a
               href={customizeHref}
-              prefetch={false}
               style={{ ...componentStyles.btnSm, display: 'flex', alignItems: 'center', gap: 6 }}
             >
               <Settings2 size={14} />
               Özelleştir
-            </Link>
+            </a>
           </div>
         ) : null}
       </div>

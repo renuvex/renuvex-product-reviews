@@ -361,9 +361,93 @@ test('widget routes isolate settings and save through the preview protocol', asy
       }),
     }),
   ]);
-  expect(requestsFor(log, 'GET', '/api/admin/settings')).toHaveLength(2);
+  expect(requestsFor(log, 'GET', '/api/admin/settings')).toHaveLength(3);
   expect(log.previewRequests).toHaveLength(1);
   expect(log.unexpectedRequests).toEqual([]);
+});
+
+test('customize enters a new document with bounded warm-auth work', async ({ page }) => {
+  const log = await setupAdminDashboardRoutes(page);
+  const dashboard = await openAdminHarness(page, 'success', '/dashboard/widgets');
+
+  await expect(dashboard.getByRole('heading', { name: 'Widgetlar' })).toBeVisible();
+  await expect.poll(() => requestsFor(log, 'GET', '/api/admin/settings').length).toBe(1);
+  await dashboard.locator('body').evaluate(() => {
+    (window as Window & { __renuvexCatalogDocument?: boolean }).__renuvexCatalogDocument = true;
+  });
+
+  await dashboard.getByRole('link', { name: 'Özelleştir' }).first().click();
+  await expect(dashboard.getByRole('heading', { name: 'Ürün Yorumları' })).toBeVisible();
+  await expectFocusedEditorChrome(dashboard);
+
+  const catalogDocumentMarker = await dashboard.locator('body').evaluate(() => (
+    (window as Window & { __renuvexCatalogDocument?: boolean }).__renuvexCatalogDocument
+  ));
+  expect(catalogDocumentMarker).toBeUndefined();
+  await expect.poll(() => requestsFor(log, 'GET', '/api/ikas/get-merchant').length).toBe(2);
+  await expect.poll(() => requestsFor(log, 'POST', '/api/admin/storefront-theme/sync').length).toBe(2);
+  await expect.poll(() => requestsFor(log, 'GET', '/api/admin/settings').length).toBe(2);
+  await expect.poll(() => log.previewRequests.length).toBe(1);
+
+  const counts = await getHarnessCounts(page);
+  expect(counts.CLOSE_LOADER).toBe(2);
+  expect(counts.REQUEST_TOKEN).toBe(1);
+  expect(log.authorizationFailures).toEqual([]);
+  expect(log.unexpectedRequests).toEqual([]);
+});
+
+test('dirty browser Back can be cancelled or accepted without history manipulation', async ({ page }) => {
+  await setupAdminDashboardRoutes(page);
+  const dashboard = await openAdminHarness(page, 'success', '/dashboard/widgets');
+
+  await expect(dashboard.getByRole('heading', { name: 'Widgetlar' })).toBeVisible();
+  await dashboard.getByRole('link', { name: 'Özelleştir' }).first().click();
+  await expect(dashboard.getByRole('heading', { name: 'Ürün Yorumları' })).toBeVisible();
+  await dashboard.getByRole('button', { name: 'Metin', exact: true }).click();
+  const title = dashboard.getByRole('textbox', { name: 'Widget Başlığı' });
+  await title.fill('Chrome Geri Uyarısı');
+
+  let beforeUnloadDialogs = 0;
+  const dismissBack = async (dialog: import('@playwright/test').Dialog) => {
+    if (dialog.type() === 'beforeunload') beforeUnloadDialogs += 1;
+    await dialog.dismiss();
+  };
+  page.on('dialog', dismissBack);
+  await dashboard.locator('body').evaluate(() => window.history.back()).catch(() => undefined);
+  await expect.poll(() => beforeUnloadDialogs).toBe(1);
+  page.off('dialog', dismissBack);
+  await expect(dashboard.getByRole('heading', { name: 'Ürün Yorumları' })).toBeVisible();
+  await expect(title).toHaveValue('Chrome Geri Uyarısı');
+
+  const acceptBack = async (dialog: import('@playwright/test').Dialog) => {
+    if (dialog.type() === 'beforeunload') beforeUnloadDialogs += 1;
+    await dialog.accept();
+  };
+  page.on('dialog', acceptBack);
+  await dashboard.locator('body').evaluate(() => window.history.back()).catch(() => undefined);
+  await expect(dashboard.getByRole('heading', { name: 'Widgetlar' })).toBeVisible();
+  page.off('dialog', acceptBack);
+  expect(beforeUnloadDialogs).toBe(2);
+});
+
+test('clean browser Back returns to the catalog without an unload warning', async ({ page }) => {
+  await setupAdminDashboardRoutes(page);
+  const dashboard = await openAdminHarness(page, 'success', '/dashboard/widgets');
+
+  await expect(dashboard.getByRole('heading', { name: 'Widgetlar' })).toBeVisible();
+  await dashboard.getByRole('link', { name: 'Özelleştir' }).first().click();
+  await expect(dashboard.getByRole('heading', { name: 'Ürün Yorumları' })).toBeVisible();
+
+  let beforeUnloadDialogs = 0;
+  const handleDialog = async (dialog: import('@playwright/test').Dialog) => {
+    if (dialog.type() === 'beforeunload') beforeUnloadDialogs += 1;
+    await dialog.accept();
+  };
+  page.on('dialog', handleDialog);
+  await dashboard.locator('body').evaluate(() => window.history.back()).catch(() => undefined);
+  await expect(dashboard.getByRole('heading', { name: 'Widgetlar' })).toBeVisible();
+  page.off('dialog', handleDialog);
+  expect(beforeUnloadDialogs).toBe(0);
 });
 
 test('failed widget settings load retries only after the explicit user action', async ({ page }) => {

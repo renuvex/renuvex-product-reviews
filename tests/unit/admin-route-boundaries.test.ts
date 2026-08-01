@@ -68,11 +68,15 @@ describe('admin route dependency boundaries', () => {
 
   it('keeps widget admission server-first and avoids history interception', () => {
     const routeSource = readFileSync(path.join(process.cwd(), 'src/app/dashboard/widgets/[widgetId]/page.tsx'), 'utf8');
+    const cardSource = readFileSync(path.join(process.cwd(), 'src/features/widget-management/components/WidgetCard.tsx'), 'utf8');
     const editorSource = readFileSync(path.join(process.cwd(), 'src/features/widget-management/components/editor/WidgetEditor.tsx'), 'utf8');
 
     expect(routeSource).not.toContain("'use client'");
     expect(routeSource).toContain('resolveWidgetDefinition(widgetId)');
     expect(routeSource).toContain('notFound()');
+    expect(cardSource).not.toContain("from 'next/link'");
+    expect(cardSource).toContain('<a');
+    expect(cardSource).toContain('href={customizeHref}');
     expect(editorSource).toContain("addEventListener('beforeunload'");
     expect(editorSource).toContain('event.preventDefault()');
     expect(editorSource).toContain('event.returnValue = true');
