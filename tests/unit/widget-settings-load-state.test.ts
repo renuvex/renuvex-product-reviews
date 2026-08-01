@@ -7,9 +7,9 @@ import {
 } from '../../src/components/home-page/widgets/editor/WidgetSettingsLoadState';
 
 describe('Widget settings load state', () => {
-  it('starts in loading state with no settings', () => {
+  it('starts idle with no settings', () => {
     expect(INITIAL_WIDGET_SETTINGS_LOAD_STATE).toEqual({
-      status: 'loading',
+      status: 'idle',
       settings: {},
       meta: {},
     });
@@ -121,6 +121,7 @@ describe('Widget settings load state', () => {
   });
 
   it('opens the widget editor only after settings are loaded', () => {
+    expect(canOpenWidgetEditor('idle')).toBe(false);
     expect(canOpenWidgetEditor('loading')).toBe(false);
     expect(canOpenWidgetEditor('error')).toBe(false);
     expect(canOpenWidgetEditor('loaded')).toBe(true);

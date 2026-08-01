@@ -3,10 +3,16 @@
 import { useEffect, useState, useCallback } from 'react';
 import { TokenHelpers } from '@/helpers/token-helpers';
 import { ApiRequests } from '@/lib/api-requests';
+import { colors, typography } from '@/lib/design-tokens';
 import HomePage from '../../components/home-page';
 
+type DashboardAuthenticationState =
+  | { status: 'loading' }
+  | { status: 'authentication_required' }
+  | { status: 'ready'; token: string };
+
 export default function DashboardPage() {
-  const [token, setToken] = useState<string | null>(null);
+  const [authentication, setAuthentication] = useState<DashboardAuthenticationState>({ status: 'loading' });
   const [storeName, setStoreName] = useState('');
 
   /**
@@ -29,14 +35,17 @@ export default function DashboardPage() {
   const initializeDashboard = useCallback(async () => {
     try {
       const fetchedToken = await TokenHelpers.getTokenForIframeApp();
-      setToken(fetchedToken || null);
-
-      if (fetchedToken) {
-        await fetchStoreName(fetchedToken);
-        ApiRequests.ikas.syncStorefrontTheme(fetchedToken, 'dashboard_open').catch(() => {});
+      if (!fetchedToken) {
+        setAuthentication({ status: 'authentication_required' });
+        return;
       }
+
+      setAuthentication({ status: 'ready', token: fetchedToken });
+      await fetchStoreName(fetchedToken);
+      ApiRequests.ikas.syncStorefrontTheme(fetchedToken, 'dashboard_open').catch(() => {});
     } catch (error) {
       console.error('Error initializing dashboard:', error);
+      setAuthentication({ status: 'authentication_required' });
     }
   }, [fetchStoreName]);
 
@@ -51,5 +60,24 @@ export default function DashboardPage() {
     initializeDashboard();
   }, [initializeDashboard]);
 
-  return <HomePage token={token ?? 'dev'} storeName={storeName || 'Test Mağaza'} />;
+  if (authentication.status === 'loading') {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background" role="status" aria-live="polite">
+        <p style={{ fontSize: typography.fontSize.base, color: colors.textMuted }}>Kimlik doğrulanıyor...</p>
+      </div>
+    );
+  }
+
+  if (authentication.status === 'authentication_required') {
+    return (
+      <div className="max-w-[1200px] mx-auto p-6 bg-background min-h-[100vh]">
+        <div className="text-center p-20 bg-muted rounded-xl border border-dashed">
+          <h3 className="mb-2" style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>Authentication Required</h3>
+          <p style={{ fontSize: typography.fontSize.base, color: colors.textMuted }}>Please authenticate to access the Review Dashboard.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return <HomePage token={authentication.token} storeName={storeName || 'Test Mağaza'} />;
 }

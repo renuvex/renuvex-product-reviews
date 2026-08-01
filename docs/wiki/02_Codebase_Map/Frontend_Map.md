@@ -3,7 +3,9 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-28
+updated: 2026-08-01
+last_verified: 2026-08-01
+confidence: high
 tags:
   - frontend
   - react
@@ -13,6 +15,13 @@ related:
   - "[[Folder_Structure]]"
   - "[[Backend_API_Map]]"
   - "[[Widget_Files_Map]]"
+source_files:
+  - "src/app/dashboard/page.tsx"
+  - "src/components/home-page/index.tsx"
+  - "src/components/home-page/widgets/editor/WidgetSettingsLoadState.ts"
+  - "src/helpers/token-helpers.ts"
+  - "playwright.admin-dashboard.config.ts"
+  - "tests/admin-dashboard-contract.spec.ts"
 ---
 
 # Frontend Map
@@ -30,7 +39,7 @@ Next.js 16 (16.2), React 19, TypeScript, Tailwind CSS v4 (`@tailwindcss/postcss`
 |---|---|---|
 | `/` | [src/app/page.tsx](src/app/page.tsx) | Triggers `useBaseHomePage` → routes based on token presence |
 | `/authorize-store` | [src/app/authorize-store/page.tsx](src/app/authorize-store/page.tsx) | Manual store-name entry fallback |
-| `/dashboard` | [src/app/dashboard/page.tsx](src/app/dashboard/page.tsx) | Authenticated home; renders `home-page` component |
+| `/dashboard` | [src/app/dashboard/page.tsx](src/app/dashboard/page.tsx) | AppBridge-gated authenticated home; mounts `home-page` only after a real JWT is available |
 | `/preview` | [src/app/(preview)/preview/route.ts](src/app/(preview)/preview/route.ts) | Standalone HTML iframe — no root layout |
 
 ### Top-level Layout
@@ -55,6 +64,13 @@ Every page that runs inside the ikas Admin iframe must follow this pattern (see 
 4. Use the `ApiRequests` helper ([src/lib/api-requests.ts](src/lib/api-requests.ts)) — don't hand-roll axios calls.
 5. Wrap any `useSearchParams()` usage in `<Suspense>` (Next.js requirement).
 6. Handle loading + error states gracefully.
+
+The dashboard enforces that sequence as a runtime boundary. Until AppBridge
+returns a token it renders only the authentication gate, so review, theme,
+merchant, and settings requests cannot start with a placeholder credential.
+The Reviews view loads review data after auth; widget settings remain idle
+until the merchant first opens Widgetlar, and a failed load retries only
+through the explicit retry action.
 
 Pattern: `AppBridgeHelper.closeLoader() → TokenHelpers → ApiRequests → backend route → ikas client`.
 

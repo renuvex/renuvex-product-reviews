@@ -3,13 +3,16 @@ type: bug
 project: renuvex-product-reviews
 status: active
 created: 2026-06-12
-updated: 2026-06-12
-last_verified: 2026-06-12
+updated: 2026-08-01
+last_verified: 2026-08-01
 confidence: high
 tags:
   - admin
   - widget-settings
   - dirty-state
+related:
+  - "[[Test_Strategy]]"
+  - "[[Frontend_Map]]"
 source_files:
   - "src/components/home-page/index.tsx"
   - "src/components/home-page/widgets/index.tsx"
@@ -20,6 +23,7 @@ source_files:
   - "src/components/home-page/widgets/editor/SettingsPanel.tsx"
   - "tests/unit/widget-editor-state.test.ts"
   - "tests/unit/widget-settings-load-state.test.ts"
+  - "tests/admin-dashboard-contract.spec.ts"
 ---
 
 # Widget Editor Late Settings Dirty State
@@ -77,24 +81,28 @@ hard `/api/admin/settings` error. In that path the parent settings map could sta
 `{}`, so the editor could mount with defaults and a merchant save could replace
 the real DB row with default-derived settings.
 
-The gate now uses a tri-state settings load model:
+The gate now uses an explicit settings load model:
 
+- `idle` means the merchant has not opened the Widgetlar tab, so no settings
+  request is made.
 - `loading` shows `EditorSkeleton`.
 - `loaded` is the only state that mounts `WidgetEditor`.
 - `error` shows `EditorSettingsError` with `Geri` and `Tekrar Dene`; the settings
   panel, preview iframe, and save button are not rendered.
 
 Settings loading is no longer coupled to the reviews list fetch. `HomePage`
-loads `/api/admin/settings` through its own `loadSettings()` try/catch, while the
-reviews list and tab counts keep their existing loading behavior. Retrying the
-error state calls that same settings-only loader.
+keeps the state `idle` on the Reviews tab and calls its settings-only
+`loadSettings()` path when Widgetlar is first opened. Loaded settings remain
+cached across normal tab changes. Retrying the error state calls that same
+settings-only loader only after the explicit `Tekrar Dene` action.
 
 `WidgetSettingsLoadState.ts` owns the pure status reducer and editor-open
-decision. `tests/unit/widget-settings-load-state.test.ts` pins loading, retry,
-valid success, malformed success, request failure, and "editor opens only when
-loaded" behavior.
+decision. `tests/unit/widget-settings-load-state.test.ts` pins idle, loading,
+retry, valid success, malformed success, request failure, and "editor opens only
+when loaded" behavior.
 
-Current `tests/admin-preview-smoke.spec.ts` covers the `/preview` widget runtime
-and admin preview messaging, not an authenticated admin panel mount. Skeleton,
-error, and retry screen rendering therefore remain manual-auth or future admin
-harness coverage rather than current CI coverage.
+`tests/admin-dashboard-contract.spec.ts` now covers the synthetic cross-origin
+admin mount, lazy settings request, cache reuse, editor save, and visible
+error/retry behavior in production mode. Its `/preview` frame is a minimal
+protocol stub; `tests/admin-preview-smoke.spec.ts` remains the separate contract
+for production preview renderers and scroll behavior.
