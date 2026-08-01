@@ -379,7 +379,12 @@ Planned and unknown deep links run in separate browser contexts and start no
 feature work. The suite uses Playwright request interception, which disables
 HTTP cache, so it does not claim second-open browser-cache reuse. It also pins
 feature-local API retry states, dirty modal navigation, native `beforeunload`,
-and the absence of custom history manipulation.
+and the absence of custom history manipulation. Configurable catalog links are
+also pinned as native document navigations: a catalog document marker must not
+survive editor admission, valid session-token state must avoid a second token
+request, and the new document may start at most one merchant lookup, one theme
+sync, one settings GET, and one preview. Dirty browser Back is tested in both
+cancel and accept directions; clean browser Back must leave without a dialog.
 It also asserts the workspace header/navigation is present on Reviews and the
 widget catalog but absent on unknown, planned, and configurable editor routes;
 the focused editor still retains AppBridge authentication, settings caching,

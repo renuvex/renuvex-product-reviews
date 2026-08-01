@@ -45,8 +45,13 @@ code overrides stale prose.
 
 ### [src/features/admin-shell/AdminWorkspaceShell.tsx](src/features/admin-shell/AdminWorkspaceShell.tsx)
 - **What:** Feature-neutral header and Reviews/Widgets navigation used only by review moderation and the widget catalog.
-- **Why it matters:** The configurable widget editor can use a focused, full-width route layout while sharing the same persistent authentication and widget-settings provider.
+- **Why it matters:** The configurable widget editor can use a focused, full-width route layout without coupling its route bundle to workspace chrome.
 - **Be careful:** Do not hoist this shell back into `dashboard/layout.tsx` or `dashboard/widgets/layout.tsx`; that would restore the editor sidebar and couple its route bundle to workspace chrome.
+
+### [src/features/widget-management/components/WidgetCard.tsx](src/features/widget-management/components/WidgetCard.tsx)
+- **What:** Catalog card and the configurable widget editor admission link.
+- **Why it matters:** The Customize link intentionally uses a native anchor so the editor owns a distinct document and dirty browser Back traversals reach the existing `beforeunload` boundary.
+- **Be careful:** Do not replace that anchor with `next/link`, `router.push`, or custom history interception without revisiting the unsaved-data and request-budget contracts.
 
 ### [src/features/widget-management/components/editor/SettingsPanel.tsx](src/features/widget-management/components/editor/SettingsPanel.tsx)
 - **What:** Schema-driven admin settings renderer. Converts every `SettingField` from [catalog.ts](src/lib/widgets/catalog.ts) into the correct control.
