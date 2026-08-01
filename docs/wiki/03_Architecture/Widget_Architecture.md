@@ -241,7 +241,7 @@ verified live on the dev store on 2026-05-17 (browser + Sentry post-test); see
 
 ## Layout-aware settings (key concept)
 
-Each layout registers support metadata such as `supports: { title: true, thumbnailSize: false, ... }` in its layout `index.js`. Admin settings panel uses `showWhen: { layoutKey, supports }` in [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts) to hide irrelevant fields. This means **adding a new setting often means deciding which layouts support it** — not editing settings rendering code.
+Each layout registers support metadata such as `supports: { title: true, thumbnailSize: false, ... }` in its layout `index.js`. Admin settings panel uses `showWhen: { layoutKey, supports }` in [catalog.ts](src/lib/widgets/catalog.ts) to hide irrelevant fields. This means **adding a new setting often means deciding which layouts support it** — not editing settings rendering code.
 
 ## Summary interaction contracts
 

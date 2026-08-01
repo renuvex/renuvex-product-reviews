@@ -16,6 +16,11 @@ const SERVER_FAILURES = {
     route: 'reviews',
     operation: 'list',
   },
+  admin_review_summary_failed: {
+    source: 'admin-api',
+    route: 'reviews-summary',
+    operation: 'aggregate',
+  },
   admin_reviews_delete_failed: {
     source: 'admin-api',
     route: 'reviews',

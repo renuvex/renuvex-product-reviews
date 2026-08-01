@@ -25,7 +25,7 @@ related:
 Small inline star rating and count shown on the product detail page near the product title. The surface entry is [src/widget/rating-badge/index.js](src/widget/rating-badge/index.js), DOM injection lives in [src/widget/rating-badge/inject.js](src/widget/rating-badge/inject.js), and placement uses [product-title.js](src/widget/core/product-title.js). Product `AggregateRating` JSON-LD is no longer owned by this badge; it lives in the independent [[Structured_Data_And_Rich_Snippets]] surface.
 
 ## Settings (`badge` widgetId)
-Settings live under `WidgetSettings.settings` with `widgetId='badge'`. Source schema: [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts).
+Settings live under `WidgetSettings.settings` with `widgetId='badge'`. Source schema: [catalog.ts](src/lib/widgets/catalog.ts).
 
 Fields:
 - `enabled` — toggle; also gates the listing/card badges.

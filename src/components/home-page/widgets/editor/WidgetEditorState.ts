@@ -1,13 +1,17 @@
 import type { WidgetSettingsMap } from '../../types';
+import {
+  WIDGETS,
+  collectSettingFields,
+  isConfigurableWidgetDefinition,
+  type ConfigurableWidgetDefinition,
+} from '@/lib/widgets/catalog';
 import { getWidgetPreviewScenes } from '@/widget/preview/scenes.js';
-import type { WidgetDef } from '../widgetDefs';
-import { WIDGETS, collectSettingFields } from '../widgetDefs';
 
 export type WidgetSettingsDraft = Record<string, unknown>;
 
-export function mergeWithDefaults(widget: WidgetDef, savedSettings: WidgetSettingsDraft): WidgetSettingsDraft {
+export function mergeWithDefaults(widget: ConfigurableWidgetDefinition, savedSettings: WidgetSettingsDraft): WidgetSettingsDraft {
   const defaults: WidgetSettingsDraft = {};
-  for (const field of collectSettingFields(widget.settings)) {
+  for (const field of collectSettingFields(widget.configuration.groups)) {
     defaults[field.key] = field.default;
   }
   return { ...defaults, ...savedSettings };
@@ -15,12 +19,13 @@ export function mergeWithDefaults(widget: WidgetDef, savedSettings: WidgetSettin
 
 export function buildWidgetPreviewSettings(
   allSettings: WidgetSettingsMap,
-  editingWidget: WidgetDef,
+  editingWidget: ConfigurableWidgetDefinition,
   draft: WidgetSettingsDraft,
 ): Record<string, WidgetSettingsDraft> {
   const previewSettings: Record<string, WidgetSettingsDraft> = {};
 
   for (const widget of WIDGETS) {
+    if (!isConfigurableWidgetDefinition(widget)) continue;
     if (getWidgetPreviewScenes(widget.id).length === 0) continue;
     const saved = (allSettings[widget.id] ?? {}) as WidgetSettingsDraft;
     previewSettings[widget.id] = mergeWithDefaults(widget, saved);

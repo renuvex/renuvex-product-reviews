@@ -201,7 +201,7 @@ export function ReviewRow({ review, onStatusChange, onReply, onDeleteReply, onDe
         )}
         <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
-            <button style={{ ...componentStyles.btnSm, padding: '0 8px' }}>
+            <button aria-label="Yorum işlemleri" style={{ ...componentStyles.btnSm, padding: '0 8px' }}>
               <MoreVertical size={15} />
             </button>
           </DropdownMenuTrigger>

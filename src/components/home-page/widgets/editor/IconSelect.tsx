@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import { colors, typography, radii } from '@/lib/design-tokens';
+import type { IconRegistry } from '@/lib/widgets/catalog';
 import { ICONS, getFilterIconSvg, parseIconValue } from '@/widget/icons/index.js';
-import type { IconRegistry } from '../widgetDefs';
 
 type Option = { value: string; label: string };
 

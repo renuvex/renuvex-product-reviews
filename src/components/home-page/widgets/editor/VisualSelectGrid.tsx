@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { colors, radii, sp, typography } from '@/lib/design-tokens';
-import type { SelectOption, SelectPreviewKey } from '../widgetDefs';
+import type { SelectOption, SelectPreviewKey } from '@/lib/widgets/catalog';
 
 interface VisualSelectGridProps {
   options: SelectOption[];

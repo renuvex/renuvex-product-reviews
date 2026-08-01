@@ -3,8 +3,8 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-28
-last_verified: 2026-06-21
+updated: 2026-08-01
+last_verified: 2026-08-01
 confidence: medium
 tags:
   - features
@@ -16,7 +16,7 @@ related:
 source_files:
   - "src/widget/core/helpers.js"
   - "src/widget/reviews-section/review-form-modal/copy.js"
-  - "src/components/home-page/widgets/widgetDefs.ts"
+  - "src/lib/widgets/catalog.ts"
 ---
 
 # Feature Map
@@ -74,15 +74,15 @@ source_files:
 | Review layouts (card/gallery/list) | ✅ | [src/widget/review-layouts/](src/widget/review-layouts/) |
 | Listing-page rating badges | ✅ | [src/widget/listing-badges/](src/widget/listing-badges/) |
 | Theme variant build (`--theme=new-theme`) | 🚧 | [scripts/build-widget.mjs](scripts/build-widget.mjs); runtime selection unclear |
-| Carousel widget | ❓ | id registered in `widgetDefs.ts`; verify implementation |
-| Popup widget | ❓ | same |
-| Q&A widget | ❓ | same |
+| Carousel widget | planned | Catalog-visible, no editor/settings/runtime activation contract |
+| Popup widget | planned | Catalog-visible, no editor/settings/runtime activation contract |
+| Q&A widget | planned | Catalog-visible, no editor/settings/runtime activation contract |
 | Settings live preview via postMessage | ✅ | [src/app/(preview)/preview/route.ts](src/app/(preview)/preview/route.ts), [src/widget/index.js](src/widget/index.js) |
 
 ## Localization / i18n
 | Feature | Status | Source |
 |---|---|---|
-| Turkish-first storefront widget copy | current reality | Hardcoded widget strings plus selected merchant-editable labels in [copy.js](src/widget/reviews-section/review-form-modal/copy.js) and [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts) |
+| Turkish-first storefront widget copy | current reality | Hardcoded widget strings plus selected merchant-editable labels in [copy.js](src/widget/reviews-section/review-form-modal/copy.js) and [catalog.ts](src/lib/widgets/catalog.ts) |
 | English / German / multi-language widget UI | planned | [[Roadmap]], [[Open_Questions]], [[Storefront_Widget_Overview]], [[Widget_Customization]] |
 | Locale-aware accessibility labels | planned | Current source still has hardcoded Turkish `aria-label` strings; future i18n must include accessible names, not only visible text |
 

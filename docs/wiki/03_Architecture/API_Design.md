@@ -3,7 +3,7 @@ type: api
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-29
+updated: 2026-08-01
 tags:
   - api
   - design
@@ -49,7 +49,7 @@ not an API family; its settings and fixtures are in-memory.
 ### Validation
 - OAuth callback uses zod ([src/lib/validation.ts](src/lib/validation.ts) + per-route schema).
 - Public review POST does manual validation (length, range, type, profanity) and validates uploaded AWS image refs through [src/lib/review-images.ts](src/lib/review-images.ts). Should migrate to zod for consistency. Tracked in [[Open_Questions]].
-- Widget settings PUT runs `validateSettings(widgetId, settings)` from [src/lib/widget-settings.ts](src/lib/widget-settings.ts) — type-checked against `widgetDefs.ts`.
+- Widget settings PUT resolves a configurable definition through [src/lib/widgets/catalog.ts](src/lib/widgets/catalog.ts), then runs `sanitizeSettings(widget, settings)` and `validateSettings(widget, settings)` from [src/lib/widget-settings.ts](src/lib/widget-settings.ts). Unknown/planned/non-configurable IDs fail closed before persistence.
 
 ### Rate limits
 Upstash Redis `INCR` + `EXPIRE` pattern. Detail: [[Security_And_Rate_Limits]].

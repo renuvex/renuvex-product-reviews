@@ -3,11 +3,11 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-30
-last_verified: 2026-07-30
+updated: 2026-08-01
+last_verified: 2026-08-01
 confidence: high
 source_files:
-  - "src/components/home-page/widgets/widgetDefs.ts"
+  - "src/lib/widgets/catalog.ts"
   - "src/components/home-page/widgets/editor/WidgetEditor.tsx"
   - "src/components/home-page/widgets/editor/WidgetPreviewLoadState.ts"
   - "src/components/home-page/widgets/editor/SettingsPanel.tsx"
@@ -47,16 +47,35 @@ related:
 
 # Widget Customization
 
+## Agent Brief
+Use the pure widget catalog for release/configuration capability and settings
+schema, then use `widget-settings.ts` for defaults, sanitization, and
+validation. Unknown or planned widgets must fail closed before reads, writes,
+or editor state. Preview uses production renderers with deterministic fixture
+data and is separate from settings persistence.
+
 ## Summary
-Per-merchant widget settings, schema-driven from a single source of truth in [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts). The same schema drives admin UI, server validation, and runtime widget rendering. Live preview via iframe + postMessage.
+Per-merchant widget settings are schema-driven from the pure catalog in [catalog.ts](src/lib/widgets/catalog.ts). The catalog drives admin capability/editor decisions and server validation without importing React or storefront runtime modules. The sanitized settings JSON drives runtime rendering. Live preview uses iframe + postMessage.
 
 ## Source of truth
-- **Schema**: [src/components/home-page/widgets/widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts)
+- **Schema**: [src/lib/widgets/catalog.ts](src/lib/widgets/catalog.ts)
 - **Server helpers** (defaults, sanitize, validate): [src/lib/widget-settings.ts](src/lib/widget-settings.ts)
 - **Admin color picker**: [src/components/home-page/widgets/editor/ColorPickerField.tsx](src/components/home-page/widgets/editor/ColorPickerField.tsx)
 - **Visual select cards**: [src/components/home-page/widgets/editor/VisualSelectGrid.tsx](src/components/home-page/widgets/editor/VisualSelectGrid.tsx)
 - **Icon registries**: [src/widget/icons/index.js](src/widget/icons/index.js)
 - **Design tokens**: [src/lib/design-tokens.ts](src/lib/design-tokens.ts)
+
+## Release, configuration, and enabled state
+- `releaseStatus` says whether the product surface is currently shipped (`available`) or visible roadmap inventory (`planned`).
+- `configuration.kind` says whether an available widget has a merchant settings/editor contract.
+- `enabled` remains an ordinary persisted setting only for the currently configurable Reviews and Badge widgets.
+- Reviews and Badge are `available + settings`. Carousel, Popup, Q&A, and Summary are `planned + none` and render as `Yakında` without active/passive or customization controls.
+- `configuration:none` does not imply merchant activation. If an available, toggleable zero-configuration widget is needed later, its activation persistence and storefront gate require a separate design.
+
+All admin/public reads and admin writes resolve the same catalog capability.
+Unknown, planned, and non-configurable rows fail closed and are never converted
+to empty settings. Existing DB rows are retained for rollback/forward
+compatibility but are excluded from responses.
 
 ## Field types
 - `toggle` - boolean
@@ -89,8 +108,9 @@ This keeps the main customization screen shallow and avoids opening large groups
 ## Read path (client / admin / widget)
 ```
 DB row.settings:Json
-  └→ sanitizeSettings(widgetId, settings)   // strip unknown keys
-  └→ getWidgetDefaults(widgetId) ⊕ savedSettings   // merge with defaults
+  └→ resolveConfigurableWidget(widgetId)   // fail closed
+  └→ sanitizeSettings(widgetDefinition, settings)   // strip unknown keys
+  └→ getWidgetDefaults(widgetDefinition) ⊕ savedSettings   // merge with defaults
   └→ rendered widget (admin preview or storefront widget.js)
 ```
 This pattern lives in BOTH:
@@ -105,12 +125,19 @@ drafts cannot be saved over the real DB row.
 
 ## Write path (admin)
 ```
-admin UI changes a field
-  └→ debounced/on-blur PUT /api/admin/settings { widgetId, settings }
-  └→ validateSettings(widgetId, settings)   // type/range/profile check
-  └→ sanitizeSettings(widgetId, settings)   // strip unknown
+admin UI changes fields and chooses Save
+  └→ PUT /api/admin/settings { widgetId, settings }
+  └→ parse plain JSON object + resolveConfigurableWidget(widgetId)
+  └→ sanitizeSettings(widgetDefinition, settings)   // strip unknown
+  └→ validateSettings(widgetDefinition, settings)   // type/range/profile check
   └→ prisma.widgetSettings.upsert({ storeId, widgetId, settings })
 ```
+
+Capability and body validation happen before the installation transaction,
+upsert, or post-response storefront theme sync. Unknown IDs return
+`invalid_widget_id`; planned widgets return `widget_not_available`; an
+available widget without settings capability returns
+`widget_not_configurable`.
 
 ## Live preview
 - All implemented live previews use one admin iframe shell in
@@ -182,7 +209,7 @@ The summary recommendation suffix (`%82 bu ürünü tavsiye ediyor`) is merchant
 Merchant-controlled CTA/count copy also has a targeted long-word contract. `writeButtonText` (`Yorum Yap Butonu Metni`, max 25) and `countLabel` (`Yorum Sayısı Etiketi`, max 20) are still rendered as plain text and wrap long unbroken words in their own controls. Do not apply a global `overflow-wrap:anywhere` rule to every widget label: numeric columns, rating counts, fixed system labels, file names, and compact controls intentionally keep nowrap or ellipsis behavior.
 
 ## Removing / changing fields
-- **Removing a field**: just delete from `widgetDefs.ts`. `sanitizeSettings` filters unknown keys at read time, so old DB rows still work.
+- **Removing a field**: just delete from `catalog.ts`. `sanitizeSettings` filters unknown keys at read time, so old DB rows still work.
 - **Renaming a field**: harder — write a one-time migration to copy `oldKey` → `newKey` in JSON, or add a back-compat shim in `sanitizeSettings`.
 - **Changing a field's `default`**: only affects rows that don't have the key. Existing rows keep their saved value.
 - **Changing a field's `type`**: dangerous — old saved values may not match the new type; consider migration.
@@ -196,9 +223,9 @@ Merchant-controlled CTA/count copy also has a targeted long-word contract. `writ
 - Color settings churn has been frequent (visible in migrations). Prefer soft-removing keys via `sanitizeSettings` over a DB migration.
 - The storefront widget container background is intentionally transparent. Store themes own the page background; admin preview background is only a testing surface.
 - In the review form wizard, `formPrimaryTextColor` owns text. The close (X) control is automatic: runtime derives its icon color and hover background from `formBgColor` for readable contrast, without adding another admin color field.
-- Review form wizard step headings and the photo step subtitle are merchant-editable under `Metin > Yorum Formu`. Storefront rendering goes through `review-form-modal/copy.js`, trims whitespace via `settingText(...)`, falls back to schema defaults for blank values, assigns text with `textContent` so markup-like copy remains literal text, and wraps long unbroken words inside the modal safe area. Those fallback strings live in `copy.js` as `REVIEW_FORM_COPY_DEFAULTS`, mirroring the `widgetDefs.ts` schema defaults (the widget bundle cannot import the admin schema) — update both places when changing the copy.
+- Review form wizard step headings and the photo step subtitle are merchant-editable under `Metin > Yorum Formu`. Storefront rendering goes through `review-form-modal/copy.js`, trims whitespace via `settingText(...)`, falls back to schema defaults for blank values, assigns text with `textContent` so markup-like copy remains literal text, and wraps long unbroken words inside the modal safe area. Those fallback strings live in `copy.js` as `REVIEW_FORM_COPY_DEFAULTS`, mirroring the `catalog.ts` schema defaults (the widget bundle cannot import the admin schema) — update both places when changing the copy.
 - Alpha hex values are still valid internally for defaults such as translucent modal controls and borders, but merchants choose opaque colors in the admin picker. If a merchant changes one of those fields manually, the saved value becomes `#rrggbb`; resetting restores the schema default, including alpha where defined.
-- `iconSelect` fields resolve their options from [src/widget/icons/index.js](src/widget/icons/index.js). Review/rating icons and filter icons are separate registries; [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts) marks each icon field with `registry: 'review' | 'filter'` so a filter value never falls back to a review icon. Current filter options are `lines`, `funnel`, `controls`, and `sliders`; legacy filter value `star` maps to `funnel` in both runtime rendering and settings sanitization.
+- `iconSelect` fields resolve their options from [src/widget/icons/index.js](src/widget/icons/index.js). Review/rating icons and filter icons are separate registries; [catalog.ts](src/lib/widgets/catalog.ts) marks each icon field with `registry: 'review' | 'filter'` so a filter value never falls back to a review icon. Current filter options are `lines`, `funnel`, `controls`, and `sliders`; legacy filter value `star` maps to `funnel` in both runtime rendering and settings sanitization.
 
 ## Related Source Files
 - [src/components/home-page/widgets/](src/components/home-page/widgets/)

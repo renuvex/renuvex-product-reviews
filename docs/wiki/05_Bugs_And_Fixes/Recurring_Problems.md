@@ -20,7 +20,7 @@ related:
 ## Patterns to watch
 
 ### Settings drift between admin schema and DB
-**Signal:** widget renders unexpected default for a setting after a recent change to `widgetDefs.ts`.
+**Signal:** widget renders unexpected default for a setting after a recent change to `catalog.ts`.
 **Cause:** `WidgetSettings.settings` rows persist old keys that no longer exist in the schema, OR a new field was added without a `default`.
 **Mitigation:**
 - `sanitizeSettings` filters unknown keys at read time (no migration needed for removals).

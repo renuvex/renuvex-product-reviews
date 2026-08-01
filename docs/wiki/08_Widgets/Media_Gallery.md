@@ -26,7 +26,7 @@ source_files:
   - "src/widget/reviews-section/bootstrap.js"
   - "src/widget/core/state.js"
   - "src/widget/core/helpers.js"
-  - "src/components/home-page/widgets/widgetDefs.ts"
+  - "src/lib/widgets/catalog.ts"
   - "src/lib/widget-settings.ts"
   - "scripts/migrate-widget-settings-media-gallery-keys.mjs"
 ---
@@ -112,7 +112,7 @@ The public filter is adaptive, but it is no longer tied to the video-upload togg
 - [src/widget/reviews-section/bootstrap.js](src/widget/reviews-section/bootstrap.js)
 - [src/widget/core/state.js](src/widget/core/state.js)
 - [src/widget/core/helpers.js](src/widget/core/helpers.js)
-- [src/components/home-page/widgets/widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts)
+- [src/lib/widgets/catalog.ts](src/lib/widgets/catalog.ts)
 - [src/lib/widget-settings.ts](src/lib/widget-settings.ts)
 - [scripts/migrate-widget-settings-media-gallery-keys.mjs](scripts/migrate-widget-settings-media-gallery-keys.mjs)
 

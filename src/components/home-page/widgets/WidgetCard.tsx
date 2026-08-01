@@ -1,13 +1,13 @@
 import React from 'react';
 import { Settings2 } from 'lucide-react';
 import { colors, componentStyles, radii, shadows, typography } from '@/lib/design-tokens';
-import { WidgetDef } from './widgetDefs';
+import type { WidgetDefinition } from '@/lib/widgets/catalog';
 
 interface WidgetCardProps {
-  widget: WidgetDef;
-  enabled: boolean;
+  widget: WidgetDefinition;
+  enabled?: boolean;
   preview: React.ReactNode;
-  onCustomize: () => void;
+  onCustomize?: () => void;
 }
 
 export function WidgetCard({ widget, enabled, preview, onCustomize }: WidgetCardProps) {
@@ -41,44 +41,60 @@ export function WidgetCard({ widget, enabled, preview, onCustomize }: WidgetCard
           <div style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
             {widget.name}
           </div>
-          {/* Aktif/Pasif badge */}
-          <div style={{
-            backgroundColor: enabled ? colors.successBg : colors.bgPage,
-            border: `1px solid ${enabled ? colors.successBorder : colors.borderDefault}`,
-            borderRadius: radii.full,
-            padding: '2px 10px',
-            fontSize: typography.fontSize.xs,
-            fontWeight: typography.fontWeight.medium,
-            color: enabled ? colors.successText : colors.textMuted,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-            flexShrink: 0,
-          }}>
-            <span style={{
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              backgroundColor: enabled ? colors.success : colors.textMuted,
-              display: 'inline-block',
-            }} />
-            {enabled ? 'Aktif' : 'Pasif'}
-          </div>
+          {widget.releaseStatus === 'planned' ? (
+            <div style={{
+              backgroundColor: colors.warningBg,
+              border: `1px solid ${colors.warningBorder}`,
+              borderRadius: radii.full,
+              padding: '2px 10px',
+              fontSize: typography.fontSize.xs,
+              fontWeight: typography.fontWeight.medium,
+              color: colors.warningText,
+              flexShrink: 0,
+            }}>
+              Yakında
+            </div>
+          ) : enabled !== undefined ? (
+            <div style={{
+              backgroundColor: enabled ? colors.successBg : colors.bgPage,
+              border: `1px solid ${enabled ? colors.successBorder : colors.borderDefault}`,
+              borderRadius: radii.full,
+              padding: '2px 10px',
+              fontSize: typography.fontSize.xs,
+              fontWeight: typography.fontWeight.medium,
+              color: enabled ? colors.successText : colors.textMuted,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              flexShrink: 0,
+            }}>
+              <span style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                backgroundColor: enabled ? colors.success : colors.textMuted,
+                display: 'inline-block',
+              }} />
+              {enabled ? 'Aktif' : 'Pasif'}
+            </div>
+          ) : null}
         </div>
         <div style={{ fontSize: typography.fontSize.base, color: colors.textSecondary, lineHeight: '1.6', flex: 1 }}>
           {widget.description}
         </div>
 
         {/* Butonlar */}
-        <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-          <button
-            style={{ ...componentStyles.btnSm, display: 'flex', alignItems: 'center', gap: 6 }}
-            onClick={onCustomize}
-          >
-            <Settings2 size={14} />
-            Özelleştir
-          </button>
-        </div>
+        {onCustomize ? (
+          <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+            <button
+              style={{ ...componentStyles.btnSm, display: 'flex', alignItems: 'center', gap: 6 }}
+              onClick={onCustomize}
+            >
+              <Settings2 size={14} />
+              Özelleştir
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );

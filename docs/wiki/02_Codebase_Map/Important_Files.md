@@ -3,8 +3,8 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-30
-last_verified: 2026-07-30
+updated: 2026-08-01
+last_verified: 2026-08-01
 tags:
   - critical-files
 related:
@@ -15,14 +15,23 @@ related:
 
 # Important Files
 
+## Agent Brief
+Use this page as a risk-oriented source index, then inspect the linked file
+before editing. High-impact boundaries include the pure widget capability
+catalog, settings validation, Prisma multi-file schema, OAuth/install
+lifecycle, public review/media routes, and storefront delivery assets. Source
+code overrides stale prose.
+
 > Hot-list of files that future Claude must be careful with. Each entry: **what it does**, **why it matters**, **what to watch out for**.
 
 ## Schema / source-of-truth
 
-### [src/components/home-page/widgets/widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts)
-- **What:** Per-widget settings schema (groups, fields, types, defaults, conditional visibility, layout-aware `supports` rules).
-- **Why it matters:** Drives admin UI rendering AND server-side defaults / sanitize / validate via [src/lib/widget-settings.ts](src/lib/widget-settings.ts). The widget.js consumes the resulting settings JSON. Single source of truth.
+### [src/lib/widgets/catalog.ts](src/lib/widgets/catalog.ts)
+- **What:** Pure widget product catalog plus per-widget settings schema (release status, configuration capability, groups, fields, defaults, conditional visibility, layout-aware `supports` rules).
+- **Why it matters:** Drives admin availability/editor guards and server-side defaults / sanitize / validate via [src/lib/widget-settings.ts](src/lib/widget-settings.ts), without importing React, DOM, or storefront runtime modules. The widget runtime consumes the resulting settings JSON.
 - **Be careful:**
+  - `releaseStatus`, `configuration`, and the persisted `enabled` field are different concepts. Do not use one as a fallback for another.
+  - Unknown, planned, or non-configurable IDs must fail closed through `resolveConfigurableWidget()` before defaults, sanitization, validation, or persistence.
   - Any new field needs a `default`. Older saved settings rows will be merged with defaults at read time.
   - If you remove a field, remember it may still exist in some merchants' saved JSON. `sanitizeSettings` filters unknown keys at read time, but you may want a migration to clean DB rows.
   - The `showWhen.layoutKey + supports` pattern reads layout meta from `src/widget/{summary,review}-layouts/index.js`. New layouts must declare their `supports` map.
@@ -30,7 +39,7 @@ related:
 ## Admin widget editor
 
 ### [src/components/home-page/widgets/editor/SettingsPanel.tsx](src/components/home-page/widgets/editor/SettingsPanel.tsx)
-- **What:** Schema-driven admin settings renderer. Converts every `SettingField` from [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts) into the correct control.
+- **What:** Schema-driven admin settings renderer. Converts every `SettingField` from [catalog.ts](src/lib/widgets/catalog.ts) into the correct control.
 - **Why it matters:** It is the bridge between schema metadata and merchant-facing customization UX.
 - **Be careful:** Keep stored setting values stable. UI-only rendering changes, such as visual select cards, should not rename setting keys or option values.
 
@@ -60,7 +69,7 @@ related:
 ## Auth / OAuth
 
 ### [src/app/api/oauth/callback/ikas/route.ts](src/app/api/oauth/callback/ikas/route.ts)
-- **What:** OAuth callback. Mandatory single-use state consumption → supplied HMAC-SHA256 signature validation → token exchange → fetch merchant + authorized app → atomically activate installation generation/replace stale tokens → upsert StoreSettings → auto-inject widget script per storefront → JWT → redirect to admin.
+- **What:** OAuth callback. Mandatory single-use state consumption → supplied HMAC-SHA256 signature validation → token exchange → fetch merchant + authorized app → atomically activate installation generation/replace stale tokens → upsert StoreSettings → auto-inject widget script per storefront → direct redirect to the trusted ikas Admin authorized-app URL. It does not create or place a JWT in a query string.
 - **Be careful:**
   - This route does a LOT (auth + side-effects). If you add work here, prefer a separate endpoint or a defensive try/catch like the existing script-injection block (it logs but doesn't fail the install).
   - Installation token writes must stay inside `activateIkasStoreInstallation()` so OAuth and uninstall share the same store-scoped generation fence. Token refresh is update-only and must not regain upsert behavior.

@@ -3,8 +3,8 @@ type: database
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-30
-last_verified: 2026-07-30
+updated: 2026-08-01
+last_verified: 2026-08-01
 confidence: high
 tags:
   - database
@@ -288,14 +288,14 @@ Per-widget JSON config.
 | `id` | String `@id @default(uuid())` | |
 | `storeId` | String | |
 | `widgetId` | String | One of `reviews` / `badge` / `carousel` / `popup` / `qa` / `summary` |
-| `settings` | Json `@default("{}")` | Free-form, validated by `widgetDefs.ts` schema |
+| `settings` | Json `@default("{}")` | Free-form, validated by `catalog.ts` schema |
 | `createdAt`, `updatedAt` | DateTime | |
 
 Constraints:
 - `@@unique([storeId, widgetId])` — one row per (merchant, widget)
 - `@@index([storeId])`
 
-Read pattern (admin and public): `getWidgetDefaults(widgetId) ⊕ sanitizeSettings(widgetId, row.settings)`. See [src/lib/widget-settings.ts](src/lib/widget-settings.ts).
+Read pattern (admin and public): `resolveConfigurableWidget(widgetId) → getWidgetDefaults(widget) ⊕ sanitizeSettings(widget, row.settings)`. Query allowlists and response guards exclude unknown/planned rows. See [src/lib/widget-settings.ts](src/lib/widget-settings.ts).
 
 ### `ProductSnapshot`
 Local read model for ikas product identity snapshots. ikas remains the source of truth.

@@ -3,8 +3,8 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-30
-last_verified: 2026-07-30
+updated: 2026-08-01
+last_verified: 2026-08-01
 tags:
   - structure
 related:
@@ -14,6 +14,13 @@ related:
 ---
 
 # Folder Structure
+
+## Agent Brief
+Use this page to locate ownership boundaries before moving files or adding a
+new domain. The live source tree is authoritative. Widget product/settings
+metadata belongs in the pure `src/lib/widgets/catalog.ts`; admin React remains
+under `src/components/home-page`, and storefront runtime stays under
+`src/widget`.
 
 ## Summary
 Top-level layout. Three big buckets: the Next.js app (`src/app/*`), the storefront widget source (`src/widget/*`), and the Prisma DB (`prisma/`). The widget bundle is checked into `public/widget.js`. Update this page whenever a top-level folder is added, removed, or renamed.
@@ -74,7 +81,6 @@ renuvex-product-reviews/
 │  │  │  ├─ types.ts
 │  │  │  └─ widgets/
 │  │  │     ├─ WidgetCard.tsx
-│  │  │     ├─ widgetDefs.ts     # 🟡 Settings schema source-of-truth
 │  │  │     ├─ editor/           # SettingsPanel + WidgetEditor + IconSelect
 │  │  │     ├─ previews/         # Static admin-side previews
 │  │  │     └─ widget-previews/  # Iframe-driven live previews
@@ -100,6 +106,8 @@ renuvex-product-reviews/
 │  │  ├─ utils.ts                # cn() etc.
 │  │  ├─ validation.ts           # zod helpers
 │  │  ├─ widget-settings.ts      # 🟡 sanitize/validate/defaults — admin & public both consume
+│  │  ├─ widgets/
+│  │  │  └─ catalog.ts           # 🟡 Pure release/configuration + settings schema source
 │  │  └─ ikas-client/
 │  │     ├─ codegen.ts           # GraphQL Codegen config
 │  │     ├─ graphql-requests.ts  # gql operations (queries + mutations)
@@ -155,7 +163,7 @@ renuvex-product-reviews/
 - Two route groups: default and `(preview)`. The `(preview)` group exists so `/preview` skips the root `layout.tsx` (which has dashboard chrome) and serves a clean iframe HTML.
 - `src/widget/` uses **plain JavaScript (.js)**, not TypeScript, because the bundle is shipped to third-party storefronts and esbuild builds it independently from the Next.js TS pipeline. Don't migrate it to TS without thinking about output size and bundling impact.
 - `public/widget.js` is committed to the repo so deploys ship it without a build step on the Vercel pipeline. Build script must be re-run after any `src/widget/*` change.
-- `widgetDefs.ts` (admin) and `widget-settings.ts` (server) share schema; widget.js receives the same settings via `/api/public/settings`. Don't duplicate — derive.
+- `catalog.ts` (admin) and `widget-settings.ts` (server) share schema; widget.js receives the same settings via `/api/public/settings`. Don't duplicate — derive.
 - `src/widget/icons/` is the current icon source of truth. Import new code from [src/widget/icons/index.js](src/widget/icons/index.js); [src/widget/icons.js](src/widget/icons.js) exists only as a compatibility re-export.
 - `review-images.ts` is the server-side source of truth for trusted review image URLs. Widget helper logic in `src/widget/core/helpers.js` mirrors this contract for storefront defense in depth.
 - **Theme adapter note**: runtime theme selection is through public settings (`runtime.themeAdapterKey/source`) and `src/widget/themes/current-adapter.js`, not per-theme bundle URLs. `src/widget/reviews-section/styles.js` is the `CLASSIC_CSS` aggregator for shared review-section CSS, with ownership modules under `src/widget/reviews-section/styles/`; `src/widget/themes/ozy/styles.js` is only a compatibility re-export / future Ozy-specific override placeholder. The older `--theme=new-theme` build alias still exists, but it is not the current adapter model. See [[Theme_Adapter_Playbook]].

@@ -499,6 +499,8 @@ describe('/api/public/settings', () => {
           size: 'large',
         },
       },
+      { widgetId: 'carousel', settings: { injected: true } },
+      { widgetId: 'unknown', settings: { injected: true } },
     ]);
 
     const { GET } = await import('@/app/api/public/settings/route');
@@ -512,6 +514,8 @@ describe('/api/public/settings', () => {
     expect(body.widgets.reviews.videoReviewsEnabled).toBe(false);
     expect(body.widgets.reviews.unknownKey).toBeUndefined();
     expect(body.widgets.badge.enabled).toBe(false);
+    expect(body.widgets.carousel).toBeUndefined();
+    expect(body.widgets.unknown).toBeUndefined();
     expect(body.runtime).toEqual({
       themeAdapterKey: 'ozy',
       themeAdapterSource: 'auto',
@@ -520,6 +524,9 @@ describe('/api/public/settings', () => {
       themeSyncDue: false,
     });
     expect(afterMock).not.toHaveBeenCalled();
+    expect(prismaMock.widgetSettings.findMany).toHaveBeenCalledWith({
+      where: { storeId: 'store-1', widgetId: { in: ['reviews', 'badge'] } },
+    });
   });
 
   it('exposes themeSyncDue without scheduling storefront theme sync', async () => {

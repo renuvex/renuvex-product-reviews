@@ -1,9 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import { getWidgetDefaults, sanitizeSettings, validateSettings } from '@/lib/widget-settings';
+import {
+  getWidgetDefaults,
+  isPlainJsonObject,
+  sanitizeSettings,
+  validateSettings,
+} from '@/lib/widget-settings';
+import { resolveConfigurableWidget } from '@/lib/widgets/catalog';
+
+const reviewsResolution = resolveConfigurableWidget('reviews');
+if (!reviewsResolution.ok) throw new Error('reviews widget definition is missing');
+const reviewsWidget = reviewsResolution.widget;
 
 describe('widget settings schema traversal', () => {
+  it('accepts only plain JSON object containers', () => {
+    expect(isPlainJsonObject({ enabled: true })).toBe(true);
+    expect(isPlainJsonObject(Object.create(null))).toBe(true);
+    expect(isPlainJsonObject(null)).toBe(false);
+    expect(isPlainJsonObject([])).toBe(false);
+    expect(isPlainJsonObject(new Date())).toBe(false);
+  });
+
   it('includes nested review form text fields in defaults and sanitization', () => {
-    const defaults = getWidgetDefaults('reviews');
+    const defaults = getWidgetDefaults(reviewsWidget);
 
     expect(defaults.formStepRatingTitle).toBe('Bu ürünü nasıl değerlendirirsiniz?');
     expect(defaults.formStepPhotosTitle).toBe('Fotoğraflı değerlendirme');
@@ -15,7 +33,7 @@ describe('widget settings schema traversal', () => {
     expect(defaults.formStepAuthorTitle).toBe('Hakkınızda');
     expect(defaults.recommendationLabel).toBe('bu ürünü tavsiye ediyor');
 
-    expect(sanitizeSettings('reviews', {
+    expect(sanitizeSettings(reviewsWidget, {
       formStepRatingTitle: 'Puanınızı seçin',
       formStepPhotosSubtitle: 'İsterseniz fotoğraf ekleyin.',
       formStepMediaSubtitle: 'Fotoğraf ya da kısa video ekleyin.',
@@ -30,7 +48,7 @@ describe('widget settings schema traversal', () => {
   });
 
   it('wires paginationMode + pagination colors through defaults, sanitize and validate', () => {
-    const defaults = getWidgetDefaults('reviews');
+    const defaults = getWidgetDefaults(reviewsWidget);
     expect(defaults.paginationMode).toBe('loadMore');
     expect(defaults.paginationBgColor).toBe('#ffffff');
     expect(defaults.paginationTextColor).toBe('#111111');
@@ -38,38 +56,38 @@ describe('widget settings schema traversal', () => {
     expect(defaults.paginationActiveTextColor).toBe('#ffffff');
     expect(defaults.paginationBorderColor).toBe('#e5e7eb');
 
-    expect(validateSettings('reviews', { paginationMode: 'numbered' })).toBeNull();
-    expect(validateSettings('reviews', { paginationMode: 'invalid' })).toBe(
+    expect(validateSettings(reviewsWidget, { paginationMode: 'numbered' })).toBeNull();
+    expect(validateSettings(reviewsWidget, { paginationMode: 'invalid' })).toBe(
       'paginationMode şu değerlerden biri olmalı: loadMore, numbered',
     );
-    expect(validateSettings('reviews', { paginationBgColor: '#abcabc' })).toBeNull();
-    expect(validateSettings('reviews', { paginationBgColor: 'red' })).toBe(
+    expect(validateSettings(reviewsWidget, { paginationBgColor: '#abcabc' })).toBeNull();
+    expect(validateSettings(reviewsWidget, { paginationBgColor: 'red' })).toBe(
       'paginationBgColor geçerli bir hex renk olmalı (#rrggbb veya #rrggbbaa)',
     );
 
-    expect(sanitizeSettings('reviews', { paginationMode: 'numbered', bogusKey: 'x' })).toEqual({
+    expect(sanitizeSettings(reviewsWidget, { paginationMode: 'numbered', bogusKey: 'x' })).toEqual({
       paginationMode: 'numbered',
     });
   });
 
   it('wires review lightbox video player colors through defaults, sanitize and validate', () => {
-    const defaults = getWidgetDefaults('reviews');
+    const defaults = getWidgetDefaults(reviewsWidget);
     expect(defaults.reviewLightboxVideoIconColor).toBe('#ffffff');
     expect(defaults.reviewLightboxVideoButtonBgColor).toBeUndefined();
     expect(defaults.reviewLightboxVideoButtonHoverBgColor).toBeUndefined();
     expect(defaults.reviewLightboxVideoProgressColor).toBe('#ffffff');
     expect(defaults.reviewLightboxVideoProgressTrackColor).toBe('#000000');
 
-    expect(validateSettings('reviews', {
+    expect(validateSettings(reviewsWidget, {
       reviewLightboxVideoIconColor: '#f97316',
       reviewLightboxVideoProgressColor: '#22c55e',
       reviewLightboxVideoProgressTrackColor: '#030712',
     })).toBeNull();
-    expect(validateSettings('reviews', { reviewLightboxVideoProgressColor: 'white' })).toBe(
+    expect(validateSettings(reviewsWidget, { reviewLightboxVideoProgressColor: 'white' })).toBe(
       'reviewLightboxVideoProgressColor geçerli bir hex renk olmalı (#rrggbb veya #rrggbbaa)',
     );
 
-    expect(sanitizeSettings('reviews', {
+    expect(sanitizeSettings(reviewsWidget, {
       reviewLightboxVideoIconColor: '#f97316',
       reviewLightboxVideoButtonBgColor: '#111111',
       reviewLightboxVideoButtonHoverBgColor: '#222222',
@@ -82,7 +100,7 @@ describe('widget settings schema traversal', () => {
   });
 
   it('normalizes legacy photo gallery keys into the media gallery contract', () => {
-    const defaults = getWidgetDefaults('reviews');
+    const defaults = getWidgetDefaults(reviewsWidget);
     expect(defaults.showMediaGallery).toBe(true);
     expect(defaults.showMediaGalleryTitle).toBe(true);
     expect(defaults.mediaGalleryTitle).toBe('Müşteri Görselleri');
@@ -92,7 +110,7 @@ describe('widget settings schema traversal', () => {
     expect(defaults.showPhotoGallery).toBeUndefined();
     expect(defaults.photoGalleryTitle).toBeUndefined();
 
-    expect(sanitizeSettings('reviews', {
+    expect(sanitizeSettings(reviewsWidget, {
       showPhotoGallery: false,
       showPhotoGalleryTitle: false,
       photoGalleryTitle: 'Eski Başlık',
@@ -108,7 +126,7 @@ describe('widget settings schema traversal', () => {
       mediaGalleryArrowTextColor: '#333333',
     });
 
-    expect(sanitizeSettings('reviews', {
+    expect(sanitizeSettings(reviewsWidget, {
       showPhotoGallery: false,
       showMediaGallery: true,
       photoGalleryTitle: 'Eski Başlık',
@@ -120,31 +138,31 @@ describe('widget settings schema traversal', () => {
   });
 
   it('validates nested review form text field limits', () => {
-    expect(validateSettings('reviews', {
+    expect(validateSettings(reviewsWidget, {
       formStepContentTitle: 'x'.repeat(60),
       formStepPhotosSubtitle: 'x'.repeat(90),
       formStepMediaSubtitle: 'x'.repeat(90),
     })).toBeNull();
 
-    expect(validateSettings('reviews', {
+    expect(validateSettings(reviewsWidget, {
       formStepContentTitle: 'x'.repeat(61),
     })).toBe('formStepContentTitle en fazla 60 karakter olmalı');
 
-    expect(validateSettings('reviews', {
+    expect(validateSettings(reviewsWidget, {
       formStepPhotosSubtitle: 'x'.repeat(91),
     })).toBe('formStepPhotosSubtitle en fazla 90 karakter olmalı');
 
-    expect(validateSettings('reviews', {
+    expect(validateSettings(reviewsWidget, {
       formStepMediaSubtitle: 'x'.repeat(91),
     })).toBe('formStepMediaSubtitle en fazla 90 karakter olmalı');
   });
 
   it('validates recommendation label as a bounded merchant text field', () => {
-    expect(validateSettings('reviews', {
+    expect(validateSettings(reviewsWidget, {
       recommendationLabel: 'x'.repeat(40),
     })).toBeNull();
 
-    expect(validateSettings('reviews', {
+    expect(validateSettings(reviewsWidget, {
       recommendationLabel: 'x'.repeat(41),
     })).toBe('recommendationLabel en fazla 40 karakter olmalı');
   });

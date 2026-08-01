@@ -66,7 +66,7 @@ describe('widget review form theme variables', () => {
     expect(set.get('--renuvex-pr-pagination-text')).toBe('#222222');
     expect(set.get('--renuvex-pr-pagination-border')).toBe('#cccccc');
 
-    // Unset -> fallbacks must equal the widgetDefs defaults (mirror contract).
+    // Unset -> fallbacks must equal the catalog defaults (mirror contract).
     const def = collectThemeVars({});
     expect(def.get('--renuvex-pr-pagination-bg')).toBe('#ffffff');
     expect(def.get('--renuvex-pr-pagination-text')).toBe('#111111');

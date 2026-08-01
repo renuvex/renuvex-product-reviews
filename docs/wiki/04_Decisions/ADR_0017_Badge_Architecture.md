@@ -21,7 +21,7 @@ related:
   - "[[ADR_0016_Rating_Visual_System]]"
   - "[[ADR_0002_Widget_Injection_Strategy]]"
 source_files:
-  - "src/components/home-page/widgets/widgetDefs.ts"
+  - "src/lib/widgets/catalog.ts"
   - "src/widget/core/badge.js"
   - "src/widget/core/helpers.js"
   - "src/widget/listing-badges/inject.js"
@@ -209,7 +209,7 @@ Each rule corresponds to a structural risk surfaced in the audit:
 
 - The badge widget gains new settings keys — `mobileOverride`, `mobileSize`,
   `alignment`, `showValue`, `showCount` (PR-1). Added via
-  [src/components/home-page/widgets/widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts);
+  [src/lib/widgets/catalog.ts](src/lib/widgets/catalog.ts);
   `WidgetSettings.settings` is JSON, so no Prisma migration is needed and old
   rows merge with defaults via `getWidgetDefaults`. `alignment`, `showValue`,
   and `showCount` are consumed by both PDP and listing badge renderers.
@@ -250,7 +250,7 @@ Each rule corresponds to a structural risk surfaced in the audit:
   `pointer-events:none` card-link behavior are unchanged.
 
 ## Related Source Files
-- [src/components/home-page/widgets/widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts)
+- [src/lib/widgets/catalog.ts](src/lib/widgets/catalog.ts)
 - [src/widget/core/badge.js](src/widget/core/badge.js)
 - [src/widget/core/helpers.js](src/widget/core/helpers.js)
 - [src/widget/listing-badges/inject.js](src/widget/listing-badges/inject.js)

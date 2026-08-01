@@ -1,4 +1,19 @@
-import { getIconOptions, getFilterIconOptions } from '@/widget/icons/index.js';
+export const REVIEW_ICON_OPTIONS = [
+  { value: 'star', label: 'Star' },
+  { value: 'favorite:modern', label: 'Heart' },
+  { value: 'leaf:phosphor', label: 'Leaf' },
+  { value: 'crown:modern', label: 'Crown' },
+  { value: 'paw:phosphor', label: 'Paw' },
+  { value: 'clover:phosphor', label: 'Clover' },
+  { value: 'coffee:phosphor', label: 'Coffee' },
+] satisfies SelectOption[];
+
+export const FILTER_ICON_OPTIONS = [
+  { value: 'lines', label: 'Lines' },
+  { value: 'funnel', label: 'Funnel' },
+  { value: 'controls', label: 'Controls' },
+  { value: 'sliders', label: 'Sliders' },
+] satisfies SelectOption[];
 
 // ─── Settings field types ────────────────────────────────────────────────────
 
@@ -70,23 +85,38 @@ export function collectSettingFields(groups: SettingsGroup[]): SettingField[] {
 
 // ─── Widget definition ───────────────────────────────────────────────────────
 
-export interface WidgetDef {
-  id: 'reviews' | 'badge' | 'carousel' | 'popup' | 'qa' | 'summary';
+export const WIDGET_IDS = ['reviews', 'badge', 'carousel', 'popup', 'qa', 'summary'] as const;
+export type WidgetId = (typeof WIDGET_IDS)[number];
+
+interface WidgetDefinitionBase {
+  id: WidgetId;
   name: string;
   description: string;
   previewBg: string;
-  settings: SettingsGroup[];
 }
+
+export type ConfigurableWidgetDefinition = WidgetDefinitionBase & {
+  releaseStatus: 'available';
+  configuration: { kind: 'settings'; groups: SettingsGroup[] };
+};
+
+export type WidgetDefinition =
+  | ConfigurableWidgetDefinition
+  | (WidgetDefinitionBase & {
+      releaseStatus: 'available' | 'planned';
+      configuration: { kind: 'none' };
+    });
 
 // ─── Widget registry ─────────────────────────────────────────────────────────
 
-export const WIDGETS: WidgetDef[] = [
+export const WIDGETS: WidgetDefinition[] = [
   {
     id: 'reviews',
     name: 'Ürün Yorumları',
     description: 'Ürün detay sayfasında yıldız puanı ve müşteri yorumlarını gösterir.',
     previewBg: 'rgba(111, 85, 255, 0.08)',
-    settings: [
+    releaseStatus: 'available',
+    configuration: { kind: 'settings', groups: [
       {
         title: 'Tasarım',
         fields: [
@@ -171,7 +201,7 @@ export const WIDGETS: WidgetDef[] = [
             label: 'Yorum İkonu',
             default: 'star',
             registry: 'review',
-            options: getIconOptions(),
+            options: REVIEW_ICON_OPTIONS,
           },
           { type: 'color', key: 'reviewStarColor', label: 'Yıldız Rengi', default: '#f59e0b' },
           {
@@ -180,7 +210,7 @@ export const WIDGETS: WidgetDef[] = [
             label: 'Filtre İkonu',
             default: 'lines',
             registry: 'filter',
-            options: getFilterIconOptions(),
+            options: FILTER_ICON_OPTIONS,
           },
         ],
       },
@@ -384,7 +414,7 @@ export const WIDGETS: WidgetDef[] = [
           },
         ],
       },
-    ],
+    ] },
   },
   {
     id: 'badge',
@@ -394,7 +424,8 @@ export const WIDGETS: WidgetDef[] = [
     // Bu widget yalnızca rozete özel görünürlük + boyut taşır.
     description: 'Ürün sayfasında ve ürün listelerinde ortalama puanı rozet olarak gösterir. Yıldız ikonu ve rengi "Ürün Yorumları" ayarlarından gelir.',
     previewBg: 'rgba(59, 130, 246, 0.08)',
-    settings: [
+    releaseStatus: 'available',
+    configuration: { kind: 'settings', groups: [
       {
         title: 'Genel',
         fields: [
@@ -458,34 +489,67 @@ export const WIDGETS: WidgetDef[] = [
           { type: 'toggle', key: 'showCount', label: 'Yorum sayısını göster', default: true },
         ],
       },
-    ],
+    ] },
   },
   {
     id: 'carousel',
     name: 'Yorum Carousel',
     description: 'Seçili yorumları carousel formatında herhangi bir sayfada gösterin.',
     previewBg: 'rgba(245, 158, 11, 0.08)',
-    settings: [],
+    releaseStatus: 'planned',
+    configuration: { kind: 'none' },
   },
   {
     id: 'popup',
     name: 'Pop-up Yorumlar',
     description: 'En iyi yorumlarınızı otomatik pop-up widget ile öne çıkarın.',
     previewBg: 'rgba(239, 68, 68, 0.08)',
-    settings: [],
+    releaseStatus: 'planned',
+    configuration: { kind: 'none' },
   },
   {
     id: 'qa',
     name: 'Soru & Cevap',
     description: 'Müşterilerin ürünleriniz hakkında soru sormasına olanak tanıyın.',
     previewBg: 'rgba(16, 185, 129, 0.08)',
-    settings: [],
+    releaseStatus: 'planned',
+    configuration: { kind: 'none' },
   },
   {
     id: 'summary',
     name: 'AI Yorum Özeti',
     description: 'Yapay zeka ile yorumlarınızın özetini ürün sayfasında gösterin.',
     previewBg: 'rgba(168, 85, 247, 0.08)',
-    settings: [],
+    releaseStatus: 'planned',
+    configuration: { kind: 'none' },
   },
 ];
+
+const WIDGET_BY_ID = new Map<WidgetId, WidgetDefinition>(WIDGETS.map((widget) => [widget.id, widget]));
+
+export function resolveWidgetDefinition(value: unknown): WidgetDefinition | null {
+  if (typeof value !== 'string') return null;
+  return WIDGET_BY_ID.get(value as WidgetId) ?? null;
+}
+
+export function isConfigurableWidgetDefinition(
+  widget: WidgetDefinition,
+): widget is ConfigurableWidgetDefinition {
+  return widget.releaseStatus === 'available' && widget.configuration.kind === 'settings';
+}
+
+export type ConfigurableWidgetResolution =
+  | { ok: true; widget: ConfigurableWidgetDefinition }
+  | { ok: false; reason: 'invalid_widget_id' | 'widget_not_available' | 'widget_not_configurable' };
+
+export function resolveConfigurableWidget(value: unknown): ConfigurableWidgetResolution {
+  const widget = resolveWidgetDefinition(value);
+  if (!widget) return { ok: false, reason: 'invalid_widget_id' };
+  if (widget.releaseStatus !== 'available') return { ok: false, reason: 'widget_not_available' };
+  if (!isConfigurableWidgetDefinition(widget)) return { ok: false, reason: 'widget_not_configurable' };
+  return { ok: true, widget };
+}
+
+export const CONFIGURABLE_WIDGET_IDS: WidgetId[] = WIDGETS
+  .filter(isConfigurableWidgetDefinition)
+  .map((widget) => widget.id);

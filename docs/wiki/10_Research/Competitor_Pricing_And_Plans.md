@@ -26,7 +26,7 @@ source_files:
   - "docs/wiki/06_Competitors/Okendo.md"
   - "docs/wiki/06_Competitors/Judge_Me.md"
   - "prisma/schema.prisma"
-  - "src/components/home-page/widgets/widgetDefs.ts"
+  - "src/lib/widgets/catalog.ts"
   - "src/widget/structured-data/jsonld.js"
   - "src/app/api/public/reviews/route.ts"
   - "src/app/api/public/upload/video/initiate/route.ts"

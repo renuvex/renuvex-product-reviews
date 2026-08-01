@@ -5,8 +5,8 @@ import { AlertCircle, ArrowLeft, Loader2, RefreshCw, Save, Smartphone, Tablet, M
 import { InfoTooltip } from './InfoTooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { colors, componentStyles, radii, typography, opacity } from '@/lib/design-tokens';
+import type { ConfigurableWidgetDefinition } from '@/lib/widgets/catalog';
 import type { WidgetSettingsMap } from '../../types';
-import type { WidgetDef } from '../widgetDefs';
 import { SettingsPanel } from './SettingsPanel';
 import { ColorPickerField } from './ColorPickerField';
 import {
@@ -61,7 +61,7 @@ function PreviewBackgroundInfo() {
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface WidgetEditorProps {
-  widget: WidgetDef;
+  widget: ConfigurableWidgetDefinition;
   savedSettings: WidgetSettingsDraft;
   allSettings: WidgetSettingsMap;
   settingsMeta: WidgetSettingsMeta;
@@ -471,7 +471,7 @@ export function WidgetEditor({
           {/* Sol — Ayarlar */}
           <div className="renuvex-pr-settings-scroll" style={{ width: '380px', flexShrink: 0, overflowY: 'auto', overflowX: 'hidden', height: '100%', paddingRight: 8, paddingLeft: 16 }}>
             <SettingsPanel
-              groups={widget.settings}
+              groups={widget.configuration.groups}
               settings={draft}
               settingsMeta={settingsMeta}
               onChange={setDraft}

@@ -3,8 +3,8 @@ type: api
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-29
-last_verified: 2026-07-29
+updated: 2026-08-01
+last_verified: 2026-08-01
 confidence: high
 tags:
   - api
@@ -23,6 +23,10 @@ source_files:
   - "src/lib/cors.ts"
   - "src/lib/review-email/public-access.ts"
   - "src/app/api/admin/reviews/route.ts"
+  - "src/app/api/admin/reviews/summary/route.ts"
+  - "src/app/api/admin/settings/route.ts"
+  - "src/lib/admin-review-summary.ts"
+  - "src/lib/widgets/catalog.ts"
   - "src/app/api/admin/inject-scripts/route.ts"
   - "src/app/(preview)/preview/route.ts"
   - "src/widget/preview/document.js"
@@ -107,11 +111,12 @@ Main API route groups:
 | Method + Path | Source | Purpose |
 |---|---|---|
 | GET `/api/admin/reviews?page&limit&status` | [route.ts](src/app/api/admin/reviews/route.ts) | Paginated reviews for `merchantId` |
+| GET `/api/admin/reviews/summary` | [route.ts](src/app/api/admin/reviews/summary/route.ts) | Tenant-scoped moderation counts from one `Review.groupBy(status)`. Returns exact `pending`, `approved`, `rejected`, and `total` fields with `private, no-store`; unknown stored statuses affect only `total`. |
 | PUT `/api/admin/reviews` `{ id, status?, merchantReply? }` | same | Update status / reply |
 | DELETE `/api/admin/reviews?id=` | same | Hard delete |
 | GET `/api/admin/reviews/video-playback?mediaId=` | [route.ts](src/app/api/admin/reviews/video-playback/route.ts) | Short-lived signed Mux Player attributes (`playbackId`, `playbackToken`, `thumbnailToken`) for pending/admin video preview. Legacy signed `url`/`posterUrl` remain temporarily for overlap. Provider ids stay server-side. |
-| GET `/api/admin/settings` | [route.ts](src/app/api/admin/settings/route.ts) | All widget settings as map (defaults merged), plus read-only `meta.videoUsage` for the current UTC month. Metadata is not part of the editable settings payload. |
-| PUT `/api/admin/settings` `{ widgetId, settings }` | same | Validate + sanitize + upsert into `WidgetSettings`; schedules lightweight storefront theme sync after the response |
+| GET `/api/admin/settings` | [route.ts](src/app/api/admin/settings/route.ts) | Available and configurable widget settings as a defaults-merged map, plus read-only `meta.videoUsage` for the current UTC month. Planned, unknown, and non-configurable stored rows are excluded by query allowlist and response guard. |
+| PUT `/api/admin/settings` `{ widgetId, settings }` | same | Authenticates, validates a plain JSON body, resolves the widget capability fail-closed, validates/sanitizes settings, then fences and upserts. Unknown IDs return `400`; planned or non-configurable widgets return `409` before any write or theme-sync side effect. |
 | POST `/api/admin/inject-scripts` | [route.ts](src/app/api/admin/inject-scripts/route.ts) | Non-destructively create/update this app's loader script on each storefront; recreates only for known missing/deleted script ids |
 | POST `/api/admin/storefront-theme/sync` | [route.ts](src/app/api/admin/storefront-theme/sync/route.ts) | Lightweight active theme sync from ikas `listStorefront`; no script create/update |
 | POST `/api/admin/sync-products` | [route.ts](src/app/api/admin/sync-products/route.ts) | Register product webhooks and backfill `ProductSnapshot` from ikas `listProduct` |

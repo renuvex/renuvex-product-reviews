@@ -49,6 +49,8 @@ source_files:
   - "tests/admin-dashboard-contract.spec.ts"
   - "tests/admin-dashboard-harness.ts"
   - "tests/admin-dashboard-harness-server.mjs"
+  - "tests/unit/admin-review-summary-route.test.ts"
+  - "tests/unit/widget-catalog.test.ts"
   - "tests/unit/ci-environment.test.ts"
   - "tests/integration/review-email-batch-db-guarantees.test.ts"
   - "tests/integration/review-email-installation-fence.test.ts"
@@ -126,7 +128,7 @@ source_files:
   - "src/widget/reviews-section/video-playback.js"
   - "src/widget/reviews-section/review-form-modal/index.js"
   - "src/widget/listing-badges/fallback-candidates.js"
-  - "src/components/home-page/widgets/widgetDefs.ts"
+  - "src/lib/widgets/catalog.ts"
   - "src/components/home-page/widgets/editor/WidgetEditor.tsx"
   - "src/components/home-page/widgets/editor/WidgetEditorState.ts"
   - "src/components/home-page/widgets/editor/WidgetSettingsLoadState.ts"
@@ -179,8 +181,8 @@ Unit coverage for this layer lives in `tests/unit/widget-origin.test.ts` and `te
 | Widget layout/runtime smoke | `pnpm test:widget-runtime` | Pairwise summary/review layout matrix (`classic`, `compact`, `hero`, `minimal`, `split` x `card`, `list`, `gallery`), rating bar keyboard filtering + badge/summary isolation, compact mobile accordion persistence/motion after rating-bar filter renders, large localized bar-count layout, media gallery toggles, badge/JSON-LD presence, hostile host-theme CSS isolation (a light-DOM `img{width:100%!important}` balloons a control image but cannot reach the shadow-hosted review thumbnail — ADR_0021 regression), and unexpected console errors. |
 | Storefront interactions | `pnpm test:widget-interactions` | Media-gallery lightbox, review-image lightbox, summary filter/popover light-dismiss, keyboard close, review wizard validation, step flow, mocked review submit, and body-scroll-lock regression (opening either overlay locks scroll on BOTH `<html>` and `<body>` and restores on close — ADR_0025). |
 | Cross-browser review media | `pnpm test:widget-media` | Local fast path runs Chromium desktop only. CI runs PR media coverage as isolated matrix jobs for Chromium desktop, Pixel Android emulation, and iPhone WebKit emulation. The scheduled cross-browser workflow adds Firefox desktop and desktop WebKit. The suite pins poster-first card/list/gallery rendering, size presets, no list autoplay/preload, Mux Player lightbox attributes, browser-back cleanup, Mux direct-upload wizard submit, and video-to-image navigation cleanup. |
-| Admin preview/settings | `pnpm test:admin-preview` | Versioned exact-context preview render path, production Reviews renderer, production PDP/listing Badge injectors, complete-map cross-widget icon/color dependencies, Badge alignment/value/count/size controls, no preview API calls, reset-to-top scroll behavior, nested-iframe wheel recovery after a modal pointer-lock cycle, and static `widgetDefs.ts` option/showWhen alignment with widget registries. |
-| Admin dashboard browser | `pnpm test:admin-dashboard` | Builds and starts the production Next.js application with scrubbed synthetic CI configuration, embeds `/dashboard` under a separate-origin parent that implements the installed `@ikas/app-helpers` message contract, and mocks only the declared local API matrix. It proves one cold token request, cache reuse, one loader-close message, fail-closed missing/direct auth, duplicate-free initial review loads, moderation/pagination behavior, lazy settings load/retry, and widget save. The dashboard editor uses a minimal versioned `/preview` protocol stub here; production preview renderers remain the responsibility of `test:admin-preview`. No real ikas token, provider, DB, or backend JWT authorization is exercised. |
+| Admin preview/settings | `pnpm test:admin-preview` | Versioned exact-context preview render path, production Reviews renderer, production PDP/listing Badge injectors, complete-map cross-widget icon/color dependencies, Badge alignment/value/count/size controls, no preview API calls, reset-to-top scroll behavior, nested-iframe wheel recovery after a modal pointer-lock cycle, and static `catalog.ts` option/showWhen alignment with widget registries. |
+| Admin dashboard browser | `pnpm test:admin-dashboard` | Builds and starts the production Next.js application with scrubbed synthetic CI configuration, embeds `/dashboard` under a separate-origin parent that implements the installed `@ikas/app-helpers` message contract, and mocks only the declared local API matrix. It proves one cold token request, cache reuse, one loader-close message, fail-closed missing/direct auth, one list + one summary cold start, no summary refresh for pagination/replies/failed mutations, one refresh after successful `200`/`202` moderation and deletion, stale-summary ordering, preservation after latest-summary failure, lazy settings load/retry, available Reviews/Badge editors, planned `Yakında` cards without editor controls, and widget save. The dashboard editor uses a minimal versioned `/preview` protocol stub here; production preview renderers remain the responsibility of `test:admin-preview`. No real ikas token, provider, DB, or backend JWT authorization is exercised. |
 | Prisma multi-file schema | `pnpm prisma:validate`, `pnpm prisma:generate`, `pnpm test:prisma-schema` | Resolves `./prisma` explicitly, refuses model-free generation, restricts schema files to the root entrypoint plus `prisma/models/**`, rejects duplicate model declarations, and requires the discovered model set to equal generated `Prisma.ModelName`. CI runs format a second time and requires a clean Prisma diff. |
 | Migration-free application build | `pnpm build:ci` | Uses synthetic CI values for the application build, generates Prisma, deterministically rebuilds and verifies widget artifacts, then runs `next build --webpack`. Widget regeneration reuses the committed manifest timestamp and the committed public widget origins so exact generated files can be compared; it performs no network call and skips time-based retention pruning. The command never runs migrations, live installation checks, provider calls, or Sentry source-map upload. The Vercel-only `pnpm build` contract remains separate because it applies migrations and checks live installation state. |
 | Ikas generated-client drift | `pnpm codegen:check` | Regenerates both official Ikas schema clients and enum globals from the public v1/v2 schema endpoints, then requires the exact generated files to remain clean. Provider unavailability or schema drift fails this independent contract job instead of weakening the application build. |
@@ -360,6 +362,14 @@ Unit tests also pin widget icon registry invariants: all shipped review, filter,
 Unit tests also pin admin widget editor draft synchronization: late asynchronous saved settings hydrate the editor draft only while the merchant has not made local edits, equivalent setting objects compare without key-order false dirty states, and switching widgets still resets the draft.
 
 Unit tests also pin admin widget settings load state: settings begin `idle`, start/retry moves to `loading`, valid response data moves to `loaded`, failed or malformed responses move to `error`, and `WidgetEditor` is allowed to mount only in the `loaded` state. The production-mode admin dashboard suite proves that settings are not requested on the Reviews tab, load once on first Widgetlar entry, remain cached across normal tab changes, and retry only after the explicit retry action. `test:admin-preview` remains a separate production-renderer contract.
+
+Admin review-summary route tests pin one tenant-scoped `groupBy`, exact known
+status buckets, unknown-status contribution to `total` only, fixed error codes,
+and private no-store responses. Widget catalog/settings tests pin the six
+release/configuration states, exact icon-metadata parity with storefront
+registries, a server dependency graph without component/runtime imports,
+plain-object error precedence, no write-side effects for unknown/planned IDs,
+and query plus response guards that exclude legacy planned/unknown rows.
 
 Unit tests also pin admin iframe preview load state: every implemented iframe
 preview moves through `loading`, `slow`, `ready`, `error`, and retry states by

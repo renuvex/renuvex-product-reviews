@@ -203,7 +203,7 @@ src/widget/
 
 ### Layout-aware settings (important)
 - `summary-layouts/index.js` and `review-layouts/index.js` each export a registry where every layout declares support metadata such as `supports: { title: true, thumbnailSize: false, ... }`.
-- Admin settings panel ([widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts)) uses `showWhen: { layoutKey: 'summaryLayout', supports: 'title' }` to read those flags.
+- Admin settings panel ([catalog.ts](src/lib/widgets/catalog.ts)) uses `showWhen: { layoutKey: 'summaryLayout', supports: 'title' }` to read those flags.
 - ⚠️ When you add a new layout, declare `supports` keys for everything any setting could check. Otherwise admin shows fields that have no effect.
 
 ### Theme variant

@@ -98,6 +98,24 @@ describe('GET /api/admin/settings', () => {
       effective: false,
       reason: 'quota_exceeded',
     });
+    expect(prismaMock.widgetSettings.findMany).toHaveBeenCalledWith({
+      where: { storeId: 'store-1', widgetId: { in: ['reviews', 'badge'] } },
+    });
+  });
+
+  it('omits planned and unknown rows even if storage returns them', async () => {
+    prismaMock.widgetSettings.findMany.mockResolvedValueOnce([
+      { widgetId: 'reviews', settings: { enabled: true } },
+      { widgetId: 'carousel', settings: { injected: true } },
+      { widgetId: 'unknown', settings: { injected: true } },
+    ]);
+
+    const response = await GET(new Request('https://app.test/api/admin/settings'));
+    const body = await response.json();
+
+    expect(body.data.reviews.enabled).toBe(true);
+    expect(body.data).not.toHaveProperty('carousel');
+    expect(body.data).not.toHaveProperty('unknown');
   });
 });
 
@@ -140,5 +158,89 @@ describe('PUT /api/admin/settings', () => {
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toEqual({ error: 'unauthorized' });
     expect(prismaMock.widgetSettings.upsert).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['malformed JSON', '{'],
+    ['null body', 'null'],
+    ['array body', '[]'],
+    ['scalar body', '42'],
+  ])('rejects %s before starting persistence', async (_label, body) => {
+    const response = await PUT(new Request('https://app.test/api/admin/settings', {
+      method: 'PUT',
+      body,
+    }));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: 'invalid_request_body' });
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    expect(afterMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unknown widget before persistence', async () => {
+    const response = await PUT(new Request('https://app.test/api/admin/settings', {
+      method: 'PUT',
+      body: JSON.stringify({ widgetId: 'unknown', settings: {} }),
+    }));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: 'invalid_widget_id' });
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    expect(afterMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['missing', {}],
+    ['null', { widgetId: null, settings: {} }],
+    ['array', { widgetId: [], settings: {} }],
+    ['empty', { widgetId: '', settings: {} }],
+  ])('rejects a %s widget ID before persistence', async (_label, body) => {
+    const response = await PUT(new Request('https://app.test/api/admin/settings', {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: 'invalid_widget_id' });
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    expect(afterMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects a planned widget before settings shape and side effects', async () => {
+    const response = await PUT(new Request('https://app.test/api/admin/settings', {
+      method: 'PUT',
+      body: JSON.stringify({ widgetId: 'carousel', settings: null }),
+    }));
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({ error: 'widget_not_available' });
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    expect(lifecycleMock.requireFence).not.toHaveBeenCalled();
+    expect(prismaMock.widgetSettings.upsert).not.toHaveBeenCalled();
+    expect(afterMock).not.toHaveBeenCalled();
+  });
+
+  it.each([null, [], 'settings', 1])('rejects non-object settings %j', async (settings) => {
+    const response = await PUT(new Request('https://app.test/api/admin/settings', {
+      method: 'PUT',
+      body: JSON.stringify({ widgetId: 'reviews', settings }),
+    }));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: 'invalid_widget_settings' });
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    expect(afterMock).not.toHaveBeenCalled();
+  });
+
+  it('returns a fixed validation error for invalid configurable settings', async () => {
+    const response = await PUT(new Request('https://app.test/api/admin/settings', {
+      method: 'PUT',
+      body: JSON.stringify({ widgetId: 'reviews', settings: { enabled: 'yes' } }),
+    }));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: 'invalid_widget_settings' });
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    expect(afterMock).not.toHaveBeenCalled();
   });
 });

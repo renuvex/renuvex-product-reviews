@@ -18,6 +18,8 @@ related:
 source_files:
   - "src/app/dashboard/page.tsx"
   - "src/components/home-page/index.tsx"
+  - "src/lib/admin-review-summary.ts"
+  - "src/lib/widgets/catalog.ts"
   - "src/components/home-page/widgets/editor/WidgetSettingsLoadState.ts"
   - "src/helpers/token-helpers.ts"
   - "playwright.admin-dashboard.config.ts"
@@ -72,6 +74,15 @@ The Reviews view loads review data after auth; widget settings remain idle
 until the merchant first opens Widgetlar, and a failed load retries only
 through the explicit retry action.
 
+Review list pagination and moderation counts are separate contracts. The first
+Reviews load requests one paginated list and one `/api/admin/reviews/summary`;
+status/page/page-size changes request only the list. The summary response is the
+only source for tab counters. Successful moderation (including accepted `202`
+video processing) and deletion refresh both list and summary, while replies and
+failed mutations do not refresh counts. A monotonically increasing request
+sequence prevents an older summary response from overwriting a newer result;
+the latest failure preserves the last verified counters.
+
 Pattern: `AppBridgeHelper.closeLoader() → TokenHelpers → ApiRequests → backend route → ikas client`.
 
 ### Frontend → backend bridge
@@ -91,18 +102,26 @@ src/components/
 │  └─ widgets/
 │     ├─ index.tsx                # Widgets tab grid
 │     ├─ WidgetCard.tsx           # Per-widget card → opens editor
-│     ├─ widgetDefs.ts            # 🟡 SCHEMA SOURCE OF TRUTH
 │     ├─ editor/
 │     │  ├─ WidgetEditor.tsx      # Settings panel + iframe preview side-by-side
-│     │  ├─ SettingsPanel.tsx     # Renders fields from widgetDefs
+│     │  ├─ SettingsPanel.tsx     # Renders fields from the pure widget catalog
 │     │  ├─ IconSelect.tsx        # SVG grid icon picker
 │     │  └─ VisualSelectGrid.tsx  # Visual choice cards for layout select fields
 │     ├─ previews/                # Small schema-choice illustrations, not live widget renderers
-│     └─ editor/WidgetEditor.tsx  # Shared iframe shell for implemented live previews
 └─ ui/                            # shadcn/ui primitives (button, card, dialog, input, label,
                                   # select, slider, sonner, table, tabs, textarea, accordion,
                                   # badge, dropdown-menu)
+
+src/lib/widgets/
+└─ catalog.ts                     # Release/configuration metadata and settings schema; no React/DOM/runtime imports
 ```
+
+The catalog separates product release state from merchant settings. Reviews
+and Badge are `available + settings`; Carousel, Popup, Q&A, and Summary are
+`planned + none`. Planned cards remain visible as `Yakında` but expose neither
+an enabled state nor an editor action. This is a capability guard, not a plan
+or entitlement system, and it does not promise activation for future
+zero-configuration widgets.
 
 ### Live preview pattern (settings)
 1. `WidgetEditor` selects a registered widget scene and mounts
@@ -121,6 +140,16 @@ src/components/
 The output renderer and widget CSS are production code. The surrounding
 fixture page and data are intentionally deterministic preview inputs, not a
 claim that every merchant theme will be pixel-identical.
+
+### Verified request reduction
+For the review data path, cold start changed from four count requests plus one
+list request to one summary plus one list (`5 -> 2`). Including merchant and
+theme bootstrap, the current dashboard fixture changes from `7 -> 4` API
+requests. Inside the review data routes this changes the Prisma list/count work
+from ten operations to one list query, one pagination count, and one summary
+`groupBy` (`10 -> 3`). Authentication/installation/token lookups are excluded
+from that DB number. These are request/query-shape measurements, not production
+latency, execution-plan, or tenant-capacity claims.
 
 ## Storefront Widget (overview, links to dedicated map)
 

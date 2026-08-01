@@ -113,6 +113,7 @@ export function ReviewsTab({
             <div className="flex items-center gap-2">
               <span style={{ fontSize: typography.fontSize.base, color: colors.textSecondary }}>Satır Adedi:</span>
               <select
+                aria-label="Satır adedi"
                 value={pageSize}
                 onChange={(e) => onPageSizeChange(Number(e.target.value))}
                 style={{ ...componentStyles.select, height: '28px', width: '72px', cursor: 'pointer' }}

@@ -18,7 +18,7 @@ related:
   - "[[Widget_Customization]]"
   - "[[ADR_0002_Widget_Injection_Strategy]]"
 source_files:
-  - "src/components/home-page/widgets/widgetDefs.ts"
+  - "src/lib/widgets/catalog.ts"
   - "src/widget/rating-badge/inject.js"
   - "src/widget/reviews-section/render.js"
   - "src/widget/core/badge.js"
@@ -123,7 +123,7 @@ fields stay exactly where merchants already set them.
   `--renuvex-pr-badge-color` variable and `badge.color` field are removed.
 - Cold listing-page entry shows the correct brand-color stars without a prior PDP
   visit (the listing path sets its own star color variables).
-- `badge.icon` / `badge.color` are removed from `widgetDefs.ts`. `WidgetSettings.
+- `badge.icon` / `badge.color` are removed from `catalog.ts`. `WidgetSettings.
   settings` is a JSON column, so no Prisma migration is needed; `sanitizeSettings`
   strips the now-unknown keys from old rows on read. No data migration required —
   the canonical `reviewIcon` / `reviewStarColor` values are untouched.
@@ -150,7 +150,7 @@ fields stay exactly where merchants already set them.
   untouched.
 
 ## Related Source Files
-- [src/components/home-page/widgets/widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts)
+- [src/lib/widgets/catalog.ts](src/lib/widgets/catalog.ts)
 - [src/widget/rating-badge/inject.js](src/widget/rating-badge/inject.js)
 - [src/widget/reviews-section/render.js](src/widget/reviews-section/render.js)
 - [src/widget/core/badge.js](src/widget/core/badge.js)

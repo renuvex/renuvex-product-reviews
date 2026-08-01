@@ -152,7 +152,7 @@ export function applyManualTheme(root, settings) {
   // Grup 13 — Sayfalama (numbered). Pasif butonlar (bg/numara/kenarlık) + aktif sayfanın
   // BAĞIMSIZ renkleri (aktif bg + aktif numara). Numara Rengi yalnız pasif numaraları,
   // Aktif Numara Rengi yalnız aktif sayfayı etkiler — otomatik türetme yok.
-  // Fallback'ler widgetDefs default'larıyla eşit olmalı.
+  // Fallback'ler saf katalog default'larıyla eşit olmalı.
   var paginationBg = settings.paginationBgColor || '#ffffff';
   var paginationText = settings.paginationTextColor || '#111111';
   var paginationBorder = settings.paginationBorderColor || '#e5e7eb';

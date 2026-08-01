@@ -48,7 +48,7 @@ After removing the override and rebuilding the widget runtime, both cases passed
 
 ## Root Cause
 - [src/widget/reviews-section/render.js](src/widget/reviews-section/render.js) read `THUMBNAIL_PRESETS[settings.thumbnailSize]`, then for list/gallery layouts overwrote `thumbPx` with the layout item-photo width from `meta.sizeOverrides`.
-- [src/components/home-page/widgets/widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts) exposes the field as "Fotoğraf Galeri Boyutu", so the runtime behavior contradicted the visible admin contract.
+- [src/lib/widgets/catalog.ts](src/lib/widgets/catalog.ts) exposes the field as "Fotoğraf Galeri Boyutu", so the runtime behavior contradicted the visible admin contract.
 
 ## Fix
 - [src/widget/reviews-section/render.js](src/widget/reviews-section/render.js) now leaves `--renuvex-pr-thumbnail-size` tied to `thumbnailSize`.

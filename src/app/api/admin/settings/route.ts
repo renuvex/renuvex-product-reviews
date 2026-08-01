@@ -6,7 +6,13 @@ import {
   ikasAdminAuthorizationLostResponse,
   ikasAdminAuthenticationResponse,
 } from '@/lib/auth-helpers';
-import { getWidgetDefaults, sanitizeSettings, validateSettings } from '@/lib/widget-settings';
+import {
+  getWidgetDefaults,
+  isPlainJsonObject,
+  sanitizeSettings,
+  validateSettings,
+} from '@/lib/widget-settings';
+import { CONFIGURABLE_WIDGET_IDS, resolveConfigurableWidget } from '@/lib/widgets/catalog';
 import { syncStorefrontThemeForToken } from '@/lib/storefront-theme-sync';
 import { getVideoFeatureAccess } from '@/lib/media/access';
 import {
@@ -27,7 +33,10 @@ export async function GET(request: Request) {
 
     const [rows, videoAccess] = await Promise.all([
       prisma.widgetSettings.findMany({
-        where: { storeId: user.merchantId },
+        where: {
+          storeId: user.merchantId,
+          widgetId: { in: CONFIGURABLE_WIDGET_IDS },
+        },
       }),
       getVideoFeatureAccess(user.merchantId),
     ]);
@@ -35,8 +44,11 @@ export async function GET(request: Request) {
     // { reviews: { enabled: true, ... }, badge: { ... } } — defaults ile merge edilmiş
     const data: Record<string, unknown> = {};
     for (const row of rows) {
-      const savedSettings = sanitizeSettings(row.widgetId, row.settings as Record<string, unknown>);
-      data[row.widgetId] = { ...getWidgetDefaults(row.widgetId), ...savedSettings };
+      const resolution = resolveConfigurableWidget(row.widgetId);
+      if (!resolution.ok) continue;
+      const storedSettings = isPlainJsonObject(row.settings) ? row.settings : {};
+      const savedSettings = sanitizeSettings(resolution.widget, storedSettings);
+      data[row.widgetId] = { ...getWidgetDefaults(resolution.widget), ...savedSettings };
     }
 
     return NextResponse.json({
@@ -70,21 +82,36 @@ export async function PUT(request: Request) {
     if (!auth.ok) return ikasAdminAuthenticationResponse(auth);
     const { principal: user, authToken } = auth.context;
 
-    const body = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'invalid_request_body' }, { status: 400 });
+    }
+
+    if (!isPlainJsonObject(body)) {
+      return NextResponse.json({ error: 'invalid_request_body' }, { status: 400 });
+    }
+
     const { widgetId, settings } = body;
-
-    if (!widgetId || typeof widgetId !== 'string') {
-      return NextResponse.json({ error: 'widgetId gerekli' }, { status: 400 });
+    if (typeof widgetId !== 'string' || widgetId.length === 0) {
+      return NextResponse.json({ error: 'invalid_widget_id' }, { status: 400 });
     }
 
-    if (!settings || typeof settings !== 'object') {
-      return NextResponse.json({ error: 'settings gerekli' }, { status: 400 });
+    const resolution = resolveConfigurableWidget(widgetId);
+    if (!resolution.ok) {
+      const status = resolution.reason === 'invalid_widget_id' ? 400 : 409;
+      return NextResponse.json({ error: resolution.reason }, { status });
     }
 
-    const cleanSettings = sanitizeSettings(widgetId, settings as Record<string, unknown>);
-    const validationError = validateSettings(widgetId, cleanSettings);
+    if (!isPlainJsonObject(settings)) {
+      return NextResponse.json({ error: 'invalid_widget_settings' }, { status: 400 });
+    }
+
+    const cleanSettings = sanitizeSettings(resolution.widget, settings);
+    const validationError = validateSettings(resolution.widget, cleanSettings);
     if (validationError) {
-      return NextResponse.json({ error: validationError }, { status: 400 });
+      return NextResponse.json({ error: 'invalid_widget_settings' }, { status: 400 });
     }
 
     const jsonSettings = cleanSettings as Prisma.InputJsonObject;
