@@ -14,13 +14,13 @@ related:
   - "[[Test_Strategy]]"
   - "[[Frontend_Map]]"
 source_files:
-  - "src/components/home-page/index.tsx"
-  - "src/components/home-page/widgets/index.tsx"
-  - "src/components/home-page/widgets/editor/WidgetEditor.tsx"
-  - "src/components/home-page/widgets/editor/WidgetEditorState.ts"
-  - "src/components/home-page/widgets/editor/WidgetSettingsLoadState.ts"
-  - "src/components/home-page/widgets/editor/EditorSettingsError.tsx"
-  - "src/components/home-page/widgets/editor/SettingsPanel.tsx"
+  - "src/features/widget-management/WidgetSettingsProvider.tsx"
+  - "src/features/widget-management/WidgetCatalogScreen.tsx"
+  - "src/features/widget-management/components/editor/WidgetEditor.tsx"
+  - "src/features/widget-management/components/editor/WidgetEditorState.ts"
+  - "src/features/widget-management/WidgetSettingsLoadState.ts"
+  - "src/features/widget-management/components/editor/EditorSettingsError.tsx"
+  - "src/features/widget-management/components/editor/SettingsPanel.tsx"
   - "tests/unit/widget-editor-state.test.ts"
   - "tests/unit/widget-settings-load-state.test.ts"
   - "tests/admin-dashboard-contract.spec.ts"
@@ -90,11 +90,12 @@ The gate now uses an explicit settings load model:
 - `error` shows `EditorSettingsError` with `Geri` and `Tekrar Dene`; the settings
   panel, preview iframe, and save button are not rendered.
 
-Settings loading is no longer coupled to the reviews list fetch. `HomePage`
-keeps the state `idle` on the Reviews tab and calls its settings-only
-`loadSettings()` path when Widgetlar is first opened. Loaded settings remain
-cached across normal tab changes. Retrying the error state calls that same
-settings-only loader only after the explicit `Tekrar Dene` action.
+Settings loading is no longer coupled to the reviews list fetch. The provider
+exists only under the Widgets route group, starts `idle`, and loads when the
+catalog or a valid editor asks for settings. Loaded settings remain cached while
+moving between catalog and editor routes. Leaving Widgets unmounts the provider;
+returning later performs one new authoritative GET. Retrying the error state
+calls the same settings-only loader only after the explicit `Tekrar Dene` action.
 
 `WidgetSettingsLoadState.ts` owns the pure status reducer and editor-open
 decision. `tests/unit/widget-settings-load-state.test.ts` pins idle, loading,

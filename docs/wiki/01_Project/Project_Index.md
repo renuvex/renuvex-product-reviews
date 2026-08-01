@@ -73,11 +73,11 @@ related:
 - Design tokens → [src/lib/design-tokens.ts](src/lib/design-tokens.ts)
 
 ## Admin UI (React)
-- Dashboard page → [src/app/dashboard/page.tsx](src/app/dashboard/page.tsx)
-- Home component (entry) → [src/components/home-page/index.tsx](src/components/home-page/index.tsx)
-- Reviews tab → [src/components/home-page/ReviewsTab.tsx](src/components/home-page/ReviewsTab.tsx)
-- Widget editor → [src/components/home-page/widgets/editor/WidgetEditor.tsx](src/components/home-page/widgets/editor/WidgetEditor.tsx)
-- Live preview wrappers → [src/components/home-page/widgets/widget-previews/](src/components/home-page/widgets/widget-previews/)
+- Dashboard route group → [src/app/dashboard/](src/app/dashboard/)
+- Persistent admin shell → [src/features/admin-shell/AdminShell.tsx](src/features/admin-shell/AdminShell.tsx)
+- Review moderation → [src/features/review-moderation/](src/features/review-moderation/)
+- Widget management → [src/features/widget-management/](src/features/widget-management/)
+- Live preview route → [src/app/(preview)/preview/route.ts](src/app/(preview)/preview/route.ts)
 - shadcn/ui primitives → [src/components/ui/](src/components/ui/)
 
 ## ikas Admin GraphQL

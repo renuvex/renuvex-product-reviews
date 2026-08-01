@@ -1,4 +1,4 @@
-import type { WidgetSettingsMap } from '../../types';
+import type { WidgetSettingsMap } from './types';
 
 export type WidgetSettingsLoadStatus = 'idle' | 'loading' | 'loaded' | 'error';
 

@@ -37,7 +37,7 @@ source_files: []
 | Task Type | Read First | Then Read | Then Inspect |
 |---|---|---|---|
 | New session / unclear task | [[Hot_Context]], [[Current_Status]] | [[Project_Overview]], [[Open_Questions]] | Related source files from focused pages |
-| Admin UI / widget editor task | [[Frontend_Map]], [[Widget_Customization]] | [[Feature_Map]], relevant widget pages | `src/components/home-page/widgets/*` |
+| Admin UI / widget editor task | [[Frontend_Map]], [[Widget_Customization]] | [[Feature_Map]], relevant widget pages | `src/features/admin-shell/*`, `src/features/review-moderation/*`, `src/features/widget-management/*` |
 | Storefront widget task | [[Widget_Architecture]], [[Storefront_Widget_Overview]] | Relevant `08_Widgets` pages and ADRs | `src/widget/*`, `public/widget.js` |
 | Modular widget loader / Yotpo-like architecture | [[Yotpo_Style_Widget_Modular_Architecture]], [[Phase_1_Widget_Runtime_Audit]], [[Phase_2_Widget_Module_Split_Plan]] | [[Yotpo_Protein_Ocean_Widget_Research]], [[Ikas_Storefront_Script_Capabilities]], [[Widget_Performance]] | `src/widget/*`, `scripts/build-widget.mjs`, storefront smoke output |
 | API task | [[Backend_API_Map]], [[API_Design]] | [[Ikas_API_Notes]], [[Security_And_Rate_Limits]] | `src/app/api/*`, `src/lib/*` |

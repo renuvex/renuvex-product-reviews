@@ -27,7 +27,9 @@ export interface AdminDashboardNetworkLog {
   authorizationFailures: string[];
   unexpectedRequests: string[];
   previewRequests: string[];
+  nextAssetRequests: string[];
   summaryCompletions: Array<{ call: number; status: number }>;
+  merchantCompletions: number;
 }
 
 interface SetupOptions {
@@ -36,6 +38,9 @@ interface SetupOptions {
   deletionStatus?: 200 | 500;
   summaryFailureCalls?: number[];
   summaryDelaysMs?: number[];
+  merchantDelayMs?: number;
+  reviewFailureCalls?: number[];
+  settingsSaveStatus?: 200 | 500;
 }
 
 interface MockState {
@@ -45,6 +50,7 @@ interface MockState {
   settings: Record<string, Record<string, unknown>>;
   settingsFailuresRemaining: number;
   summaryCallCount: number;
+  reviewCallCount: number;
 }
 
 interface HarnessCounts {
@@ -205,7 +211,9 @@ export async function setupAdminDashboardRoutes(page: Page, options: SetupOption
     authorizationFailures: [],
     unexpectedRequests: [],
     previewRequests: [],
+    nextAssetRequests: [],
     summaryCompletions: [],
+    merchantCompletions: 0,
   };
   const state: MockState = {
     moderated: false,
@@ -213,6 +221,7 @@ export async function setupAdminDashboardRoutes(page: Page, options: SetupOption
     merchantReply: null,
     settingsFailuresRemaining: options.settingsFailures || 0,
     summaryCallCount: 0,
+    reviewCallCount: 0,
     settings: {
       reviews: { enabled: true, title: 'Müşteri Yorumları', showTitle: true, reviewStarColor: '#f59e0b' },
       badge: { enabled: true, size: 'medium', alignment: 'auto', showValue: true, showCount: true },
@@ -230,11 +239,13 @@ export async function setupAdminDashboardRoutes(page: Page, options: SetupOption
       return;
     }
 
-    if (url.origin === DASHBOARD_ORIGIN && (
-      url.pathname === '/dashboard' ||
-      url.pathname.startsWith('/_next/') ||
-      url.pathname === '/favicon.ico'
-    )) {
+    if (url.origin === DASHBOARD_ORIGIN && url.pathname.startsWith('/_next/')) {
+      log.nextAssetRequests.push(path);
+      await route.continue();
+      return;
+    }
+
+    if (url.origin === DASHBOARD_ORIGIN && (url.pathname === '/' || url.pathname.startsWith('/dashboard') || url.pathname === '/favicon.ico')) {
       await route.continue();
       return;
     }
@@ -265,6 +276,8 @@ export async function setupAdminDashboardRoutes(page: Page, options: SetupOption
       }
 
       if (url.pathname === '/api/ikas/get-merchant' && method === 'GET') {
+        if (options.merchantDelayMs) await new Promise((resolve) => setTimeout(resolve, options.merchantDelayMs));
+        log.merchantCompletions += 1;
         await json(route, { data: { merchantInfo: { storeName: 'Kanıt Mağazası' } } });
         return;
       }
@@ -275,6 +288,11 @@ export async function setupAdminDashboardRoutes(page: Page, options: SetupOption
       }
 
       if (url.pathname === '/api/admin/reviews' && method === 'GET') {
+        const call = ++state.reviewCallCount;
+        if (options.reviewFailureCalls?.includes(call)) {
+          await json(route, { error: 'review_fixture_failure' }, 500);
+          return;
+        }
         await json(route, reviewsResponse(url, state));
         return;
       }
@@ -358,6 +376,10 @@ export async function setupAdminDashboardRoutes(page: Page, options: SetupOption
 
       if (url.pathname === '/api/admin/settings' && method === 'PUT') {
         if (body && typeof body === 'object' && 'widgetId' in body && 'settings' in body && typeof body.widgetId === 'string' && body.settings && typeof body.settings === 'object') {
+          if ((options.settingsSaveStatus ?? 200) === 500) {
+            await json(route, { error: 'settings_save_fixture_failure' }, 500);
+            return;
+          }
           state.settings[body.widgetId] = body.settings as Record<string, unknown>;
           await json(route, { data: { widgetId: body.widgetId, settings: body.settings } });
           return;
@@ -378,8 +400,9 @@ export async function setupAdminDashboardRoutes(page: Page, options: SetupOption
   return log;
 }
 
-export async function openAdminHarness(page: Page, scenario: HarnessScenario = 'success'): Promise<FrameLocator> {
-  await page.goto(`${HARNESS_ORIGIN}/?scenario=${scenario}`, { waitUntil: 'domcontentloaded' });
+export async function openAdminHarness(page: Page, scenario: HarnessScenario = 'success', dashboardPath = '/dashboard'): Promise<FrameLocator> {
+  const query = new URLSearchParams({ scenario, path: dashboardPath });
+  await page.goto(`${HARNESS_ORIGIN}/?${query}`, { waitUntil: 'domcontentloaded' });
   return page.frameLocator('iframe[title="Renuvex Admin Dashboard"]');
 }
 

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { isUnapprovedVideoPreview, type MediaPreviewState } from '@/components/home-page/MediaPreviewState';
+import { isUnapprovedVideoPreview, type MediaPreviewState } from '@/features/review-moderation/MediaPreviewState';
 import { REVIEW_PLAYER_LOCALE } from '@/lib/mux-player/review-player-locale';
 
 function preview(overrides: Partial<MediaPreviewState> = {}): MediaPreviewState {
@@ -28,8 +28,8 @@ describe('admin video preview contract', () => {
   });
 
   it('keeps signed playback and safe player defaults in the admin surface', () => {
-    const source = readFileSync(path.join(process.cwd(), 'src/components/home-page/index.tsx'), 'utf8');
-    const playerSource = readFileSync(path.join(process.cwd(), 'src/components/home-page/AdminMuxPlayerPreview.tsx'), 'utf8');
+    const source = readFileSync(path.join(process.cwd(), 'src/features/review-moderation/ReviewModerationScreen.tsx'), 'utf8');
+    const playerSource = readFileSync(path.join(process.cwd(), 'src/features/review-moderation/AdminMuxPlayerPreview.tsx'), 'utf8');
     const storefrontPlayerSource = readFileSync(path.join(process.cwd(), 'src/widget/reviews-section/video-playback.js'), 'utf8');
     const themeSource = readFileSync(path.join(process.cwd(), 'src/lib/mux-player/review-player-theme.ts'), 'utf8');
     const i18nSource = readFileSync(path.join(process.cwd(), 'src/lib/mux-player/review-player-i18n.ts'), 'utf8');

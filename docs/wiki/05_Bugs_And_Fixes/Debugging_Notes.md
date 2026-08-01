@@ -100,5 +100,5 @@ Operational reference: [[Sentry_Operations]] (org `renuvex`, project `renuvex-pr
   initialization against an unhandled `/api/admin/settings` 401. The callback
   page and query handoff were removed on 2026-07-28. Current source:
   [src/helpers/token-helpers.ts](src/helpers/token-helpers.ts),
-  [src/components/home-page/index.tsx](src/components/home-page/index.tsx).
+  [src/features/admin-shell/AdminShell.tsx](src/features/admin-shell/AdminShell.tsx).
 - 2026-05-10: Added debugging checklist for the photo review detail lightbox and its current open risks. Related source: [src/widget/reviews-section/review-modal.js](src/widget/reviews-section/review-modal.js), related bug: [[Bug_Review_Detail_Lightbox_Risks]].

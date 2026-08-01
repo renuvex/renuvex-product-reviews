@@ -33,6 +33,7 @@ source_files:
   - "scripts/run-ci-build.mjs"
   - "scripts/run-ci-start.mjs"
   - "scripts/ci-environment.mjs"
+  - "scripts/verify-admin-route-bundles.mjs"
   - "scripts/wiki-audit.mjs"
   - "scripts/test-review-email-cloudformation-contract.mjs"
   - "scripts/check-widget-runtime.mjs"
@@ -49,6 +50,7 @@ source_files:
   - "tests/admin-dashboard-contract.spec.ts"
   - "tests/admin-dashboard-harness.ts"
   - "tests/admin-dashboard-harness-server.mjs"
+  - "tests/unit/admin-route-boundaries.test.ts"
   - "tests/unit/admin-review-summary-route.test.ts"
   - "tests/unit/widget-catalog.test.ts"
   - "tests/unit/ci-environment.test.ts"
@@ -129,10 +131,10 @@ source_files:
   - "src/widget/reviews-section/review-form-modal/index.js"
   - "src/widget/listing-badges/fallback-candidates.js"
   - "src/lib/widgets/catalog.ts"
-  - "src/components/home-page/widgets/editor/WidgetEditor.tsx"
-  - "src/components/home-page/widgets/editor/WidgetEditorState.ts"
-  - "src/components/home-page/widgets/editor/WidgetSettingsLoadState.ts"
-  - "src/components/home-page/widgets/editor/WidgetPreviewLoadState.ts"
+  - "src/features/widget-management/components/editor/WidgetEditor.tsx"
+  - "src/features/widget-management/components/editor/WidgetEditorState.ts"
+  - "src/features/widget-management/WidgetSettingsLoadState.ts"
+  - "src/features/widget-management/components/editor/WidgetPreviewLoadState.ts"
   - "src/app/api/public/settings/route.ts"
   - "src/app/api/public/reviews/route.ts"
   - "src/app/api/public/ratings/route.ts"
@@ -361,7 +363,29 @@ Unit tests also pin widget icon registry invariants: all shipped review, filter,
 
 Unit tests also pin admin widget editor draft synchronization: late asynchronous saved settings hydrate the editor draft only while the merchant has not made local edits, equivalent setting objects compare without key-order false dirty states, and switching widgets still resets the draft.
 
-Unit tests also pin admin widget settings load state: settings begin `idle`, start/retry moves to `loading`, valid response data moves to `loaded`, failed or malformed responses move to `error`, and `WidgetEditor` is allowed to mount only in the `loaded` state. The production-mode admin dashboard suite proves that settings are not requested on the Reviews tab, load once on first Widgetlar entry, remain cached across normal tab changes, and retry only after the explicit retry action. `test:admin-preview` remains a separate production-renderer contract.
+Unit tests also pin admin widget settings load state: settings begin `idle`, start/retry moves to `loading`, valid response data moves to `loaded`, failed or malformed responses move to `error`, and `WidgetEditor` is allowed to mount only in the `loaded` state. The production-mode admin dashboard suite proves that settings are not requested on the Reviews route, load once inside the Widgets route group, remain cached between catalog/editor routes, and retry only after the explicit retry action. Leaving Widgets for Reviews unmounts that provider, so the next Widgets entry performs one new authoritative GET. `test:admin-preview` remains a separate production-renderer contract.
+
+The admin route-isolation contract has three complementary gates. The esbuild
+metafile test rejects shell-to-feature, review-to-widget, and catalog-to-editor
+or storefront-runtime imports. `verify:admin-route-bundles` fail-closes on an
+unknown Next manifest shape, requires distinct Reviews/catalog/editor owner-
+module chunk sets, and reports their raw/gzip evidence without a brittle byte
+limit. It does not label those sets as complete route initial JavaScript. The
+production-mode cross-origin browser suite starts the canonical `/` iframe entry
+and proves one AppBridge loader/token owner plus fresh-context request isolation:
+Reviews and catalog do not fetch the editor route chunk or `/preview`, while
+each configurable editor deep link loads settings, its editor route, and preview.
+Planned and unknown deep links run in separate browser contexts and start no
+feature work. The suite uses Playwright request interception, which disables
+HTTP cache, so it does not claim second-open browser-cache reuse. It also pins
+feature-local API retry states, dirty modal navigation, native `beforeunload`,
+and the absence of custom history manipulation.
+
+`pnpm test:admin-dashboard` is the canonical sequence: one `build:ci`, the
+route-bundle verifier, then `test:admin-dashboard:built`. CI reuses that build
+and does not compile the application a second time. The test proves client
+shell/AppBridge/UI/network contracts; backend JWT and installation fencing stay
+in unit/integration and post-deploy acceptance tests.
 
 Admin review-summary route tests pin one tenant-scoped `groupBy`, exact known
 status buckets, unknown-status contribution to `total` only, fixed error codes,

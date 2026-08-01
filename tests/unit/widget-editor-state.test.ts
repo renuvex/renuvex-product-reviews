@@ -6,7 +6,7 @@ import {
   sameSettingsDraft,
   shouldSyncDraftFromSaved,
   type WidgetSettingsDraft,
-} from '../../src/components/home-page/widgets/editor/WidgetEditorState';
+} from '../../src/features/widget-management/components/editor/WidgetEditorState';
 
 const reviewsResolution = resolveConfigurableWidget('reviews');
 const badgeResolution = resolveConfigurableWidget('badge');

@@ -4,7 +4,7 @@ import {
   canOpenWidgetEditor,
   reduceWidgetSettingsLoadState,
   type WidgetSettingsLoadState,
-} from '../../src/components/home-page/widgets/editor/WidgetSettingsLoadState';
+} from '../../src/features/widget-management/WidgetSettingsLoadState';
 
 describe('Widget settings load state', () => {
   it('starts idle with no settings', () => {

@@ -57,7 +57,7 @@ source_files:
 | Reviews list / pagination / status filter | ✅ | [src/app/api/admin/reviews/route.ts](src/app/api/admin/reviews/route.ts) |
 | Update status / merchant reply | ✅ | same file (PUT) |
 | Delete review | ✅ | same file (DELETE) |
-| Admin UI (table, dialog, tabs) | ✅ | [src/components/home-page/](src/components/home-page/) |
+| Admin UI (persistent shell, review moderation, widget routes) | ✅ | [src/features/](src/features/) |
 | Widget settings GET/PUT | ✅ | [src/app/api/admin/settings/route.ts](src/app/api/admin/settings/route.ts) |
 | Inject scripts (re-inject button) | ✅ | [src/app/api/admin/inject-scripts/route.ts](src/app/api/admin/inject-scripts/route.ts) |
 | Image cleanup cron | ✅ | [src/app/api/admin/daily-maintenance/route.ts](src/app/api/admin/daily-maintenance/route.ts), [src/app/api/admin/cleanup-images/route.ts](src/app/api/admin/cleanup-images/route.ts), [vercel.json](vercel.json) |

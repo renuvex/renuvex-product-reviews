@@ -1,5 +1,6 @@
 import React from 'react';
 import { Settings2 } from 'lucide-react';
+import Link from 'next/link';
 import { colors, componentStyles, radii, shadows, typography } from '@/lib/design-tokens';
 import type { WidgetDefinition } from '@/lib/widgets/catalog';
 
@@ -7,10 +8,10 @@ interface WidgetCardProps {
   widget: WidgetDefinition;
   enabled?: boolean;
   preview: React.ReactNode;
-  onCustomize?: () => void;
+  customizeHref?: string;
 }
 
-export function WidgetCard({ widget, enabled, preview, onCustomize }: WidgetCardProps) {
+export function WidgetCard({ widget, enabled, preview, customizeHref }: WidgetCardProps) {
   return (
     <div style={{
       backgroundColor: colors.bgWhite,
@@ -84,15 +85,16 @@ export function WidgetCard({ widget, enabled, preview, onCustomize }: WidgetCard
         </div>
 
         {/* Butonlar */}
-        {onCustomize ? (
+        {customizeHref ? (
           <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-            <button
+            <Link
+              href={customizeHref}
+              prefetch={false}
               style={{ ...componentStyles.btnSm, display: 'flex', alignItems: 'center', gap: 6 }}
-              onClick={onCustomize}
             >
               <Settings2 size={14} />
               Özelleştir
-            </button>
+            </Link>
           </div>
         ) : null}
       </div>

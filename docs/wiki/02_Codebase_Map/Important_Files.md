@@ -38,17 +38,22 @@ code overrides stale prose.
 
 ## Admin widget editor
 
-### [src/components/home-page/widgets/editor/SettingsPanel.tsx](src/components/home-page/widgets/editor/SettingsPanel.tsx)
+### [src/features/admin-shell/AdminShell.tsx](src/features/admin-shell/AdminShell.tsx)
+- **What:** Persistent dashboard layout boundary for AppBridge authentication, feature-neutral navigation, merchant identity display, and best-effort theme synchronization.
+- **Why it matters:** Review and widget routes cannot mount or call authenticated APIs before a real AppBridge JWT exists. The shell starts merchant and theme work independently after auth instead of blocking route data.
+- **Be careful:** The shell must not import review moderation, widget management, the widget catalog, or `src/widget/**`. Dirty-navigation support stays behind the generic blocker interface in `AdminShellContext.tsx`.
+
+### [src/features/widget-management/components/editor/SettingsPanel.tsx](src/features/widget-management/components/editor/SettingsPanel.tsx)
 - **What:** Schema-driven admin settings renderer. Converts every `SettingField` from [catalog.ts](src/lib/widgets/catalog.ts) into the correct control.
 - **Why it matters:** It is the bridge between schema metadata and merchant-facing customization UX.
 - **Be careful:** Keep stored setting values stable. UI-only rendering changes, such as visual select cards, should not rename setting keys or option values.
 
-### [src/components/home-page/widgets/editor/VisualSelectGrid.tsx](src/components/home-page/widgets/editor/VisualSelectGrid.tsx)
+### [src/features/widget-management/components/editor/VisualSelectGrid.tsx](src/features/widget-management/components/editor/VisualSelectGrid.tsx)
 - **What:** Admin-only visual choice card renderer for `select` options that declare `preview` metadata.
 - **Why it matters:** Lets layout choices show mini visual sketches while preserving simple string values in `WidgetSettings`.
 - **Be careful:** Do not move storefront rendering logic here. These previews are explanatory admin sketches, not production widget components.
 
-### [src/components/home-page/widgets/editor/ColorPickerField.tsx](src/components/home-page/widgets/editor/ColorPickerField.tsx)
+### [src/features/widget-management/components/editor/ColorPickerField.tsx](src/features/widget-management/components/editor/ColorPickerField.tsx)
 - **What:** Shared admin color picker used by schema-driven widget color fields and local-only preview controls.
 - **Why it matters:** Keeps color picker UX consistent across the settings panel and preview toolbar. Admin edits emit opaque `#rrggbb` values, while backend/runtime still tolerate alpha defaults and legacy saved `#rrggbbaa` values.
 - **Be careful:** Preview-only controls can use this component without writing to `WidgetSettings`; keep DB persistence decisions in the caller. Do not re-enable user-facing alpha unless the UX for transparent defaults is redesigned.
@@ -235,4 +240,4 @@ code overrides stale prose.
 - 2026-05-11: Added [src/widget/core/error-reporter.js](src/widget/core/error-reporter.js) and [src/app/api/public/widget-error/route.ts](src/app/api/public/widget-error/route.ts) under Observability. Together they close the widget-side visibility gap from ADR_0009 by forwarding uncaught widget errors to Sentry via a 637-byte (gzip) in-widget reporter and a rate-limited server endpoint. See [[ADR_0010_Widget_Error_Forwarding]].
 - 2026-05-11: Added the Observability (Sentry) section: [sentry.server.config.ts](sentry.server.config.ts), [sentry.edge.config.ts](sentry.edge.config.ts), [src/instrumentation.ts](src/instrumentation.ts), [src/instrumentation-client.ts](src/instrumentation-client.ts), [src/app/global-error.tsx](src/app/global-error.tsx), and the `withSentryConfig` wrapping in [next.config.js](next.config.js). Each entry calls out the `sendDefaultPii: false` invariant, env-driven DSN, prod sample rates, and the wizard-wrapper ordering rule. See [[ADR_0009_Sentry_Observability_Strategy]].
 - 2026-05-10: Added [src/lib/review-images.ts](src/lib/review-images.ts) as the source of truth for trusted review image URL validation.
-- 2026-05-08: Added [SettingsPanel.tsx](src/components/home-page/widgets/editor/SettingsPanel.tsx) and [VisualSelectGrid.tsx](src/components/home-page/widgets/editor/VisualSelectGrid.tsx) to the admin widget editor hot-list after introducing schema-driven visual choice cards.
+- 2026-05-08: Added [SettingsPanel.tsx](src/features/widget-management/components/editor/SettingsPanel.tsx) and [VisualSelectGrid.tsx](src/features/widget-management/components/editor/VisualSelectGrid.tsx) to the admin widget editor hot-list after introducing schema-driven visual choice cards.

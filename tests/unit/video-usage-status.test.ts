@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildVideoUsageStatus } from '@/components/home-page/widgets/editor/VideoUsageStatus';
+import { buildVideoUsageStatus } from '@/features/widget-management/components/editor/VideoUsageStatus';
 
 const base = {
   monthlyLimit: 5,

@@ -17,7 +17,7 @@ import { IconSelect } from './IconSelect';
 import { ColorPickerField } from './ColorPickerField';
 import { InfoTooltip } from './InfoTooltip';
 import { VisualSelectGrid, hasVisualSelectPreview } from './VisualSelectGrid';
-import type { WidgetSettingsMeta } from './WidgetSettingsLoadState';
+import type { WidgetSettingsMeta } from '../../WidgetSettingsLoadState';
 import { buildVideoUsageStatus, type VideoUsageStatusTone } from './VideoUsageStatus';
 // Layout registry'leri — meta.supports okumak için.
 // Bkz: src/widget/{summary,review}-layouts/index.js (supports sözleşmesi).
