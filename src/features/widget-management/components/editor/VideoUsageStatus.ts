@@ -1,4 +1,4 @@
-import type { WidgetVideoUsageMeta } from './WidgetSettingsLoadState';
+import type { WidgetVideoUsageMeta } from '../../WidgetSettingsLoadState';
 
 export type VideoUsageStatusTone = 'neutral' | 'success' | 'warning';
 

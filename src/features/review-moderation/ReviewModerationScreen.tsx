@@ -1,85 +1,68 @@
+'use client';
+
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { AlertCircle, CheckCircle2, LoaderCircle, MessageSquare, Settings, X } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AlertCircle, LoaderCircle, RefreshCw, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { colors, componentStyles, typography } from '@/lib/design-tokens';
-import { TokenHelpers } from '@/helpers/token-helpers';
 import { isAdminReviewSummary } from '@/lib/admin-review-summary';
-import { Review, ReviewMedia, WidgetSettingsMap, TabKey } from './types';
+import { useAdminShell } from '@/features/admin-shell/AdminShellContext';
+import { Review, ReviewMedia, TabKey } from './types';
 import { AdminMuxPlayerPreview } from './AdminMuxPlayerPreview';
 import { isUnapprovedVideoPreview, type MediaPreviewState } from './MediaPreviewState';
 import { ReplyDialog } from './ReplyDialog';
 import { ReviewsTab } from './ReviewsTab';
-import { WidgetsContainer } from './widgets';
-import {
-  INITIAL_WIDGET_SETTINGS_LOAD_STATE,
-  reduceWidgetSettingsLoadState,
-  type WidgetSettingsLoadState,
-} from './widgets/editor/WidgetSettingsLoadState';
 
-// Her admin API çağrısından önce taze JWT token al — uzun açık kalan
-// sayfada eski token expire olduğunda 401 alıp "kaydedilemedi" hatası
-// vermesini önler. TokenHelpers cache'li, expired token'ı atıp AppBridge'den
-// yenisini çeker.
-async function freshAuthHeader(fallbackToken: string): Promise<{ Authorization: string }> {
-  const fresh = await TokenHelpers.getTokenForIframeApp();
-  return { Authorization: `JWT ${fresh || fallbackToken}` };
-}
-
-interface HomePageProps {
-  token: string;
-  storeName?: string;
-}
-
-type MainTab = 'reviews' | 'widgets';
-
-export default function HomePage({ token, storeName }: HomePageProps) {
-  const [mainTab, setMainTab] = useState<MainTab>('reviews');
+export function ReviewModerationScreen() {
+  const { getAuthHeader, handleApiAuthenticationFailure } = useAdminShell();
   const [activeTab, setActiveTab] = useState<TabKey>('pending');
   const [reviews, setReviews] = useState<Review[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [pageSize, setPageSize] = useState(20);
   const [tabCounts, setTabCounts] = useState<Record<TabKey, number>>({ pending: 0, approved: 0, rejected: 0, all: 0 });
-  const [settingsLoadState, setSettingsLoadState] = useState<WidgetSettingsLoadState>(INITIAL_WIDGET_SETTINGS_LOAD_STATE);
   const [loading, setLoading] = useState(false);
+  const [hasLoadedReviews, setHasLoadedReviews] = useState(false);
+  const [reviewLoadError, setReviewLoadError] = useState(false);
   const [mediaPreview, setMediaPreview] = useState<MediaPreviewState | null>(null);
   const [replyDialog, setReplyDialog] = useState<{ open: boolean; review: Review | null }>({ open: false, review: null });
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-  const settings = settingsLoadState.settings;
-
   const pageSizeRef = React.useRef(pageSize);
-  pageSizeRef.current = pageSize;
   const summaryRequestSequenceRef = React.useRef(0);
+
+  useEffect(() => {
+    pageSizeRef.current = pageSize;
+  }, [pageSize]);
 
   const fetchReviews = useCallback(async (tab: TabKey, p: number, limit?: number) => {
     setLoading(true);
+    setReviewLoadError(false);
     try {
       const statusParam = tab === 'all' ? '' : `&status=${tab}`;
       const res = await axios.get(`/api/admin/reviews?page=${p}&limit=${limit ?? pageSizeRef.current}${statusParam}`, {
-        headers: await freshAuthHeader(token),
+        headers: await getAuthHeader(),
       });
       if (res.data?.data) {
         setReviews(res.data.data as Review[]);
         setTotal(res.data.pagination.total);
         setPage(p);
+        setHasLoadedReviews(true);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } catch (error) {
-      console.error("Yorumlar çekilirken hata:", error);
+      if (!handleApiAuthenticationFailure(error)) setReviewLoadError(true);
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [getAuthHeader, handleApiAuthenticationFailure]);
 
   const fetchReviewSummary = useCallback(async () => {
     const requestSequence = ++summaryRequestSequenceRef.current;
     try {
       const response = await axios.get('/api/admin/reviews/summary', {
-        headers: await freshAuthHeader(token),
+        headers: await getAuthHeader(),
       });
       if (requestSequence !== summaryRequestSequenceRef.current) return;
       const summary = response.data?.data;
@@ -90,47 +73,16 @@ export default function HomePage({ token, storeName }: HomePageProps) {
         rejected: summary.rejected,
         all: summary.total,
       });
-    } catch {
-      if (requestSequence !== summaryRequestSequenceRef.current) return;
-      console.error("Review summary could not be loaded.");
-    }
-  }, [token]);
-
-  const loadSettings = useCallback(async () => {
-    setSettingsLoadState(state => reduceWidgetSettingsLoadState(state, { type: 'start' }));
-
-    try {
-      const settingsRes = await axios.get('/api/admin/settings', { headers: await freshAuthHeader(token) });
-      setSettingsLoadState(state => reduceWidgetSettingsLoadState(state, {
-        type: 'success',
-        settings: settingsRes.data?.data,
-        meta: settingsRes.data?.meta,
-      }));
     } catch (error) {
-      console.error("Widget ayarları çekilirken hata:", error);
-      setSettingsLoadState(state => reduceWidgetSettingsLoadState(state, { type: 'failure' }));
+      if (requestSequence !== summaryRequestSequenceRef.current) return;
+      handleApiAuthenticationFailure(error);
     }
-  }, [token]);
-
-  const handleSettingsChange = useCallback((nextSettings: WidgetSettingsMap) => {
-    setSettingsLoadState(state => ({
-      ...state,
-      settings: nextSettings,
-    }));
-  }, []);
+  }, [getAuthHeader, handleApiAuthenticationFailure]);
 
   useEffect(() => {
     void fetchReviews('pending', 1);
     void fetchReviewSummary();
   }, [fetchReviews, fetchReviewSummary]);
-
-  const handleMainTabChange = useCallback((value: string) => {
-    if (value !== 'reviews' && value !== 'widgets') return;
-    setMainTab(value);
-    if (value === 'widgets' && settingsLoadState.status === 'idle') {
-      void loadSettings();
-    }
-  }, [loadSettings, settingsLoadState.status]);
 
   const handleReviewTabChange = (tab: TabKey) => {
     setActiveTab(tab);
@@ -139,25 +91,26 @@ export default function HomePage({ token, storeName }: HomePageProps) {
 
   const handleStatusChange = async (id: string, newStatus: string) => {
     try {
-      const response = await axios.put('/api/admin/reviews', { id, status: newStatus }, { headers: await freshAuthHeader(token) });
+      const response = await axios.put('/api/admin/reviews', { id, status: newStatus }, { headers: await getAuthHeader() });
       const processing = response.data?.processing === true;
       toast.success(processing
         ? 'Video yayına hazırlanıyor. Onay provider işlemi tamamlanınca uygulanacak.'
         : newStatus === 'approved' ? 'Yorum onaylandı.' : 'Yorum reddedildi.');
       await Promise.all([fetchReviews(activeTab, page), fetchReviewSummary()]);
     } catch (error) {
-      console.error("Durum güncellenemedi:", error);
-      toast.error("Durum güncellenirken bir hata oluştu, lütfen tekrar deneyin.");
+      if (!handleApiAuthenticationFailure(error)) {
+        toast.error("Durum güncellenirken bir hata oluştu, lütfen tekrar deneyin.");
+      }
     }
   };
 
   const getImagePreviewUrl = useCallback(async (mediaId: string, variant: 'thumb_320x427' | 'w1200' = 'w1200') => {
     const response = await axios.get(`/api/admin/reviews/image-preview?mediaId=${encodeURIComponent(mediaId)}&variant=${encodeURIComponent(variant)}`, {
-      headers: await freshAuthHeader(token),
+      headers: await getAuthHeader(),
     });
     const signedUrl = response.data?.data?.url;
     return typeof signedUrl === 'string' && signedUrl ? signedUrl : null;
-  }, [token]);
+  }, [getAuthHeader]);
 
   const handleMediaOpen = async (media: ReviewMedia, reviewStatus: string) => {
     if (media.type === 'image') {
@@ -174,9 +127,10 @@ export default function HomePage({ token, storeName }: HomePageProps) {
           current?.mediaId === media.id ? { ...current, url: signedUrl, loading: false } : current
         ));
       } catch (error) {
-        console.error('Image preview could not be opened:', error);
         setMediaPreview(current => (current?.mediaId === media.id ? null : current));
-        toast.error('Gorsel onizlemesi acilamadi. Lutfen tekrar deneyin.');
+        if (!handleApiAuthenticationFailure(error)) {
+          toast.error('Gorsel onizlemesi acilamadi. Lutfen tekrar deneyin.');
+        }
       }
       return;
     }
@@ -184,7 +138,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
     setMediaPreview({ mediaId: media.id, type: 'video', url: null, width: media.width, height: media.height, loading: true, reviewStatus });
     try {
       const response = await axios.get(`/api/admin/reviews/video-playback?mediaId=${encodeURIComponent(media.id)}`, {
-        headers: await freshAuthHeader(token),
+        headers: await getAuthHeader(),
       });
       const data = response.data?.data;
       const playbackId = data?.playbackId;
@@ -207,19 +161,20 @@ export default function HomePage({ token, storeName }: HomePageProps) {
           : current
       ));
     } catch (error) {
-      console.error('Video önizlemesi açılamadı:', error);
       setMediaPreview(current => (current?.mediaId === media.id ? null : current));
-      toast.error('Video önizlemesi açılamadı. Lütfen tekrar deneyin.');
+      if (!handleApiAuthenticationFailure(error)) {
+        toast.error('Video önizlemesi açılamadı. Lütfen tekrar deneyin.');
+      }
     }
   };
 
   const handleReplySubmit = async (id: string, replyText: string) => {
     try {
-      await axios.put('/api/admin/reviews', { id, merchantReply: replyText }, { headers: await freshAuthHeader(token) });
+      await axios.put('/api/admin/reviews', { id, merchantReply: replyText }, { headers: await getAuthHeader() });
       setReviews(prev => prev.map(r => r.id === id ? { ...r, merchantReply: replyText } : r));
       toast.success("Yanıt başarıyla gönderildi.");
-    } catch {
-      toast.error("Yanıt gönderilirken bir hata oluştu.");
+    } catch (error) {
+      if (!handleApiAuthenticationFailure(error)) toast.error("Yanıt gönderilirken bir hata oluştu.");
     }
   };
 
@@ -230,33 +185,25 @@ export default function HomePage({ token, storeName }: HomePageProps) {
     const id = deleteConfirm;
     setDeleteConfirm(null);
     try {
-      await axios.delete(`/api/admin/reviews?id=${id}`, { headers: await freshAuthHeader(token) });
+      await axios.delete(`/api/admin/reviews?id=${id}`, { headers: await getAuthHeader() });
       toast.success("Yorum silindi.");
       const targetPage = reviews.length === 1 && page > 1 ? page - 1 : page;
       await Promise.all([fetchReviews(activeTab, targetPage), fetchReviewSummary()]);
-    } catch {
-      fetchReviews(activeTab, page);
-      toast.error("Yorum silinirken bir hata oluştu.");
+    } catch (error) {
+      if (!handleApiAuthenticationFailure(error)) {
+        void fetchReviews(activeTab, page);
+        toast.error("Yorum silinirken bir hata oluştu.");
+      }
     }
   };
 
   const handleDeleteReply = async (id: string) => {
     try {
-      await axios.put('/api/admin/reviews', { id, merchantReply: null }, { headers: await freshAuthHeader(token) });
+      await axios.put('/api/admin/reviews', { id, merchantReply: null }, { headers: await getAuthHeader() });
       setReviews(prev => prev.map(r => r.id === id ? { ...r, merchantReply: null } : r));
       toast.success("Yanıt silindi.");
-    } catch {
-      toast.error("Yanıt silinirken bir hata oluştu.");
-    }
-  };
-
-  const saveSettings = async (widgetId: string, widgetSettings: Record<string, unknown>) => {
-    try {
-      await axios.put('/api/admin/settings', { widgetId, settings: widgetSettings }, { headers: await freshAuthHeader(token) });
-      toast.success('Kaydetme başarılı! Değişiklikleriniz sitenize birkaç dakika içinde yansıtılacaktır.');
-    } catch {
-      toast.error('Ayarlar kaydedilirken bir hata oluştu.');
-      throw new Error('save_failed');
+    } catch (error) {
+      if (!handleApiAuthenticationFailure(error)) toast.error("Yanıt silinirken bir hata oluştu.");
     }
   };
 
@@ -272,7 +219,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
     : 'aspect-video max-h-[72vh] w-full rounded-lg bg-black shadow-2xl [--media-object-fit:contain] [--media-object-position:center]';
 
   return (
-    <div className="w-full p-4 bg-background min-h-screen">
+    <div className="w-full">
 
       <ReplyDialog
         open={replyDialog.open}
@@ -328,66 +275,42 @@ export default function HomePage({ token, storeName }: HomePageProps) {
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.bold, color: colors.textPrimary, letterSpacing: '-0.02em' }}>Değerlendirmeler</h1>
-          <p className="mt-1" style={{ fontSize: typography.fontSize.base, color: colors.textMuted }}>
-            <span style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{storeName}</span> mağazanızın müşteri yorumlarını yönetin.
-          </p>
+      {reviewLoadError ? (
+        <div role="alert" className="mb-4 flex items-center justify-between rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm">
+          <span>{hasLoadedReviews ? 'Yorumlar yenilenemedi. Son doğrulanmış liste gösteriliyor.' : 'Yorumlar yüklenemedi.'}</span>
+          <button
+            type="button"
+            onClick={() => void fetchReviews(activeTab, page)}
+            style={{ ...componentStyles.btnDefault, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          >
+            <RefreshCw size={14} aria-hidden="true" /> Tekrar Dene
+          </button>
         </div>
-        <div className="flex items-center gap-2">
-          <span style={{ ...componentStyles.badgeApproved, fontSize: typography.fontSize.sm, padding: '4px 12px' }}>
-            <CheckCircle2 size={14} style={{ marginRight: 4, display: 'inline' }} /> İkas&apos;a Bağlı
-          </span>
-        </div>
-      </div>
+      ) : null}
 
-      <Tabs value={mainTab} onValueChange={handleMainTabChange} orientation="vertical" className="gap-4">
-        <TabsList className="h-fit p-1.5 bg-muted/30 rounded-xl w-44 shrink-0 border border-border/50">
-          <TabsTrigger value="reviews" className="py-2 px-3 rounded-lg mb-1" style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium }}>
-            <MessageSquare size={15} className="mr-1.5 shrink-0" />
-            <span className="truncate">Yorumlar</span>
-          </TabsTrigger>
-          <TabsTrigger value="widgets" className="py-2 px-3 rounded-lg" style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium }}>
-            <Settings size={15} className="mr-1.5 shrink-0" />
-            <span className="truncate">Widgetlar</span>
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="reviews" className="m-0 flex-1 min-w-0">
-          <ReviewsTab
-            activeTab={activeTab}
-            reviews={reviews}
-            loading={loading}
-            page={page}
-            total={total}
-            pageSize={pageSize}
-            tabCounts={tabCounts}
-            onTabChange={handleReviewTabChange}
-            onStatusChange={handleStatusChange}
-            onReply={(r) => setReplyDialog({ open: true, review: r })}
-            onDeleteReply={handleDeleteReply}
-            onDeleteReview={handleDeleteReview}
-            onMediaOpen={handleMediaOpen}
-            getImagePreviewUrl={getImagePreviewUrl}
-            onPageChange={(p) => fetchReviews(activeTab, p)}
-            onPageSizeChange={(size) => { setPageSize(size); fetchReviews(activeTab, 1, size); }}
-          />
-        </TabsContent>
-
-        <TabsContent value="widgets" className="m-0 flex-1 min-w-0">
-          <WidgetsContainer
-            settings={settings}
-            settingsMeta={settingsLoadState.meta}
-            settingsStatus={settingsLoadState.status}
-            onChange={handleSettingsChange}
-            onSave={async (widgetId, widgetSettings) => {
-              await saveSettings(widgetId, widgetSettings);
-            }}
-            onRetrySettings={loadSettings}
-          />
-        </TabsContent>
-      </Tabs>
+      {hasLoadedReviews || loading ? (
+        <ReviewsTab
+          activeTab={activeTab}
+          reviews={reviews}
+          loading={loading}
+          page={page}
+          total={total}
+          pageSize={pageSize}
+          tabCounts={tabCounts}
+          onTabChange={handleReviewTabChange}
+          onStatusChange={handleStatusChange}
+          onReply={(review) => setReplyDialog({ open: true, review })}
+          onDeleteReply={handleDeleteReply}
+          onDeleteReview={handleDeleteReview}
+          onMediaOpen={handleMediaOpen}
+          getImagePreviewUrl={getImagePreviewUrl}
+          onPageChange={(nextPage) => void fetchReviews(activeTab, nextPage)}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            void fetchReviews(activeTab, 1, size);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

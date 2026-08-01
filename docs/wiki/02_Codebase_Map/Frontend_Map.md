@@ -16,17 +16,29 @@ related:
   - "[[Backend_API_Map]]"
   - "[[Widget_Files_Map]]"
 source_files:
+  - "src/app/hooks/use-base-home-page.ts"
   - "src/app/dashboard/page.tsx"
-  - "src/components/home-page/index.tsx"
+  - "src/app/dashboard/layout.tsx"
+  - "src/app/dashboard/not-found.tsx"
+  - "src/features/admin-shell/AdminShell.tsx"
+  - "src/features/review-moderation/ReviewModerationScreen.tsx"
+  - "src/features/widget-management/WidgetCatalogScreen.tsx"
+  - "src/features/widget-management/WidgetEditorScreen.tsx"
   - "src/lib/admin-review-summary.ts"
   - "src/lib/widgets/catalog.ts"
-  - "src/components/home-page/widgets/editor/WidgetSettingsLoadState.ts"
+  - "src/features/widget-management/WidgetSettingsLoadState.ts"
   - "src/helpers/token-helpers.ts"
   - "playwright.admin-dashboard.config.ts"
+  - "scripts/verify-admin-route-bundles.mjs"
   - "tests/admin-dashboard-contract.spec.ts"
 ---
 
 # Frontend Map
+
+## Agent Brief
+- `/` delegates iframe entry to the persistent `AdminShell`; only that shell owns AppBridge loader/token bootstrap.
+- Reviews, widget catalog, and widget editor are separate route-owned feature graphs; settings live only under the Widgets route group.
+- The admin-dashboard suite uses a protocol stub for route tests; the real `/preview` renderer remains covered by `test:admin-preview`.
 
 ## Summary
 The "frontend" splits into two completely separate runtimes: (1) the **merchant admin panel** — Next.js 16 App Router + React 19 + shadcn/ui, embedded as iframe inside ikas Admin; and (2) the **storefront widget** — vanilla JS bundled by esbuild, runs on customer storefronts. Don't conflate the two: shared code lives in `src/lib/design-tokens.ts` and the settings schema. See [[Widget_Files_Map]] for the storefront side.
@@ -39,9 +51,12 @@ Next.js 16 (16.2), React 19, TypeScript, Tailwind CSS v4 (`@tailwindcss/postcss`
 ### Routing
 | Path | File | Notes |
 |---|---|---|
-| `/` | [src/app/page.tsx](src/app/page.tsx) | Triggers `useBaseHomePage` → routes based on token presence |
+| `/` | [src/app/page.tsx](src/app/page.tsx) | In iframe, delegates to `/dashboard/reviews`; outside iframe, starts or requests OAuth authorization |
 | `/authorize-store` | [src/app/authorize-store/page.tsx](src/app/authorize-store/page.tsx) | Manual store-name entry fallback |
-| `/dashboard` | [src/app/dashboard/page.tsx](src/app/dashboard/page.tsx) | AppBridge-gated authenticated home; mounts `home-page` only after a real JWT is available |
+| `/dashboard` | [src/app/dashboard/page.tsx](src/app/dashboard/page.tsx) | Server redirect to `/dashboard/reviews` |
+| `/dashboard/reviews` | [src/app/dashboard/reviews/page.tsx](src/app/dashboard/reviews/page.tsx) | Review moderation route; owns review list, summary and action state |
+| `/dashboard/widgets` | [src/app/dashboard/widgets/page.tsx](src/app/dashboard/widgets/page.tsx) | Widget catalog route; loads settings only after entering the widget route group |
+| `/dashboard/widgets/[widgetId]` | [src/app/dashboard/widgets/[widgetId]/page.tsx](src/app/dashboard/widgets/[widgetId]/page.tsx) | Server-first widget capability admission; only configurable widgets mount the client editor |
 | `/preview` | [src/app/(preview)/preview/route.ts](src/app/(preview)/preview/route.ts) | Standalone HTML iframe — no root layout |
 
 ### Top-level Layout
@@ -50,8 +65,8 @@ Next.js 16 (16.2), React 19, TypeScript, Tailwind CSS v4 (`@tailwindcss/postcss`
 
 ### Auth bootstrap
 - [src/app/hooks/use-base-home-page.ts](src/app/hooks/use-base-home-page.ts)
-  - In iframe: `TokenHelpers.getTokenForIframeApp()` obtains and caches the
-    authorized-app-scoped JWT from AppBridge, then routes to `/dashboard`.
+  - In iframe: routes directly to `/dashboard/reviews` without touching
+    AppBridge. The persistent `AdminShell` is the single loader/token owner.
   - Out of iframe with `?storeName=`: redirect to `/api/oauth/authorize/ikas`
   - Otherwise: `/authorize-store`
 - The OAuth server callback returns directly to the trusted ikas Admin
@@ -59,7 +74,7 @@ Next.js 16 (16.2), React 19, TypeScript, Tailwind CSS v4 (`@tailwindcss/postcss`
   handoff.
 
 ### Mandatory iframe page pattern (from canonical rules)
-Every page that runs inside the ikas Admin iframe must follow this pattern (see [[Existing_AI_Rules_And_Ikas_CLI_Instructions]] for full text):
+The dashboard route group follows this pattern through its persistent layout shell (see [[Existing_AI_Rules_And_Ikas_CLI_Instructions]] for full text):
 1. **Always** call `AppBridgeHelper.closeLoader()` in a separate `useEffect(() => { AppBridgeHelper.closeLoader(); }, [])` on mount.
 2. **Always** retrieve the JWT via `TokenHelpers.getTokenForIframeApp()`.
 3. **Never** make direct API calls to ikas from the frontend — always go through `/api/admin/*` or `/api/ikas/*` server routes.
@@ -70,9 +85,10 @@ Every page that runs inside the ikas Admin iframe must follow this pattern (see 
 The dashboard enforces that sequence as a runtime boundary. Until AppBridge
 returns a token it renders only the authentication gate, so review, theme,
 merchant, and settings requests cannot start with a placeholder credential.
-The Reviews view loads review data after auth; widget settings remain idle
-until the merchant first opens Widgetlar, and a failed load retries only
-through the explicit retry action.
+The Reviews route loads review data after auth. The widget settings provider
+exists only under `/dashboard/widgets`, starts idle, and loads after a catalog
+or valid editor route requests it. Leaving the widget route group discards the
+cache, so returning from Reviews performs one new authoritative settings GET.
 
 Review list pagination and moderation counts are separate contracts. The first
 Reviews load requests one paginated list and one `/api/admin/reviews/summary`;
@@ -91,26 +107,19 @@ Pattern: `AppBridgeHelper.closeLoader() → TokenHelpers → ApiRequests → bac
 ## Component tree (admin)
 
 ```
-src/components/
-├─ Loading/                       # Full-page loader
-├─ home-page/
-│  ├─ index.tsx                   # Tabs container — Reviews tab + Widgets tab
-│  ├─ types.ts                    # Local types
-│  ├─ ReviewsTab.tsx              # Table of reviews + filter + pagination
-│  ├─ ReviewRow.tsx               # Single review row UI
-│  ├─ ReplyDialog.tsx             # Modal for editing merchant reply
-│  └─ widgets/
-│     ├─ index.tsx                # Widgets tab grid
-│     ├─ WidgetCard.tsx           # Per-widget card → opens editor
-│     ├─ editor/
-│     │  ├─ WidgetEditor.tsx      # Settings panel + iframe preview side-by-side
-│     │  ├─ SettingsPanel.tsx     # Renders fields from the pure widget catalog
-│     │  ├─ IconSelect.tsx        # SVG grid icon picker
-│     │  └─ VisualSelectGrid.tsx  # Visual choice cards for layout select fields
-│     ├─ previews/                # Small schema-choice illustrations, not live widget renderers
-└─ ui/                            # shadcn/ui primitives (button, card, dialog, input, label,
-                                  # select, slider, sonner, table, tabs, textarea, accordion,
-                                  # badge, dropdown-menu)
+src/features/
+├─ admin-shell/                   # Persistent AppBridge auth, navigation and generic route errors
+├─ review-moderation/             # Review list, rows, dialogs, media previews and route-owned state
+└─ widget-management/
+   ├─ WidgetSettingsProvider.tsx  # Route-group cache; no mount-time request
+   ├─ WidgetCatalogScreen.tsx     # Catalog and small card previews; no editor/runtime import
+   ├─ WidgetEditorScreen.tsx      # Configurable route client boundary
+   └─ components/
+      ├─ WidgetCard.tsx
+      ├─ editor/                  # Settings panel, editor and preview protocol client
+      └─ previews/                # Small catalog illustrations, not live widget renderers
+
+src/components/ui/                # Shared shadcn/ui primitives
 
 src/lib/widgets/
 └─ catalog.ts                     # Release/configuration metadata and settings schema; no React/DOM/runtime imports
@@ -122,6 +131,18 @@ and Badge are `available + settings`; Carousel, Popup, Q&A, and Summary are
 an enabled state nor an editor action. This is a capability guard, not a plan
 or entitlement system, and it does not promise activation for future
 zero-configuration widgets.
+
+The persistent shell is intentionally feature-neutral. Static esbuild graphs
+reject review/widget/runtime imports from the shell, reject widget imports from
+Reviews, and reject editor/preview imports from the catalog. The build verifier
+then requires distinct client-reference chunk sets for the selected Reviews,
+catalog, and editor owner modules. Those byte totals are not complete route
+initial-JavaScript measurements. Fresh-context browser tests prove that Reviews
+and catalog do not request the editor route chunk or `/preview`, while each
+configurable editor deep link loads settings, its editor route, and preview.
+Because Playwright request interception disables HTTP cache, this suite does not
+claim second-open browser-cache reuse; it separately proves the widget settings
+provider lifecycle.
 
 ### Live preview pattern (settings)
 1. `WidgetEditor` selects a registered widget scene and mounts
@@ -177,4 +198,4 @@ The storefront widget is an entirely different runtime — vanilla JS, IIFE, IE1
 - [[System_Architecture]]
 
 ## Change Log
-- 2026-05-08: Added [VisualSelectGrid.tsx](src/components/home-page/widgets/editor/VisualSelectGrid.tsx) to the admin editor map. It renders schema-driven visual choice cards for layout select fields without changing stored widget setting values.
+- 2026-05-08: Added [VisualSelectGrid.tsx](src/features/widget-management/components/editor/VisualSelectGrid.tsx) to the admin editor map. It renders schema-driven visual choice cards for layout select fields without changing stored widget setting values.

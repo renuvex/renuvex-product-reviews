@@ -4,8 +4,8 @@ import { describe, expect, it } from 'vitest';
 
 describe('admin image preview contract', () => {
   it('loads signed AWS image thumbnails through the authenticated preview endpoint', () => {
-    const homeSource = readFileSync(path.join(process.cwd(), 'src/components/home-page/index.tsx'), 'utf8');
-    const rowSource = readFileSync(path.join(process.cwd(), 'src/components/home-page/ReviewRow.tsx'), 'utf8');
+    const homeSource = readFileSync(path.join(process.cwd(), 'src/features/review-moderation/ReviewModerationScreen.tsx'), 'utf8');
+    const rowSource = readFileSync(path.join(process.cwd(), 'src/features/review-moderation/ReviewRow.tsx'), 'utf8');
     const routeSource = readFileSync(path.join(process.cwd(), 'src/app/api/admin/reviews/image-preview/route.ts'), 'utf8');
 
     expect(homeSource).toContain('/api/admin/reviews/image-preview?mediaId=');

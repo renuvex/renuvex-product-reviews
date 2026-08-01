@@ -125,7 +125,7 @@ test('preview reset-scroll message returns a scrolled reviews scene to the top',
 
 test('pre-scrolled admin preview keeps wheel input after a modal pointer lock cycle', async ({ page }) => {
   const editorSource = await readFile(
-    path.join(process.cwd(), 'src/components/home-page/widgets/editor/WidgetEditor.tsx'),
+    path.join(process.cwd(), 'src/features/widget-management/components/editor/WidgetEditor.tsx'),
     'utf8',
   );
   const previewFrameMarkup = editorSource.match(/<iframe[\s\S]*?title="Widget Önizleme"/)?.[0] || '';

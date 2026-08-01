@@ -39,7 +39,7 @@ source_files:
   - "src/lib/mux-player/review-player-theme.ts"
   - "src/lib/mux-player/review-player-i18n.ts"
   - "src/lib/mux-player/review-player-locale.ts"
-  - "src/components/home-page/AdminMuxPlayerPreview.tsx"
+  - "src/features/review-moderation/AdminMuxPlayerPreview.tsx"
   - "src/widget/core/review-media.js"
   - "src/widget/reviews-section/review-form-modal/styles.js"
   - "src/widget/reviews-section/review-form-modal/steps/step-photos.js"

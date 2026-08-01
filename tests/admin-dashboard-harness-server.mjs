@@ -26,7 +26,7 @@ function scriptValue(value) {
   return JSON.stringify(value).replace(/</g, '\\u003c');
 }
 
-function harnessDocument(scenario) {
+function harnessDocument(scenario, dashboardPath) {
   const token = buildSyntheticJwt();
   const messageTypes = {
     closeLoader: AppBridgeMessageType.CLOSE_LOADER,
@@ -53,6 +53,7 @@ function harnessDocument(scenario) {
     (() => {
       const dashboardOrigin = ${scriptValue(dashboardOrigin)};
       const scenario = ${scriptValue(scenario)};
+      const dashboardPath = ${scriptValue(dashboardPath)};
       const authorizedAppId = ${scriptValue(authorizedAppId)};
       const token = ${scriptValue(token)};
       const messageTypes = ${scriptValue(messageTypes)};
@@ -93,7 +94,7 @@ function harnessDocument(scenario) {
         }
       });
 
-      frame.src = dashboardOrigin + '/dashboard';
+      frame.src = dashboardOrigin + dashboardPath;
     })();
   </script>
 </body>
@@ -118,7 +119,11 @@ const server = createServer((request, response) => {
   const scenario = ['success', 'missing-id', 'missing-token'].includes(requestedScenario || '')
     ? requestedScenario
     : 'success';
-  const body = harnessDocument(scenario);
+  const requestedPath = url.searchParams.get('path') || '/dashboard';
+  const dashboardPath = (requestedPath === '/' || requestedPath.startsWith('/dashboard')) && !requestedPath.startsWith('//')
+    ? requestedPath
+    : '/dashboard';
+  const body = harnessDocument(scenario, dashboardPath);
   response.writeHead(200, {
     'Cache-Control': 'no-store',
     'Content-Length': Buffer.byteLength(body),

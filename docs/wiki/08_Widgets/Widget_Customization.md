@@ -8,10 +8,12 @@ last_verified: 2026-08-01
 confidence: high
 source_files:
   - "src/lib/widgets/catalog.ts"
-  - "src/components/home-page/widgets/editor/WidgetEditor.tsx"
-  - "src/components/home-page/widgets/editor/WidgetPreviewLoadState.ts"
-  - "src/components/home-page/widgets/editor/SettingsPanel.tsx"
-  - "src/components/home-page/widgets/editor/WidgetEditorState.ts"
+  - "src/app/dashboard/widgets/[widgetId]/page.tsx"
+  - "src/features/widget-management/WidgetSettingsProvider.tsx"
+  - "src/features/widget-management/components/editor/WidgetEditor.tsx"
+  - "src/features/widget-management/components/editor/WidgetPreviewLoadState.ts"
+  - "src/features/widget-management/components/editor/SettingsPanel.tsx"
+  - "src/features/widget-management/components/editor/WidgetEditorState.ts"
   - "src/lib/widget-settings.ts"
   - "src/app/(preview)/preview/route.ts"
   - "src/widget/core/namespace.js"
@@ -60,8 +62,8 @@ Per-merchant widget settings are schema-driven from the pure catalog in [catalog
 ## Source of truth
 - **Schema**: [src/lib/widgets/catalog.ts](src/lib/widgets/catalog.ts)
 - **Server helpers** (defaults, sanitize, validate): [src/lib/widget-settings.ts](src/lib/widget-settings.ts)
-- **Admin color picker**: [src/components/home-page/widgets/editor/ColorPickerField.tsx](src/components/home-page/widgets/editor/ColorPickerField.tsx)
-- **Visual select cards**: [src/components/home-page/widgets/editor/VisualSelectGrid.tsx](src/components/home-page/widgets/editor/VisualSelectGrid.tsx)
+- **Admin color picker**: [src/features/widget-management/components/editor/ColorPickerField.tsx](src/features/widget-management/components/editor/ColorPickerField.tsx)
+- **Visual select cards**: [src/features/widget-management/components/editor/VisualSelectGrid.tsx](src/features/widget-management/components/editor/VisualSelectGrid.tsx)
 - **Icon registries**: [src/widget/icons/index.js](src/widget/icons/index.js)
 - **Design tokens**: [src/lib/design-tokens.ts](src/lib/design-tokens.ts)
 
@@ -95,7 +97,7 @@ Three forms:
 The third reads `meta.supports.<key>` from the active layout's registry entry. Adding a new layout means adding `supports` keys for everything — otherwise admin shows fields the layout silently ignores.
 
 ## Admin settings navigation
-The admin customization panel uses top-level navigation plus focused detail panels in [SettingsPanel.tsx](src/components/home-page/widgets/editor/SettingsPanel.tsx):
+The admin customization panel uses top-level navigation plus focused detail panels in [SettingsPanel.tsx](src/features/widget-management/components/editor/SettingsPanel.tsx):
 - The main panel lists top-level setting groups as navigation rows.
 - Selecting a group opens a dedicated detail panel with a sticky back header.
 - Detail panels can render schema `subGroups` as inner accordions after the group's direct fields. `Metin` uses this for `Yorum Formu`, which owns review wizard step copy without adding another main navigation row.
@@ -104,6 +106,27 @@ The admin customization panel uses top-level navigation plus focused detail pane
 - `Widget Boyutu` remains the only size control for storefront review typography and shared controls. It also scales load-more and numbered-pagination controls through internal CSS variables; no separate "pagination size" setting is exposed. Mobile pagination uses the visible compact box as the clickable target, so small/medium/large stay visually distinct without an invisible tap halo around dense page numbers.
 
 This keeps the main customization screen shallow and avoids opening large groups inline.
+
+The catalog and editor are separate routes. The server component at
+`/dashboard/widgets/[widgetId]` validates the route ID against the pure catalog:
+unknown IDs become `404`, while planned or non-configurable widgets render a
+server-only unavailable view. Only a canonical configurable ID can mount the
+client editor, request settings, or create a preview iframe. The client and
+settings APIs repeat the capability check as independent fail-closed layers.
+
+## Unsaved editor navigation
+- The editor's Geri command and AdminShell Yorumlar/Widgetlar links use the same
+  `Kaydedilmemiş Değişiklikler` modal when the settings draft is dirty.
+- Successful Save and `Kaydetmeden Çık` leave the editor. A failed save keeps
+  the editor open and the draft dirty.
+- While dirty, a native `beforeunload` listener protects reload, tab/window
+  close, and hard navigation. The browser controls the warning text.
+- Save, discard, clean state, and unmount remove the listener. There is no
+  session/local storage, IndexedDB, backend draft, automatic recovery,
+  `popstate`, history sentinel, or router-history manipulation.
+- Same-document App Router browser Back is not guaranteed to show the native
+  warning. A draft can be lost on that path; the product does not promise full
+  browser-Back interception.
 
 ## Read path (client / admin / widget)
 ```
@@ -141,7 +164,7 @@ available widget without settings capability returns
 
 ## Live preview
 - All implemented live previews use one admin iframe shell in
-  [WidgetEditor.tsx](src/components/home-page/widgets/editor/WidgetEditor.tsx).
+  [WidgetEditor.tsx](src/features/widget-management/components/editor/WidgetEditor.tsx).
   The registry currently exposes Reviews (`reviews`) plus Badge product-detail
   (`pdp`) and listing (`listing`) scenes. Future widgets add an explicit scene
   adapter instead of introducing a parallel React mock preview.
@@ -163,7 +186,7 @@ available widget without settings capability returns
 - The internal `RENUVEX_PR_SETTINGS_UPDATED_PREVIEW` custom event remains
   scoped to already-open Reviews overlays so a lightbox can update without
   remounting; it is not the parent/iframe transport.
-- Preview background color is local editor state in [WidgetEditor.tsx](src/components/home-page/widgets/editor/WidgetEditor.tsx). It changes only the admin preview surface and is not saved to `WidgetSettings`.
+- Preview background color is local editor state in [WidgetEditor.tsx](src/features/widget-management/components/editor/WidgetEditor.tsx). It changes only the admin preview surface and is not saved to `WidgetSettings`.
 - Preview background uses the same opaque admin color picker as widget colors. Transparent/alpha values are intentionally not user-selectable in the admin UI.
 - Desktop preview fills the available preview panel width and height without a device-frame shadow, so it behaves like a browser viewport; mobile and tablet keep fixed device widths.
 - The nested preview iframe explicitly owns `pointer-events:auto`. Radix modal scroll locking temporarily sets the app body to `pointer-events:none`; allowing that value to inherit into an already-scrolled iframe can leave Chrome wheel input detached after the reset dialog closes. The modal overlay remains above the iframe and keeps outside interaction blocked while the dialog is open.
@@ -228,11 +251,11 @@ Merchant-controlled CTA/count copy also has a targeted long-word contract. `writ
 - `iconSelect` fields resolve their options from [src/widget/icons/index.js](src/widget/icons/index.js). Review/rating icons and filter icons are separate registries; [catalog.ts](src/lib/widgets/catalog.ts) marks each icon field with `registry: 'review' | 'filter'` so a filter value never falls back to a review icon. Current filter options are `lines`, `funnel`, `controls`, and `sliders`; legacy filter value `star` maps to `funnel` in both runtime rendering and settings sanitization.
 
 ## Related Source Files
-- [src/components/home-page/widgets/](src/components/home-page/widgets/)
+- [src/features/widget-management/](src/features/widget-management/)
 - [src/lib/widget-settings.ts](src/lib/widget-settings.ts)
 - [src/app/api/admin/settings/route.ts](src/app/api/admin/settings/route.ts)
 - [src/app/api/public/settings/route.ts](src/app/api/public/settings/route.ts)
-- [src/components/home-page/widgets/editor/InfoTooltip.tsx](src/components/home-page/widgets/editor/InfoTooltip.tsx)
+- [src/features/widget-management/components/editor/InfoTooltip.tsx](src/features/widget-management/components/editor/InfoTooltip.tsx)
 
 ## Obsidian Links
 - [[Widget_Architecture]]

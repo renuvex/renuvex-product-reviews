@@ -3,7 +3,7 @@ import {
   INITIAL_WIDGET_PREVIEW_LOAD_STATE,
   reduceWidgetPreviewLoadState,
   shouldShowPreviewOverlay,
-} from '../../src/components/home-page/widgets/editor/WidgetPreviewLoadState';
+} from '../../src/features/widget-management/components/editor/WidgetPreviewLoadState';
 
 describe('Widget preview load state', () => {
   it('starts in loading state for the first preview request', () => {

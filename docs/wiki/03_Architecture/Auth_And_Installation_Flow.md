@@ -29,10 +29,20 @@ source_files:
   - "src/helpers/api-helpers.ts"
   - "src/helpers/token-helpers.ts"
   - "src/app/dashboard/page.tsx"
+  - "src/app/dashboard/layout.tsx"
+  - "src/features/admin-shell/AdminShell.tsx"
+  - "src/features/admin-shell/AdminShellContext.tsx"
   - "tests/admin-dashboard-contract.spec.ts"
 ---
 
 # Auth & Installation Flow
+
+## Agent Brief
+Use this page when changing OAuth, AppBridge dashboard admission, installation
+generation, token refresh, or uninstall fencing. The dashboard's persistent
+shell owns browser authentication and feature-neutral navigation; server routes
+still make the final authorization decision against the exact active
+installation/token pair.
 
 ## Summary
 ikas OAuth 2.0 where token exchange requires a browser-bound, ten-minute,
@@ -97,10 +107,11 @@ OAuth callback responses never place that bearer credential in a URL.
          <ikasAdmin>/authorized-app/<id> target; no JWT/query handoff
        │
        ▼
-5.  Merchant lands inside ikas Admin → app loads in iframe → useBaseHomePage()
-       - TokenHelpers.getTokenForIframeApp() obtains the JWT via AppBridge
-         and caches it under the exact authorizedAppId for the browser session
-       - router.push('/dashboard')
+5.  Merchant lands inside ikas Admin → app loads `/` in iframe
+       - useBaseHomePage() delegates to `/dashboard/reviews` without touching AppBridge
+       - the persistent AdminShell closes the loader and obtains the JWT once via AppBridge
+       - TokenHelpers caches it under the exact authorizedAppId for the browser session
+       - the persistent AdminShell owns all dashboard auth and route admission
 ```
 
 Source files:
@@ -134,11 +145,16 @@ Source files:
   valid token is cached in `sessionStorage` only under
   `token-<authorizedAppId>`; OAuth callback query parameters are not a token
   source.
-- `/dashboard` keeps the application data tree behind an explicit
-  `loading -> ready | authentication_required` gate. `HomePage` mounts only
-  after AppBridge returns a real token. Direct top-level access, a missing
-  authorized-app identity, or a missing token starts no admin/ikas API request;
-  there is no `JWT dev` fallback.
+- `dashboard/layout.tsx` keeps every review/widget route behind the persistent
+  `AdminShell` `loading -> ready | authentication_required` gate. Feature
+  routes mount only after AppBridge returns a real token. Direct top-level
+  access, a missing authorized-app identity, or a missing token starts no
+  admin/ikas API request; there is no `JWT dev` fallback.
+- After auth, merchant lookup, best-effort storefront-theme sync, and the active
+  route's data request start independently. A delayed merchant response does
+  not block review or widget content. `401` and exact
+  `reauthorization_required` move the shell back to authentication-required;
+  retryable `503 authentication_unavailable` remains a feature-local error.
 - `AppBridgeHelper.closeLoader()` remains an independent mount effect so the
   ikas host loader closes even when authentication fails.
 - All `/api/admin/*` calls send `Authorization: JWT <token>`.

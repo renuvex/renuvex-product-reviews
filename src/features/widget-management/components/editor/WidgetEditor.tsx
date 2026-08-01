@@ -2,9 +2,11 @@
 
 import React, { useState, useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef } from 'react';
 import { AlertCircle, ArrowLeft, Loader2, RefreshCw, Save, Smartphone, Tablet, Monitor } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { InfoTooltip } from './InfoTooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { colors, componentStyles, radii, typography, opacity } from '@/lib/design-tokens';
+import { useAdminShell } from '@/features/admin-shell/AdminShellContext';
 import type { ConfigurableWidgetDefinition } from '@/lib/widgets/catalog';
 import type { WidgetSettingsMap } from '../../types';
 import { SettingsPanel } from './SettingsPanel';
@@ -22,7 +24,7 @@ import {
   shouldShowPreviewOverlay,
   type WidgetPreviewStatus,
 } from './WidgetPreviewLoadState';
-import type { WidgetSettingsMeta } from './WidgetSettingsLoadState';
+import type { WidgetSettingsMeta } from '../../WidgetSettingsLoadState';
 import {
   RENUVEX_PR_PREVIEW_ERROR,
   RENUVEX_PR_PREVIEW_RENDER,
@@ -67,7 +69,6 @@ interface WidgetEditorProps {
   settingsMeta: WidgetSettingsMeta;
   saving: boolean;
   onCommit: (committed: WidgetSettingsDraft) => Promise<void>;
-  onBack: () => void;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -187,10 +188,12 @@ export function WidgetEditor({
   settingsMeta,
   saving,
   onCommit,
-  onBack,
 }: WidgetEditorProps) {
+  const router = useRouter();
+  const { registerNavigationBlocker } = useAdminShell();
   const [draft, setDraft] = useState<WidgetSettingsDraft>(() => mergeWithDefaults(widget, savedSettings));
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
+  const [pendingExitHref, setPendingExitHref] = useState('/dashboard/widgets');
   const [viewport, setViewport] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
   const [previewBgColor, setPreviewBgColor] = useState(DEFAULT_PREVIEW_BG);
   const [previewLoadState, dispatchPreviewLoadState] = useReducer(
@@ -210,6 +213,7 @@ export function WidgetEditor({
   );
   const previewWidgetsRef = useRef<Record<string, WidgetSettingsDraft>>(previewWidgets);
   const previewRequestKeyRef = useRef(previewLoadState.requestKey);
+  const allowNavigationRef = useRef(false);
   const savedDraft = useMemo(() => mergeWithDefaults(widget, savedSettings), [widget, savedSettings]);
   const previousSavedDraftRef = useRef<WidgetSettingsDraft>(savedDraft);
   const previousWidgetIdRef = useRef(widget.id);
@@ -315,6 +319,27 @@ export function WidgetEditor({
 
   const dirty = isDirty(draft, savedDraft);
 
+  useEffect(() => {
+    if (!dirty) return;
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = true;
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [dirty]);
+
+  useEffect(() => {
+    if (!dirty) return;
+    allowNavigationRef.current = false;
+    return registerNavigationBlocker((href) => {
+      if (allowNavigationRef.current) return false;
+      setPendingExitHref(href);
+      setShowUnsavedModal(true);
+      return true;
+    });
+  }, [dirty, registerNavigationBlocker]);
+
   const viewportWidth = VIEWPORT_PRESETS.find(v => v.key === viewport)?.width ?? '100%';
   const isDesktopPreview = viewport === 'desktop';
   const previewBackground = OPAQUE_HEX_COLOR_RE.test(previewBgColor) ? previewBgColor : DEFAULT_PREVIEW_BG;
@@ -339,36 +364,52 @@ export function WidgetEditor({
     });
   }, [activePreviewScene, widget.id]);
 
-  // Kaydet: draft'ı commit et → parent + DB güncellenir
-  const handleSave = useCallback(async () => {
-    await onCommit(draft);
-  }, [onCommit, draft]);
+  const exitEditor = useCallback((href: string) => {
+    allowNavigationRef.current = true;
+    router.push(href);
+  }, [router]);
 
-  // Geri: dirty varsa modal aç, yoksa direkt çık
-  const handleBack = useCallback(() => {
+  const requestExit = useCallback((href: string) => {
     if (dirty) {
+      setPendingExitHref(href);
       setShowUnsavedModal(true);
-    } else {
-      onBack();
+      return;
     }
-  }, [dirty, onBack]);
+    exitEditor(href);
+  }, [dirty, exitEditor]);
 
-  // Modal: kaydet ve çık
+  const handleSave = useCallback(async () => {
+    try {
+      await onCommit(draft);
+      exitEditor('/dashboard/widgets');
+    } catch {
+      // The settings boundary reports a fixed user-facing failure and keeps the draft open.
+    }
+  }, [draft, exitEditor, onCommit]);
+
+  const handleBack = useCallback(() => {
+    requestExit('/dashboard/widgets');
+  }, [requestExit]);
+
   const handleSaveAndExit = useCallback(async () => {
-    setShowUnsavedModal(false);
-    await onCommit(draft);
-  }, [onCommit, draft]);
+    try {
+      await onCommit(draft);
+      setShowUnsavedModal(false);
+      exitEditor(pendingExitHref);
+    } catch {
+      // Keep the modal and dirty draft in place after a failed save.
+    }
+  }, [draft, exitEditor, onCommit, pendingExitHref]);
 
-  // Modal: kaydetmeden çık — draft at, parent dokunulmaz
   const handleDiscardAndExit = useCallback(() => {
     setShowUnsavedModal(false);
-    onBack();
-  }, [onBack]);
+    exitEditor(pendingExitHref);
+  }, [exitEditor, pendingExitHref]);
 
   return (
     <>
       {/* Unsaved changes modal */}
-      <Dialog open={showUnsavedModal} onOpenChange={(o) => { if (!o) setShowUnsavedModal(false); }}>
+      <Dialog open={showUnsavedModal} onOpenChange={(open) => { if (!open) setShowUnsavedModal(false); }}>
         <DialogContent className="sm:max-w-xl" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle style={componentStyles.dialogTitle}>Kaydedilmemiş Değişiklikler</DialogTitle>

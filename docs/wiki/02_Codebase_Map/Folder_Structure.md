@@ -19,7 +19,7 @@ related:
 Use this page to locate ownership boundaries before moving files or adding a
 new domain. The live source tree is authoritative. Widget product/settings
 metadata belongs in the pure `src/lib/widgets/catalog.ts`; admin React remains
-under `src/components/home-page`, and storefront runtime stays under
+under domain-owned `src/features/*` folders, and storefront runtime stays under
 `src/widget`.
 
 ## Summary
@@ -65,26 +65,28 @@ renuvex-product-reviews/
 │  │  │  ├─ oauth/               # authorize + callback
 │  │  │  └─ public/              # Anonymous widget + isolated review-session APIs
 │  │  ├─ authorize-store/page.tsx
-│  │  ├─ dashboard/page.tsx
+│  │  ├─ dashboard/
+│  │  │  ├─ layout.tsx           # Persistent authenticated AdminShell
+│  │  │  ├─ not-found.tsx        # Dashboard-local fail-closed unknown-route UI
+│  │  │  ├─ page.tsx             # Redirects to /dashboard/reviews
+│  │  │  ├─ reviews/              # Review moderation route + error boundary
+│  │  │  └─ widgets/              # Settings layout, catalog and [widgetId] editor
 │  │  ├─ hooks/use-base-home-page.ts
 │  │  ├─ globals.css             # Tailwind v4 entry
 │  │  ├─ layout.tsx
-│  │  └─ page.tsx                # → useBaseHomePage routing
+│  │  └─ page.tsx                # iframe delegates to AdminShell; top-level OAuth routing
 │  │
 │  ├─ components/
 │  │  ├─ Loading/                # Full-page loader
-│  │  ├─ home-page/              # Admin UI (dashboard tabs, reviews, widget editor)
-│  │  │  ├─ ReplyDialog.tsx
-│  │  │  ├─ ReviewRow.tsx
-│  │  │  ├─ ReviewsTab.tsx
-│  │  │  ├─ index.tsx            # Top-level home component
-│  │  │  ├─ types.ts
-│  │  │  └─ widgets/
-│  │  │     ├─ WidgetCard.tsx
-│  │  │     ├─ editor/           # SettingsPanel + WidgetEditor + IconSelect
-│  │  │     ├─ previews/         # Static admin-side previews
-│  │  │     └─ widget-previews/  # Iframe-driven live previews
 │  │  └─ ui/                     # shadcn/ui primitives (button, card, dialog, etc.)
+│  │
+│  ├─ features/
+│  │  ├─ admin-shell/            # AppBridge auth, persistent nav, generic route errors
+│  │  ├─ review-moderation/      # Route-owned review state and moderation UI
+│  │  └─ widget-management/      # Settings provider, catalog and editor domain
+│  │     └─ components/
+│  │        ├─ editor/           # SettingsPanel + WidgetEditor + preview protocol
+│  │        └─ previews/         # Lightweight catalog card previews
 │  │
 │  ├─ globals/
 │  │  ├─ config.ts               # OAuth scope/clientId/etc; reads NEXT_PUBLIC_* env

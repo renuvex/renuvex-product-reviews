@@ -69,7 +69,7 @@ Legacy planned or unknown DB rows are retained but cannot reach storefront
 configuration. Release availability, merchant `enabled`, and future plan or
 tenant entitlement are separate concepts.
 
-Settings UI in admin: [src/components/home-page/widgets/editor/SettingsPanel.tsx](src/components/home-page/widgets/editor/SettingsPanel.tsx).
+Settings UI in admin: [src/features/widget-management/components/editor/SettingsPanel.tsx](src/features/widget-management/components/editor/SettingsPanel.tsx).
 
 ## Language And Localization Boundary
 The storefront widget is Turkish-first today. There is no runtime i18n layer, no locale resolver, and no `{ locale -> strings }` catalog. A small set of visible review-form labels is merchant-editable through widget settings, but most visible strings, dates (`tr-TR`), number formatting, and accessibility names are still hardcoded in the widget source.
