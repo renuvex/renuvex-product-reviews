@@ -29,11 +29,28 @@ describe('admin route dependency boundaries', () => {
   });
 
   it('keeps the persistent shell feature-neutral', async () => {
-    const inputs = await bundledInputs('src/features/admin-shell/AdminShell.tsx');
+    const inputs = await bundledInputs('src/features/admin-shell/AdminAuthBoundary.tsx');
     expect(inputs.some((input) => input.includes('/src/features/review-moderation/'))).toBe(false);
     expect(inputs.some((input) => input.includes('/src/features/widget-management/'))).toBe(false);
     expect(inputs.some((input) => input.endsWith('/src/lib/widgets/catalog.ts'))).toBe(false);
     expect(inputs.some((input) => input.includes('/src/widget/'))).toBe(false);
+  });
+
+  it('keeps visual workspace chrome out of the focused editor route', async () => {
+    const workspaceInputs = await bundledInputs('src/features/admin-shell/AdminWorkspaceShell.tsx');
+    const dashboardLayout = readFileSync(path.join(process.cwd(), 'src/app/dashboard/layout.tsx'), 'utf8');
+    const reviewsLayout = readFileSync(path.join(process.cwd(), 'src/app/dashboard/reviews/layout.tsx'), 'utf8');
+    const catalogLayout = readFileSync(path.join(process.cwd(), 'src/app/dashboard/widgets/(catalog)/layout.tsx'), 'utf8');
+    const editorLayout = readFileSync(path.join(process.cwd(), 'src/app/dashboard/widgets/[widgetId]/layout.tsx'), 'utf8');
+
+    expect(workspaceInputs.some((input) => input.includes('/src/features/review-moderation/'))).toBe(false);
+    expect(workspaceInputs.some((input) => input.includes('/src/features/widget-management/'))).toBe(false);
+    expect(workspaceInputs.some((input) => input.includes('/src/widget/'))).toBe(false);
+    expect(dashboardLayout).toContain('AdminAuthBoundary');
+    expect(dashboardLayout).not.toContain('AdminWorkspaceShell');
+    expect(reviewsLayout).toContain('AdminWorkspaceShell');
+    expect(catalogLayout).toContain('AdminWorkspaceShell');
+    expect(editorLayout).not.toContain('AdminWorkspaceShell');
   });
 
   it('keeps review moderation out of widget feature and runtime graphs', async () => {
@@ -62,5 +79,6 @@ describe('admin route dependency boundaries', () => {
     expect(editorSource).not.toMatch(/addEventListener\(['"]popstate/);
     expect(editorSource).not.toMatch(/history\.(?:pushState|replaceState)/);
     expect(editorSource).not.toMatch(/(?:sessionStorage|localStorage|indexedDB)/);
+    expect(editorSource).not.toContain('registerNavigationBlocker');
   });
 });

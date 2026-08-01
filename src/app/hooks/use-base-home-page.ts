@@ -18,7 +18,7 @@ export function useBaseHomePage() {
   useEffect(() => {
     try {
       if (window.self !== window.top) {
-        // AdminShell is the single owner of AppBridge loader and token bootstrap.
+        // The dashboard auth boundary is the single owner of AppBridge loader and token bootstrap.
         router.replace('/dashboard/reviews');
         return;
       }

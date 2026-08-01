@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-01
-last_verified: 2026-08-01
+updated: 2026-08-02
+last_verified: 2026-08-02
 confidence: high
 tags:
   - auth
@@ -30,7 +30,8 @@ source_files:
   - "src/helpers/token-helpers.ts"
   - "src/app/dashboard/page.tsx"
   - "src/app/dashboard/layout.tsx"
-  - "src/features/admin-shell/AdminShell.tsx"
+  - "src/features/admin-shell/AdminAuthBoundary.tsx"
+  - "src/features/admin-shell/AdminWorkspaceShell.tsx"
   - "src/features/admin-shell/AdminShellContext.tsx"
   - "tests/admin-dashboard-contract.spec.ts"
 ---
@@ -40,7 +41,7 @@ source_files:
 ## Agent Brief
 Use this page when changing OAuth, AppBridge dashboard admission, installation
 generation, token refresh, or uninstall fencing. The dashboard's persistent
-shell owns browser authentication and feature-neutral navigation; server routes
+auth boundary owns browser authentication; route-specific workspace layouts own navigation. Server routes
 still make the final authorization decision against the exact active
 installation/token pair.
 
@@ -109,9 +110,9 @@ OAuth callback responses never place that bearer credential in a URL.
        ▼
 5.  Merchant lands inside ikas Admin → app loads `/` in iframe
        - useBaseHomePage() delegates to `/dashboard/reviews` without touching AppBridge
-       - the persistent AdminShell closes the loader and obtains the JWT once via AppBridge
+       - the persistent AdminAuthBoundary closes the loader and obtains the JWT once via AppBridge
        - TokenHelpers caches it under the exact authorizedAppId for the browser session
-       - the persistent AdminShell owns all dashboard auth and route admission
+       - the persistent AdminAuthBoundary owns all dashboard auth and route admission
 ```
 
 Source files:
@@ -146,7 +147,7 @@ Source files:
   `token-<authorizedAppId>`; OAuth callback query parameters are not a token
   source.
 - `dashboard/layout.tsx` keeps every review/widget route behind the persistent
-  `AdminShell` `loading -> ready | authentication_required` gate. Feature
+  `AdminAuthBoundary` `loading -> ready | authentication_required` gate. Feature
   routes mount only after AppBridge returns a real token. Direct top-level
   access, a missing authorized-app identity, or a missing token starts no
   admin/ikas API request; there is no `JWT dev` fallback.
@@ -157,6 +158,9 @@ Source files:
   retryable `503 authentication_unavailable` remains a feature-local error.
 - `AppBridgeHelper.closeLoader()` remains an independent mount effect so the
   ikas host loader closes even when authentication fails.
+- Reviews and the widget catalog add `AdminWorkspaceShell` in their nested
+  layouts. The widget editor omits that visual shell while remaining inside the
+  same authenticated dashboard and widget-settings route boundaries.
 - All `/api/admin/*` calls send `Authorization: JWT <token>`.
 - Server: `authenticateIkasAdminRequest()` accepts exactly one
   `Authorization: JWT <compact-token>` credential. `JwtHelpers.verifyToken()`

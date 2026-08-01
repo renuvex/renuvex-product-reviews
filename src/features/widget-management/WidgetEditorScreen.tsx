@@ -32,7 +32,7 @@ export function WidgetEditorScreen({ widgetId }: { widgetId: WidgetId }) {
   }
 
   return (
-    <div className="h-[calc(100vh-132px)] min-h-[620px] overflow-hidden rounded-lg bg-background">
+    <div className="h-full min-h-0 overflow-hidden rounded-lg bg-background">
       <WidgetEditor
         widget={widget}
         savedSettings={(settings[widget.id] ?? {}) as Record<string, unknown>}

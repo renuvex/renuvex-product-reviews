@@ -13,10 +13,10 @@ const routeDefinitions = {
     expectedRouteChunk: '/app/dashboard/reviews/page-',
   },
   catalog: {
-    appPath: '/dashboard/widgets/page',
-    manifest: 'server/app/dashboard/widgets/page_client-reference-manifest.js',
+    appPath: '/dashboard/widgets/(catalog)/page',
+    manifest: 'server/app/dashboard/widgets/(catalog)/page_client-reference-manifest.js',
     owner: 'src/features/widget-management/WidgetCatalogScreen.tsx',
-    expectedRouteChunk: '/app/dashboard/widgets/page-',
+    expectedRouteChunk: '/app/dashboard/widgets/(catalog)/page-',
   },
   editor: {
     appPath: '/dashboard/widgets/[widgetId]/page',

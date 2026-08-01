@@ -3,8 +3,8 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-01
-last_verified: 2026-08-01
+updated: 2026-08-02
+last_verified: 2026-08-02
 tags:
   - critical-files
 related:
@@ -38,10 +38,15 @@ code overrides stale prose.
 
 ## Admin widget editor
 
-### [src/features/admin-shell/AdminShell.tsx](src/features/admin-shell/AdminShell.tsx)
-- **What:** Persistent dashboard layout boundary for AppBridge authentication, feature-neutral navigation, merchant identity display, and best-effort theme synchronization.
-- **Why it matters:** Review and widget routes cannot mount or call authenticated APIs before a real AppBridge JWT exists. The shell starts merchant and theme work independently after auth instead of blocking route data.
-- **Be careful:** The shell must not import review moderation, widget management, the widget catalog, or `src/widget/**`. Dirty-navigation support stays behind the generic blocker interface in `AdminShellContext.tsx`.
+### [src/features/admin-shell/AdminAuthBoundary.tsx](src/features/admin-shell/AdminAuthBoundary.tsx)
+- **What:** Persistent dashboard boundary for AppBridge authentication, merchant identity lookup, and best-effort theme synchronization.
+- **Why it matters:** Review and widget routes cannot mount or call authenticated APIs before a real AppBridge JWT exists. It starts merchant and theme work independently after auth instead of blocking route data.
+- **Be careful:** The boundary must not import review moderation, widget management, the widget catalog, workspace navigation, or `src/widget/**`.
+
+### [src/features/admin-shell/AdminWorkspaceShell.tsx](src/features/admin-shell/AdminWorkspaceShell.tsx)
+- **What:** Feature-neutral header and Reviews/Widgets navigation used only by review moderation and the widget catalog.
+- **Why it matters:** The configurable widget editor can use a focused, full-width route layout while sharing the same persistent authentication and widget-settings provider.
+- **Be careful:** Do not hoist this shell back into `dashboard/layout.tsx` or `dashboard/widgets/layout.tsx`; that would restore the editor sidebar and couple its route bundle to workspace chrome.
 
 ### [src/features/widget-management/components/editor/SettingsPanel.tsx](src/features/widget-management/components/editor/SettingsPanel.tsx)
 - **What:** Schema-driven admin settings renderer. Converts every `SettingField` from [catalog.ts](src/lib/widgets/catalog.ts) into the correct control.

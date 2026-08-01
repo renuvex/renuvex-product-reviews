@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-28
-updated: 2026-08-01
-last_verified: 2026-08-01
+updated: 2026-08-02
+last_verified: 2026-08-02
 confidence: high
 tags:
   - testing
@@ -380,6 +380,10 @@ feature work. The suite uses Playwright request interception, which disables
 HTTP cache, so it does not claim second-open browser-cache reuse. It also pins
 feature-local API retry states, dirty modal navigation, native `beforeunload`,
 and the absence of custom history manipulation.
+It also asserts the workspace header/navigation is present on Reviews and the
+widget catalog but absent on unknown, planned, and configurable editor routes;
+the focused editor still retains AppBridge authentication, settings caching,
+route isolation, and preview admission.
 
 `pnpm test:admin-dashboard` is the canonical sequence: one `build:ci`, the
 route-bundle verifier, then `test:admin-dashboard:built`. CI reuses that build

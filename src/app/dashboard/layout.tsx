@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
-import { AdminShell } from '@/features/admin-shell/AdminShell';
+import { AdminAuthBoundary } from '@/features/admin-shell/AdminAuthBoundary';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  return <AdminShell>{children}</AdminShell>;
+  return <AdminAuthBoundary>{children}</AdminAuthBoundary>;
 }

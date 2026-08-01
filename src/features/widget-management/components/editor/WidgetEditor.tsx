@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { InfoTooltip } from './InfoTooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { colors, componentStyles, radii, typography, opacity } from '@/lib/design-tokens';
-import { useAdminShell } from '@/features/admin-shell/AdminShellContext';
 import type { ConfigurableWidgetDefinition } from '@/lib/widgets/catalog';
 import type { WidgetSettingsMap } from '../../types';
 import { SettingsPanel } from './SettingsPanel';
@@ -41,6 +40,7 @@ import {
 
 const PREVIEW_SLOW_TIMEOUT_MS = 2500;
 const PREVIEW_ERROR_TIMEOUT_MS = 15000;
+const WIDGET_CATALOG_HREF = '/dashboard/widgets';
 
 const VIEWPORT_PRESETS = [
   { key: 'mobile',  label: 'Mobil',   icon: Smartphone, width: 390  },
@@ -190,10 +190,8 @@ export function WidgetEditor({
   onCommit,
 }: WidgetEditorProps) {
   const router = useRouter();
-  const { registerNavigationBlocker } = useAdminShell();
   const [draft, setDraft] = useState<WidgetSettingsDraft>(() => mergeWithDefaults(widget, savedSettings));
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
-  const [pendingExitHref, setPendingExitHref] = useState('/dashboard/widgets');
   const [viewport, setViewport] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
   const [previewBgColor, setPreviewBgColor] = useState(DEFAULT_PREVIEW_BG);
   const [previewLoadState, dispatchPreviewLoadState] = useReducer(
@@ -213,7 +211,6 @@ export function WidgetEditor({
   );
   const previewWidgetsRef = useRef<Record<string, WidgetSettingsDraft>>(previewWidgets);
   const previewRequestKeyRef = useRef(previewLoadState.requestKey);
-  const allowNavigationRef = useRef(false);
   const savedDraft = useMemo(() => mergeWithDefaults(widget, savedSettings), [widget, savedSettings]);
   const previousSavedDraftRef = useRef<WidgetSettingsDraft>(savedDraft);
   const previousWidgetIdRef = useRef(widget.id);
@@ -329,17 +326,6 @@ export function WidgetEditor({
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [dirty]);
 
-  useEffect(() => {
-    if (!dirty) return;
-    allowNavigationRef.current = false;
-    return registerNavigationBlocker((href) => {
-      if (allowNavigationRef.current) return false;
-      setPendingExitHref(href);
-      setShowUnsavedModal(true);
-      return true;
-    });
-  }, [dirty, registerNavigationBlocker]);
-
   const viewportWidth = VIEWPORT_PRESETS.find(v => v.key === viewport)?.width ?? '100%';
   const isDesktopPreview = viewport === 'desktop';
   const previewBackground = OPAQUE_HEX_COLOR_RE.test(previewBgColor) ? previewBgColor : DEFAULT_PREVIEW_BG;
@@ -364,47 +350,45 @@ export function WidgetEditor({
     });
   }, [activePreviewScene, widget.id]);
 
-  const exitEditor = useCallback((href: string) => {
-    allowNavigationRef.current = true;
-    router.push(href);
+  const exitEditor = useCallback(() => {
+    router.push(WIDGET_CATALOG_HREF);
   }, [router]);
 
-  const requestExit = useCallback((href: string) => {
+  const requestExit = useCallback(() => {
     if (dirty) {
-      setPendingExitHref(href);
       setShowUnsavedModal(true);
       return;
     }
-    exitEditor(href);
+    exitEditor();
   }, [dirty, exitEditor]);
 
   const handleSave = useCallback(async () => {
     try {
       await onCommit(draft);
-      exitEditor('/dashboard/widgets');
+      exitEditor();
     } catch {
       // The settings boundary reports a fixed user-facing failure and keeps the draft open.
     }
   }, [draft, exitEditor, onCommit]);
 
   const handleBack = useCallback(() => {
-    requestExit('/dashboard/widgets');
+    requestExit();
   }, [requestExit]);
 
   const handleSaveAndExit = useCallback(async () => {
     try {
       await onCommit(draft);
       setShowUnsavedModal(false);
-      exitEditor(pendingExitHref);
+      exitEditor();
     } catch {
       // Keep the modal and dirty draft in place after a failed save.
     }
-  }, [draft, exitEditor, onCommit, pendingExitHref]);
+  }, [draft, exitEditor, onCommit]);
 
   const handleDiscardAndExit = useCallback(() => {
     setShowUnsavedModal(false);
-    exitEditor(pendingExitHref);
-  }, [exitEditor, pendingExitHref]);
+    exitEditor();
+  }, [exitEditor]);
 
   return (
     <>

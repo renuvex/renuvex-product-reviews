@@ -1,15 +1,14 @@
 'use client';
 
-import { createContext, useCallback, useContext, useMemo, useRef, type ReactNode } from 'react';
-
-export type AdminNavigationBlocker = (href: string) => boolean;
+import { createContext, useContext, useMemo, type ReactNode } from 'react';
 
 type AdminShellContextValue = {
   token: string;
   getAuthHeader: () => Promise<{ Authorization: string }>;
   handleApiAuthenticationFailure: (error: unknown) => boolean;
-  registerNavigationBlocker: (blocker: AdminNavigationBlocker) => () => void;
-  tryBlockNavigation: (href: string) => boolean;
+  storeName: string;
+  storeLoadFailed: boolean;
+  retryStore: () => void;
 };
 
 const AdminShellContext = createContext<AdminShellContextValue | null>(null);
@@ -19,6 +18,9 @@ type AdminShellProviderProps = {
   token: string;
   getAuthHeader: AdminShellContextValue['getAuthHeader'];
   handleApiAuthenticationFailure: AdminShellContextValue['handleApiAuthenticationFailure'];
+  storeName: string;
+  storeLoadFailed: boolean;
+  retryStore: AdminShellContextValue['retryStore'];
 };
 
 export function AdminShellProvider({
@@ -26,34 +28,24 @@ export function AdminShellProvider({
   token,
   getAuthHeader,
   handleApiAuthenticationFailure,
+  storeName,
+  storeLoadFailed,
+  retryStore,
 }: AdminShellProviderProps) {
-  const navigationBlockerRef = useRef<AdminNavigationBlocker | null>(null);
-
-  const registerNavigationBlocker = useCallback((blocker: AdminNavigationBlocker) => {
-    navigationBlockerRef.current = blocker;
-    return () => {
-      if (navigationBlockerRef.current === blocker) {
-        navigationBlockerRef.current = null;
-      }
-    };
-  }, []);
-
-  const tryBlockNavigation = useCallback((href: string) => {
-    return navigationBlockerRef.current?.(href) ?? false;
-  }, []);
-
   const value = useMemo<AdminShellContextValue>(() => ({
     token,
     getAuthHeader,
     handleApiAuthenticationFailure,
-    registerNavigationBlocker,
-    tryBlockNavigation,
+    storeName,
+    storeLoadFailed,
+    retryStore,
   }), [
     getAuthHeader,
     handleApiAuthenticationFailure,
-    registerNavigationBlocker,
+    retryStore,
+    storeLoadFailed,
+    storeName,
     token,
-    tryBlockNavigation,
   ]);
 
   return <AdminShellContext.Provider value={value}>{children}</AdminShellContext.Provider>;

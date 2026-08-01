@@ -3,8 +3,8 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-01
-last_verified: 2026-08-01
+updated: 2026-08-02
+last_verified: 2026-08-02
 tags:
   - structure
 related:
@@ -66,22 +66,22 @@ renuvex-product-reviews/
 │  │  │  └─ public/              # Anonymous widget + isolated review-session APIs
 │  │  ├─ authorize-store/page.tsx
 │  │  ├─ dashboard/
-│  │  │  ├─ layout.tsx           # Persistent authenticated AdminShell
+│  │  │  ├─ layout.tsx           # Persistent AppBridge AdminAuthBoundary
 │  │  │  ├─ not-found.tsx        # Dashboard-local fail-closed unknown-route UI
 │  │  │  ├─ page.tsx             # Redirects to /dashboard/reviews
-│  │  │  ├─ reviews/              # Review moderation route + error boundary
-│  │  │  └─ widgets/              # Settings layout, catalog and [widgetId] editor
+│  │  │  ├─ reviews/              # Workspace-shell layout, review route + error boundary
+│  │  │  └─ widgets/              # Settings layout, (catalog) workspace and focused [widgetId] editor
 │  │  ├─ hooks/use-base-home-page.ts
 │  │  ├─ globals.css             # Tailwind v4 entry
 │  │  ├─ layout.tsx
-│  │  └─ page.tsx                # iframe delegates to AdminShell; top-level OAuth routing
+│  │  └─ page.tsx                # iframe delegates to dashboard auth boundary; top-level OAuth routing
 │  │
 │  ├─ components/
 │  │  ├─ Loading/                # Full-page loader
 │  │  └─ ui/                     # shadcn/ui primitives (button, card, dialog, etc.)
 │  │
 │  ├─ features/
-│  │  ├─ admin-shell/            # AppBridge auth, persistent nav, generic route errors
+│  │  ├─ admin-shell/            # AppBridge auth boundary, optional workspace nav, route errors
 │  │  ├─ review-moderation/      # Route-owned review state and moderation UI
 │  │  └─ widget-management/      # Settings provider, catalog and editor domain
 │  │     └─ components/

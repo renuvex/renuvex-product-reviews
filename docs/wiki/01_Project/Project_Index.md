@@ -3,7 +3,7 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-01
+updated: 2026-08-02
 tags:
   - quick-reference
 related:
@@ -74,7 +74,8 @@ related:
 
 ## Admin UI (React)
 - Dashboard route group → [src/app/dashboard/](src/app/dashboard/)
-- Persistent admin shell → [src/features/admin-shell/AdminShell.tsx](src/features/admin-shell/AdminShell.tsx)
+- Persistent admin auth boundary → [src/features/admin-shell/AdminAuthBoundary.tsx](src/features/admin-shell/AdminAuthBoundary.tsx)
+- Reviews/catalog workspace shell → [src/features/admin-shell/AdminWorkspaceShell.tsx](src/features/admin-shell/AdminWorkspaceShell.tsx)
 - Review moderation → [src/features/review-moderation/](src/features/review-moderation/)
 - Widget management → [src/features/widget-management/](src/features/widget-management/)
 - Live preview route → [src/app/(preview)/preview/route.ts](src/app/(preview)/preview/route.ts)

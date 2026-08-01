@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-01
-last_verified: 2026-08-01
+updated: 2026-08-02
+last_verified: 2026-08-02
 confidence: high
 source_files:
   - "src/lib/widgets/catalog.ts"
@@ -113,9 +113,13 @@ unknown IDs become `404`, while planned or non-configurable widgets render a
 server-only unavailable view. Only a canonical configurable ID can mount the
 client editor, request settings, or create a preview iframe. The client and
 settings APIs repeat the capability check as independent fail-closed layers.
+The catalog opts into the normal admin workspace header/sidebar, while the
+editor route uses a focused full-width layout. Both remain under the same
+persistent AppBridge auth boundary and widget-settings provider, so the focused
+presentation does not create a second auth flow or settings cache.
 
 ## Unsaved editor navigation
-- The editor's Geri command and AdminShell Yorumlar/Widgetlar links use the same
+- The focused editor has no workspace sidebar. Its Geri command uses the
   `Kaydedilmemiş Değişiklikler` modal when the settings draft is dirty.
 - Successful Save and `Kaydetmeden Çık` leave the editor. A failed save keeps
   the editor open and the draft dirty.

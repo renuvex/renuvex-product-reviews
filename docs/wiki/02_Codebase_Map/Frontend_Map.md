@@ -3,8 +3,8 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-01
-last_verified: 2026-08-01
+updated: 2026-08-02
+last_verified: 2026-08-02
 confidence: high
 tags:
   - frontend
@@ -20,7 +20,8 @@ source_files:
   - "src/app/dashboard/page.tsx"
   - "src/app/dashboard/layout.tsx"
   - "src/app/dashboard/not-found.tsx"
-  - "src/features/admin-shell/AdminShell.tsx"
+  - "src/features/admin-shell/AdminAuthBoundary.tsx"
+  - "src/features/admin-shell/AdminWorkspaceShell.tsx"
   - "src/features/review-moderation/ReviewModerationScreen.tsx"
   - "src/features/widget-management/WidgetCatalogScreen.tsx"
   - "src/features/widget-management/WidgetEditorScreen.tsx"
@@ -36,8 +37,8 @@ source_files:
 # Frontend Map
 
 ## Agent Brief
-- `/` delegates iframe entry to the persistent `AdminShell`; only that shell owns AppBridge loader/token bootstrap.
-- Reviews, widget catalog, and widget editor are separate route-owned feature graphs; settings live only under the Widgets route group.
+- `/` delegates iframe entry to the persistent `AdminAuthBoundary`; only that boundary owns AppBridge loader/token bootstrap.
+- Reviews and the widget catalog opt into `AdminWorkspaceShell`; the widget editor keeps the same auth/settings boundaries but uses a focused, sidebar-free route layout.
 - The admin-dashboard suite uses a protocol stub for route tests; the real `/preview` renderer remains covered by `test:admin-preview`.
 
 ## Summary
@@ -55,8 +56,8 @@ Next.js 16 (16.2), React 19, TypeScript, Tailwind CSS v4 (`@tailwindcss/postcss`
 | `/authorize-store` | [src/app/authorize-store/page.tsx](src/app/authorize-store/page.tsx) | Manual store-name entry fallback |
 | `/dashboard` | [src/app/dashboard/page.tsx](src/app/dashboard/page.tsx) | Server redirect to `/dashboard/reviews` |
 | `/dashboard/reviews` | [src/app/dashboard/reviews/page.tsx](src/app/dashboard/reviews/page.tsx) | Review moderation route; owns review list, summary and action state |
-| `/dashboard/widgets` | [src/app/dashboard/widgets/page.tsx](src/app/dashboard/widgets/page.tsx) | Widget catalog route; loads settings only after entering the widget route group |
-| `/dashboard/widgets/[widgetId]` | [src/app/dashboard/widgets/[widgetId]/page.tsx](src/app/dashboard/widgets/[widgetId]/page.tsx) | Server-first widget capability admission; only configurable widgets mount the client editor |
+| `/dashboard/widgets` | [src/app/dashboard/widgets/(catalog)/page.tsx](src/app/dashboard/widgets/(catalog)/page.tsx) | Widget catalog route inside the workspace shell; loads settings only after entering the widget route group |
+| `/dashboard/widgets/[widgetId]` | [src/app/dashboard/widgets/[widgetId]/page.tsx](src/app/dashboard/widgets/[widgetId]/page.tsx) | Focused sidebar-free editor route with server-first capability admission; only configurable widgets mount the client editor |
 | `/preview` | [src/app/(preview)/preview/route.ts](src/app/(preview)/preview/route.ts) | Standalone HTML iframe — no root layout |
 
 ### Top-level Layout
@@ -66,7 +67,7 @@ Next.js 16 (16.2), React 19, TypeScript, Tailwind CSS v4 (`@tailwindcss/postcss`
 ### Auth bootstrap
 - [src/app/hooks/use-base-home-page.ts](src/app/hooks/use-base-home-page.ts)
   - In iframe: routes directly to `/dashboard/reviews` without touching
-    AppBridge. The persistent `AdminShell` is the single loader/token owner.
+    AppBridge. The persistent `AdminAuthBoundary` is the single loader/token owner.
   - Out of iframe with `?storeName=`: redirect to `/api/oauth/authorize/ikas`
   - Otherwise: `/authorize-store`
 - The OAuth server callback returns directly to the trusted ikas Admin
@@ -74,7 +75,7 @@ Next.js 16 (16.2), React 19, TypeScript, Tailwind CSS v4 (`@tailwindcss/postcss`
   handoff.
 
 ### Mandatory iframe page pattern (from canonical rules)
-The dashboard route group follows this pattern through its persistent layout shell (see [[Existing_AI_Rules_And_Ikas_CLI_Instructions]] for full text):
+The dashboard route group follows this pattern through its persistent auth boundary (see [[Existing_AI_Rules_And_Ikas_CLI_Instructions]] for full text):
 1. **Always** call `AppBridgeHelper.closeLoader()` in a separate `useEffect(() => { AppBridgeHelper.closeLoader(); }, [])` on mount.
 2. **Always** retrieve the JWT via `TokenHelpers.getTokenForIframeApp()`.
 3. **Never** make direct API calls to ikas from the frontend — always go through `/api/admin/*` or `/api/ikas/*` server routes.
@@ -82,13 +83,17 @@ The dashboard route group follows this pattern through its persistent layout she
 5. Wrap any `useSearchParams()` usage in `<Suspense>` (Next.js requirement).
 6. Handle loading + error states gracefully.
 
-The dashboard enforces that sequence as a runtime boundary. Until AppBridge
+The dashboard enforces that sequence in `AdminAuthBoundary`. Until AppBridge
 returns a token it renders only the authentication gate, so review, theme,
 merchant, and settings requests cannot start with a placeholder credential.
 The Reviews route loads review data after auth. The widget settings provider
 exists only under `/dashboard/widgets`, starts idle, and loads after a catalog
 or valid editor route requests it. Leaving the widget route group discards the
 cache, so returning from Reviews performs one new authoritative settings GET.
+The Reviews and catalog layouts add the shared workspace header/sidebar below
+that auth boundary. The editor route deliberately omits the workspace shell and
+uses the full iframe width; this changes neither its URL nor its auth/settings
+provider lifetime.
 
 Review list pagination and moderation counts are separate contracts. The first
 Reviews load requests one paginated list and one `/api/admin/reviews/summary`;
@@ -108,7 +113,7 @@ Pattern: `AppBridgeHelper.closeLoader() → TokenHelpers → ApiRequests → bac
 
 ```
 src/features/
-├─ admin-shell/                   # Persistent AppBridge auth, navigation and generic route errors
+├─ admin-shell/                   # Persistent AppBridge auth plus optional workspace navigation
 ├─ review-moderation/             # Review list, rows, dialogs, media previews and route-owned state
 └─ widget-management/
    ├─ WidgetSettingsProvider.tsx  # Route-group cache; no mount-time request
