@@ -29,7 +29,7 @@ Before coding:
 
 Implementation rules:
 - The widget is **plain JS** (no TypeScript, no React). Don't introduce a framework without an ADR.
-- Settings come from [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts). If a new field is needed, add to schema first; UI and validation auto-derive.
+- Settings come from [catalog.ts](src/lib/widgets/catalog.ts). If a new field is needed, add to schema first; UI and validation auto-derive.
 - Layout meta (`supports`) drives which settings appear. New layouts must declare `supports`.
 - After any `src/widget/*` change: run `pnpm build:widget`, commit `public/widget.js`.
 - Test in `/preview` AND on a real ikas storefront — preview skips the mutation observer + theme integration.

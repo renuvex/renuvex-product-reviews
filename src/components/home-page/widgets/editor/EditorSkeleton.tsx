@@ -1,7 +1,7 @@
 import React from 'react';
 import { ArrowLeft, Loader2, Save } from 'lucide-react';
 import { colors, componentStyles, radii, typography, opacity } from '@/lib/design-tokens';
-import type { WidgetDef } from '../widgetDefs';
+import type { ConfigurableWidgetDefinition } from '@/lib/widgets/catalog';
 
 // Ayarlar (savedSettings) async yüklenirken WidgetEditor yerine gösterilir.
 // Editörün layout iskeletini birebir aynalar — başlık + split-pane — ki gerçek
@@ -9,7 +9,7 @@ import type { WidgetDef } from '../widgetDefs';
 // gelince WidgetsContainer bunu gerçek WidgetEditor ile değiştirir.
 
 interface EditorSkeletonProps {
-  widget: WidgetDef;
+  widget: ConfigurableWidgetDefinition;
   onBack: () => void;
 }
 

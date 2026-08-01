@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-29
-last_verified: 2026-07-29
+updated: 2026-08-01
+last_verified: 2026-08-01
 confidence: high
 tags:
   - security
@@ -142,7 +142,7 @@ IP source: `x-forwarded-for` (first entry). Vercel sets this. Spoofable in theor
   only context-allowlisted codes or fixed fallback codes. Sentry receives a
   synthetic error and optional opaque run/event ID; raw exception messages,
   stacks, recipient/token/URL/provider/query/connection data are excluded.
-- **Admin settings PUT**: `validateSettings(widgetId, settings)` runs the schema in [src/lib/widget-settings.ts](src/lib/widget-settings.ts).
+- **Admin settings PUT**: a plain JSON body and fail-closed configurable widget definition are required before `sanitizeSettings(widget, settings)` / `validateSettings(widget, settings)` and before any write-side effect.
 - **DB caps**: `comment` and `merchantReply` are `@db.VarChar(2000)`.
 
 ## Profanity filter

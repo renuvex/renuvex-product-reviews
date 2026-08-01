@@ -27,16 +27,24 @@ export interface AdminDashboardNetworkLog {
   authorizationFailures: string[];
   unexpectedRequests: string[];
   previewRequests: string[];
+  summaryCompletions: Array<{ call: number; status: number }>;
 }
 
 interface SetupOptions {
   settingsFailures?: number;
+  moderationStatus?: 200 | 202 | 500;
+  deletionStatus?: 200 | 500;
+  summaryFailureCalls?: number[];
+  summaryDelaysMs?: number[];
 }
 
 interface MockState {
   moderated: boolean;
+  deleted: boolean;
+  merchantReply: string | null;
   settings: Record<string, Record<string, unknown>>;
   settingsFailuresRemaining: number;
+  summaryCallCount: number;
 }
 
 interface HarnessCounts {
@@ -75,7 +83,7 @@ function json(route: Route, body: unknown, status = 200) {
   });
 }
 
-function review(id: string, author: string, status: string) {
+function review(id: string, author: string, status: string, merchantReply: string | null = null) {
   return {
     id,
     productId: `product-${id}`,
@@ -84,7 +92,7 @@ function review(id: string, author: string, status: string) {
     comment: `${author} tarafından yazılan test yorumu.`,
     author,
     status,
-    merchantReply: null,
+    merchantReply,
     images: '[]',
     media: [],
     hasVideo: false,
@@ -93,10 +101,21 @@ function review(id: string, author: string, status: string) {
 }
 
 function totalForStatus(state: MockState, status: string | null): number {
-  if (status === 'pending') return state.moderated ? 20 : 21;
+  if (status === 'pending') return 21 - Number(state.moderated) - Number(state.deleted);
   if (status === 'approved') return state.moderated ? 5 : 4;
   if (status === 'rejected') return 2;
-  return 27;
+  return 27 - Number(state.deleted);
+}
+
+function summaryResponse(state: MockState) {
+  return {
+    data: {
+      pending: totalForStatus(state, 'pending'),
+      approved: totalForStatus(state, 'approved'),
+      rejected: totalForStatus(state, 'rejected'),
+      total: totalForStatus(state, null),
+    },
+  };
 }
 
 function reviewsResponse(url: URL, state: MockState) {
@@ -113,7 +132,7 @@ function reviewsResponse(url: URL, state: MockState) {
   if (status === 'pending' && page === 2) {
     data = [review('page-2', 'İkinci Sayfa Müşterisi', 'pending')];
   } else if (status === 'pending') {
-    data = [state.moderated
+    data = [state.moderated || state.deleted
       ? review('pending-2', 'Sonraki Müşteri', 'pending')
       : review('review-1', 'İlk Müşteri', 'pending')];
   } else if (status === 'approved') {
@@ -186,10 +205,14 @@ export async function setupAdminDashboardRoutes(page: Page, options: SetupOption
     authorizationFailures: [],
     unexpectedRequests: [],
     previewRequests: [],
+    summaryCompletions: [],
   };
   const state: MockState = {
     moderated: false,
+    deleted: false,
+    merchantReply: null,
     settingsFailuresRemaining: options.settingsFailures || 0,
+    summaryCallCount: 0,
     settings: {
       reviews: { enabled: true, title: 'Müşteri Yorumları', showTitle: true, reviewStarColor: '#f59e0b' },
       badge: { enabled: true, size: 'medium', alignment: 'auto', showValue: true, showCount: true },
@@ -256,13 +279,57 @@ export async function setupAdminDashboardRoutes(page: Page, options: SetupOption
         return;
       }
 
+      if (url.pathname === '/api/admin/reviews/summary' && method === 'GET') {
+        const call = ++state.summaryCallCount;
+        const response = summaryResponse(state);
+        const delayMs = options.summaryDelaysMs?.[call - 1] ?? 0;
+        if (delayMs > 0) await new Promise((resolve) => setTimeout(resolve, delayMs));
+        const status = options.summaryFailureCalls?.includes(call) ? 500 : 200;
+        await json(route, status === 200 ? response : { error: 'summary_fixture_failure' }, status);
+        log.summaryCompletions.push({ call, status });
+        return;
+      }
+
       if (url.pathname === '/api/admin/reviews' && method === 'PUT') {
         if (body && typeof body === 'object' && 'id' in body && 'status' in body && body.id === 'review-1' && body.status === 'approved') {
+          const status = options.moderationStatus ?? 200;
+          if (status === 500) {
+            await json(route, { error: 'moderation_fixture_failure' }, 500);
+            return;
+          }
+          if (status === 202) {
+            await json(route, {
+              data: review('review-1', 'İlk Müşteri', 'pending'),
+              processing: true,
+            }, 202);
+            return;
+          }
           state.moderated = true;
           await json(route, { data: review('review-1', 'İlk Müşteri', 'approved'), processing: false });
           return;
         }
+        if (body && typeof body === 'object' && 'id' in body && 'merchantReply' in body && body.id === 'review-1') {
+          state.merchantReply = typeof body.merchantReply === 'string' ? body.merchantReply : null;
+          await json(route, {
+            data: review('review-1', 'İlk Müşteri', 'pending', state.merchantReply),
+          });
+          return;
+        }
         await json(route, { error: 'unexpected_review_update' }, 400);
+        return;
+      }
+
+      if (url.pathname === '/api/admin/reviews' && method === 'DELETE') {
+        if (url.searchParams.get('id') !== 'review-1') {
+          await json(route, { error: 'unexpected_review_delete' }, 400);
+          return;
+        }
+        if ((options.deletionStatus ?? 200) === 500) {
+          await json(route, { error: 'deletion_fixture_failure' }, 500);
+          return;
+        }
+        state.deleted = true;
+        await json(route, { data: { id: 'review-1' } });
         return;
       }
 

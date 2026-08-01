@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { colors, componentStyles, typography } from '@/lib/design-tokens';
 import { TokenHelpers } from '@/helpers/token-helpers';
+import { isAdminReviewSummary } from '@/lib/admin-review-summary';
 import { Review, ReviewMedia, WidgetSettingsMap, TabKey } from './types';
 import { AdminMuxPlayerPreview } from './AdminMuxPlayerPreview';
 import { isUnapprovedVideoPreview, type MediaPreviewState } from './MediaPreviewState';
@@ -52,6 +53,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
 
   const pageSizeRef = React.useRef(pageSize);
   pageSizeRef.current = pageSize;
+  const summaryRequestSequenceRef = React.useRef(0);
 
   const fetchReviews = useCallback(async (tab: TabKey, p: number, limit?: number) => {
     setLoading(true);
@@ -64,7 +66,6 @@ export default function HomePage({ token, storeName }: HomePageProps) {
         setReviews(res.data.data as Review[]);
         setTotal(res.data.pagination.total);
         setPage(p);
-        setTabCounts(prev => ({ ...prev, [tab]: res.data.pagination.total }));
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } catch (error) {
@@ -74,23 +75,24 @@ export default function HomePage({ token, storeName }: HomePageProps) {
     }
   }, [token]);
 
-  const fetchAllCounts = useCallback(async () => {
-    const headers = await freshAuthHeader(token);
+  const fetchReviewSummary = useCallback(async () => {
+    const requestSequence = ++summaryRequestSequenceRef.current;
     try {
-      const [pending, approved, rejected, all] = await Promise.all([
-        axios.get('/api/admin/reviews?status=pending&page=1&limit=1', { headers }),
-        axios.get('/api/admin/reviews?status=approved&page=1&limit=1', { headers }),
-        axios.get('/api/admin/reviews?status=rejected&page=1&limit=1', { headers }),
-        axios.get('/api/admin/reviews?page=1&limit=1', { headers }),
-      ]);
-      setTabCounts({
-        pending:  pending.data?.pagination?.total  ?? 0,
-        approved: approved.data?.pagination?.total ?? 0,
-        rejected: rejected.data?.pagination?.total ?? 0,
-        all:      all.data?.pagination?.total      ?? 0,
+      const response = await axios.get('/api/admin/reviews/summary', {
+        headers: await freshAuthHeader(token),
       });
-    } catch (error) {
-      console.error("Tab sayıları çekilirken hata:", error);
+      if (requestSequence !== summaryRequestSequenceRef.current) return;
+      const summary = response.data?.data;
+      if (!isAdminReviewSummary(summary)) throw new Error('admin_review_summary_invalid');
+      setTabCounts({
+        pending: summary.pending,
+        approved: summary.approved,
+        rejected: summary.rejected,
+        all: summary.total,
+      });
+    } catch {
+      if (requestSequence !== summaryRequestSequenceRef.current) return;
+      console.error("Review summary could not be loaded.");
     }
   }, [token]);
 
@@ -119,8 +121,8 @@ export default function HomePage({ token, storeName }: HomePageProps) {
 
   useEffect(() => {
     void fetchReviews('pending', 1);
-    void fetchAllCounts();
-  }, [fetchReviews, fetchAllCounts]);
+    void fetchReviewSummary();
+  }, [fetchReviews, fetchReviewSummary]);
 
   const handleMainTabChange = useCallback((value: string) => {
     if (value !== 'reviews' && value !== 'widgets') return;
@@ -142,7 +144,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
       toast.success(processing
         ? 'Video yayına hazırlanıyor. Onay provider işlemi tamamlanınca uygulanacak.'
         : newStatus === 'approved' ? 'Yorum onaylandı.' : 'Yorum reddedildi.');
-      await Promise.all([fetchReviews(activeTab, page), fetchAllCounts()]);
+      await Promise.all([fetchReviews(activeTab, page), fetchReviewSummary()]);
     } catch (error) {
       console.error("Durum güncellenemedi:", error);
       toast.error("Durum güncellenirken bir hata oluştu, lütfen tekrar deneyin.");
@@ -226,20 +228,12 @@ export default function HomePage({ token, storeName }: HomePageProps) {
   const confirmDeleteReview = async () => {
     if (!deleteConfirm) return;
     const id = deleteConfirm;
-    const deletedReview = reviews.find(r => r.id === id);
     setDeleteConfirm(null);
     try {
       await axios.delete(`/api/admin/reviews?id=${id}`, { headers: await freshAuthHeader(token) });
       toast.success("Yorum silindi.");
       const targetPage = reviews.length === 1 && page > 1 ? page - 1 : page;
-      await fetchReviews(activeTab, targetPage);
-      if (deletedReview) {
-        setTabCounts(prev => ({
-          ...prev,
-          [deletedReview.status as TabKey]: Math.max(0, prev[deletedReview.status as TabKey] - 1),
-          all: Math.max(0, prev.all - 1),
-        }));
-      }
+      await Promise.all([fetchReviews(activeTab, targetPage), fetchReviewSummary()]);
     } catch {
       fetchReviews(activeTab, page);
       toast.error("Yorum silinirken bir hata oluştu.");

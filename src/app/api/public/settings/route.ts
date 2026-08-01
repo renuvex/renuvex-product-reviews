@@ -3,7 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { anonymousPublicCorsOptions, withAnonymousPublicCors } from '@/lib/cors';
 import { buildPublicThemeRuntime } from '@/lib/storefront-theme';
 import { isStorefrontThemeLazySyncDue } from '@/lib/storefront-theme-lazy-sync';
-import { getWidgetDefaults, sanitizeSettings } from '@/lib/widget-settings';
+import { getWidgetDefaults, isPlainJsonObject, sanitizeSettings } from '@/lib/widget-settings';
+import { CONFIGURABLE_WIDGET_IDS, resolveConfigurableWidget } from '@/lib/widgets/catalog';
 import { isVideoReviewsGloballyEnabled } from '@/lib/media/config';
 
 // ADR_0022: public settings is a pure read path. It only exposes whether
@@ -37,13 +38,19 @@ export async function GET(req: Request) {
   }
 
   const rows = await prisma.widgetSettings.findMany({
-    where: { storeId: publicApiKey },
+    where: {
+      storeId: publicApiKey,
+      widgetId: { in: CONFIGURABLE_WIDGET_IDS },
+    },
   });
 
   const widgets: Record<string, unknown> = {};
   for (const row of rows) {
-    const savedSettings = sanitizeSettings(row.widgetId, row.settings as Record<string, unknown>);
-    const publicSettings = { ...getWidgetDefaults(row.widgetId), ...savedSettings };
+    const resolution = resolveConfigurableWidget(row.widgetId);
+    if (!resolution.ok) continue;
+    const storedSettings = isPlainJsonObject(row.settings) ? row.settings : {};
+    const savedSettings = sanitizeSettings(resolution.widget, storedSettings);
+    const publicSettings = { ...getWidgetDefaults(resolution.widget), ...savedSettings };
     if (row.widgetId === 'reviews') {
       publicSettings.videoReviewsEnabled =
         isVideoReviewsGloballyEnabled() &&

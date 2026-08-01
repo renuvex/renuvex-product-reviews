@@ -37,7 +37,7 @@ Hard rules (canonical rules from `/CLAUDE.md` + wiki additions):
 - **Iframe pages must follow the canonical pattern** (`AppBridgeHelper.closeLoader()` in its own useEffect → `TokenHelpers.getTokenForIframeApp()` → `ApiRequests` → backend route). Wrap `useSearchParams()` in `<Suspense>`.
 - **Don't introduce a framework into the storefront widget** (`src/widget/*`) without an ADR — bundle size matters.
 - `storeId === merchantId` everywhere.
-- Settings schema lives in `src/components/home-page/widgets/widgetDefs.ts` — admin UI, server validation, and widget all consume it. Don't duplicate.
+- Settings schema lives in `src/lib/widgets/catalog.ts` — admin UI, server validation, and widget all consume it. Don't duplicate.
 - Every public route must choose an explicit trust policy: anonymous
   storefront/preview CORS, widget-error beacon CORS, or no CORS for
   host-isolated cookie/session routes. Never add a generic credential-reflecting

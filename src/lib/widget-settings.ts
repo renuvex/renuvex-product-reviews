@@ -1,8 +1,8 @@
 // Widget settings yardımcıları — admin ve public endpoint'lerin paylaştığı tek kaynak.
-// widgetDefs.ts schema'sından default'ları, izin verilen key listesini, sanitize
+// Saf widget kataloğundan default'ları, izin verilen key listesini, sanitize
 // ve validate işlemlerini türetir. İki endpoint'in ayrı kopyaları olmasın diye burada toplandı.
 
-import { WIDGETS, collectSettingFields } from '@/components/home-page/widgets/widgetDefs';
+import { collectSettingFields, type ConfigurableWidgetDefinition } from '@/lib/widgets/catalog';
 
 const REVIEW_SETTING_ALIASES: Record<string, string> = {
   showPhotoGallery: 'showMediaGallery',
@@ -13,11 +13,17 @@ const REVIEW_SETTING_ALIASES: Record<string, string> = {
   photoArrowTextColor: 'mediaGalleryArrowTextColor',
 };
 
+export function isPlainJsonObject(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
 export function normalizeWidgetSettingsKeys(
-  widgetId: string,
+  widget: ConfigurableWidgetDefinition,
   settings: Record<string, unknown>,
 ): Record<string, unknown> {
-  if (widgetId !== 'reviews') return { ...settings };
+  if (widget.id !== 'reviews') return { ...settings };
 
   const normalized = { ...settings };
   for (const [legacyKey, canonicalKey] of Object.entries(REVIEW_SETTING_ALIASES)) {
@@ -32,40 +38,31 @@ export function normalizeWidgetSettingsKeys(
   return normalized;
 }
 
-export function getWidgetDefaults(widgetId: string): Record<string, unknown> {
-  const widget = WIDGETS.find((w) => w.id === widgetId);
-  if (!widget) return {};
+export function getWidgetDefaults(widget: ConfigurableWidgetDefinition): Record<string, unknown> {
   const defaults: Record<string, unknown> = {};
-  for (const field of collectSettingFields(widget.settings)) {
+  for (const field of collectSettingFields(widget.configuration.groups)) {
     defaults[field.key] = field.default;
   }
   return defaults;
 }
 
-export function getWidgetFieldKeys(widgetId: string): Set<string> | null {
-  const widget = WIDGETS.find((w) => w.id === widgetId);
-  if (!widget) return null;
-
+export function getWidgetFieldKeys(widget: ConfigurableWidgetDefinition): Set<string> {
   const keys = new Set<string>();
-  for (const field of collectSettingFields(widget.settings)) {
+  for (const field of collectSettingFields(widget.configuration.groups)) {
     keys.add(field.key);
   }
   return keys;
 }
 
-export function sanitizeSettings(widgetId: string, settings: Record<string, unknown>): Record<string, unknown> {
-  const allowedKeys = getWidgetFieldKeys(widgetId);
-  if (!allowedKeys) return settings;
-  const normalizedSettings = normalizeWidgetSettingsKeys(widgetId, settings);
+export function sanitizeSettings(widget: ConfigurableWidgetDefinition, settings: Record<string, unknown>): Record<string, unknown> {
+  const allowedKeys = getWidgetFieldKeys(widget);
+  const normalizedSettings = normalizeWidgetSettingsKeys(widget, settings);
 
   const sanitized = Object.fromEntries(
     Object.entries(normalizedSettings).filter(([key]) => allowedKeys.has(key))
   );
 
-  const widget = WIDGETS.find((w) => w.id === widgetId);
-  if (!widget) return sanitized;
-
-  for (const field of collectSettingFields(widget.settings)) {
+  for (const field of collectSettingFields(widget.configuration.groups)) {
     if (field.type === 'iconSelect' && field.registry === 'filter' && sanitized[field.key] === 'star') {
       sanitized[field.key] = 'funnel';
     }
@@ -74,11 +71,9 @@ export function sanitizeSettings(widgetId: string, settings: Record<string, unkn
   return sanitized;
 }
 
-export function validateSettings(widgetId: string, settings: Record<string, unknown>): string | null {
-  const widget = WIDGETS.find((w) => w.id === widgetId);
-  if (!widget) return `Bilinmeyen widgetId: ${widgetId}`;
-  const normalizedSettings = normalizeWidgetSettingsKeys(widgetId, settings);
-  for (const field of collectSettingFields(widget.settings)) {
+export function validateSettings(widget: ConfigurableWidgetDefinition, settings: Record<string, unknown>): string | null {
+  const normalizedSettings = normalizeWidgetSettingsKeys(widget, settings);
+  for (const field of collectSettingFields(widget.configuration.groups)) {
     const value = normalizedSettings[field.key];
     if (value === undefined) continue;
     if (field.type === 'toggle' && typeof value !== 'boolean') {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { WIDGETS } from '../../src/components/home-page/widgets/widgetDefs';
+import { resolveConfigurableWidget } from '../../src/lib/widgets/catalog';
 import {
   buildWidgetPreviewSettings,
   mergeWithDefaults,
@@ -8,12 +8,15 @@ import {
   type WidgetSettingsDraft,
 } from '../../src/components/home-page/widgets/editor/WidgetEditorState';
 
-const reviewsWidget = WIDGETS.find((widget) => widget.id === 'reviews');
-const badgeWidget = WIDGETS.find((widget) => widget.id === 'badge');
+const reviewsResolution = resolveConfigurableWidget('reviews');
+const badgeResolution = resolveConfigurableWidget('badge');
 
-if (!reviewsWidget || !badgeWidget) {
+if (!reviewsResolution.ok || !badgeResolution.ok) {
   throw new Error('implemented widget definition is missing');
 }
+
+const reviewsWidget = reviewsResolution.widget;
+const badgeWidget = badgeResolution.widget;
 
 describe('WidgetEditor state helpers', () => {
   it('merges saved review settings over widget defaults', () => {

@@ -3,7 +3,7 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-30
+updated: 2026-08-01
 tags:
   - quick-reference
 related:
@@ -68,7 +68,7 @@ related:
 - Themes → [src/widget/themes/](src/widget/themes/)
 
 ## Settings schema (single source of truth)
-- WidgetDefs (settings UI + validation contract) → [src/components/home-page/widgets/widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts)
+- Widget catalog (release/configuration + settings contract) → [src/lib/widgets/catalog.ts](src/lib/widgets/catalog.ts)
 - Server-side helpers (defaults, sanitize, validate) → [src/lib/widget-settings.ts](src/lib/widget-settings.ts)
 - Design tokens → [src/lib/design-tokens.ts](src/lib/design-tokens.ts)
 

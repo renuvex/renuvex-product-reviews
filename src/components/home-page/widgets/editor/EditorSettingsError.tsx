@@ -1,10 +1,10 @@
 import React from 'react';
 import { AlertCircle, ArrowLeft, RefreshCw } from 'lucide-react';
 import { colors, componentStyles, radii, shadows, typography } from '@/lib/design-tokens';
-import type { WidgetDef } from '../widgetDefs';
+import type { ConfigurableWidgetDefinition } from '@/lib/widgets/catalog';
 
 interface EditorSettingsErrorProps {
-  widget: WidgetDef;
+  widget: ConfigurableWidgetDefinition;
   onBack: () => void;
   onRetry: () => void;
 }

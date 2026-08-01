@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
 import { colors, typography } from '@/lib/design-tokens';
+import {
+  WIDGETS,
+  isConfigurableWidgetDefinition,
+  resolveConfigurableWidget,
+  type WidgetId,
+} from '@/lib/widgets/catalog';
 import { WidgetSettingsMap } from '../types';
-import { WIDGETS, WidgetDef } from './widgetDefs';
 import { WidgetCard } from './WidgetCard';
 import { ReviewsPreview } from './previews/ReviewsPreview';
 import { BadgePreview } from './previews/BadgePreview';
@@ -46,17 +51,18 @@ const CARD_PREVIEWS: Record<string, React.ReactNode> = {
   summary:  <PlaceholderPreview />,
 };
 
-function getEnabled(settings: WidgetSettingsMap, id: WidgetDef['id']): boolean {
+function getEnabled(settings: WidgetSettingsMap, id: WidgetId): boolean | undefined {
   if (id === 'reviews') return (settings.reviews?.enabled) ?? true;
   if (id === 'badge')   return (settings.badge?.enabled)   ?? true;
-  return false;
+  return undefined;
 }
 
 export function WidgetsContainer({ settings, settingsMeta, settingsStatus, onChange, onSave, onRetrySettings }: WidgetsContainerProps) {
-  const [editingId, setEditingId] = useState<WidgetDef['id'] | null>(null);
+  const [editingId, setEditingId] = useState<WidgetId | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const editingWidget = editingId ? WIDGETS.find(w => w.id === editingId) ?? null : null;
+  const editingResolution = editingId ? resolveConfigurableWidget(editingId) : null;
+  const editingWidget = editingResolution?.ok ? editingResolution.widget : null;
 
   // Editing widget'ın mevcut ayarlarını al
   const editingWidgetSettings = editingId ? (settings[editingId] ?? {}) as Record<string, unknown> : {};
@@ -126,7 +132,7 @@ export function WidgetsContainer({ settings, settingsMeta, settingsStatus, onCha
             widget={widget}
             enabled={getEnabled(settings, widget.id)}
             preview={CARD_PREVIEWS[widget.id]}
-            onCustomize={() => setEditingId(widget.id)}
+            onCustomize={isConfigurableWidgetDefinition(widget) ? () => setEditingId(widget.id) : undefined}
           />
         ))}
       </div>

@@ -22,7 +22,7 @@ related:
   - "[[Bug_Review_Wizard_Focus_Trap_Accessibility]]"
   - "[[Bug_Review_Wizard_Photo_Upload_Lifecycle]]"
 source_files:
-  - "src/components/home-page/widgets/widgetDefs.ts"
+  - "src/lib/widgets/catalog.ts"
   - "src/widget/reviews-section/bootstrap.js"
   - "src/widget/reviews-section/render.js"
   - "src/widget/reviews-section/render/theme-vars.js"
@@ -70,7 +70,7 @@ runtime/media/interactions tests.
 The full review block on a product detail page: rating summary (with bar chart for distribution), filter/sort controls, the review list, media gallery, a "Write a Review" CTA that opens a multi-step submission modal, and a separate media review detail lightbox. Composed of swappable summary and review layouts.
 
 ## Settings (`reviews` widgetId)
-Source: [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts).
+Source: [catalog.ts](src/lib/widgets/catalog.ts).
 
 Recurring categories:
 - General — show/hide widget title, photo/media gallery title, etc.
