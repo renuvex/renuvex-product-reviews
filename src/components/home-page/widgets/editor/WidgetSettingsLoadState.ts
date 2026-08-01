@@ -1,6 +1,6 @@
 import type { WidgetSettingsMap } from '../../types';
 
-export type WidgetSettingsLoadStatus = 'loading' | 'loaded' | 'error';
+export type WidgetSettingsLoadStatus = 'idle' | 'loading' | 'loaded' | 'error';
 
 export type VideoUsageReason =
   | 'enabled'
@@ -37,7 +37,7 @@ export type WidgetSettingsLoadAction =
   | { type: 'failure' };
 
 export const INITIAL_WIDGET_SETTINGS_LOAD_STATE: WidgetSettingsLoadState = {
-  status: 'loading',
+  status: 'idle',
   settings: {},
   meta: {},
 };

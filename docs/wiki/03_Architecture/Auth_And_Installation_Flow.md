@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-28
-last_verified: 2026-07-28
+updated: 2026-08-01
+last_verified: 2026-08-01
 confidence: high
 tags:
   - auth
@@ -28,6 +28,8 @@ source_files:
   - "src/lib/ikas-client/v1-graphql-requests.ts"
   - "src/helpers/api-helpers.ts"
   - "src/helpers/token-helpers.ts"
+  - "src/app/dashboard/page.tsx"
+  - "tests/admin-dashboard-contract.spec.ts"
 ---
 
 # Auth & Installation Flow
@@ -132,6 +134,13 @@ Source files:
   valid token is cached in `sessionStorage` only under
   `token-<authorizedAppId>`; OAuth callback query parameters are not a token
   source.
+- `/dashboard` keeps the application data tree behind an explicit
+  `loading -> ready | authentication_required` gate. `HomePage` mounts only
+  after AppBridge returns a real token. Direct top-level access, a missing
+  authorized-app identity, or a missing token starts no admin/ikas API request;
+  there is no `JWT dev` fallback.
+- `AppBridgeHelper.closeLoader()` remains an independent mount effect so the
+  ikas host loader closes even when authentication fails.
 - All `/api/admin/*` calls send `Authorization: JWT <token>`.
 - Server: `authenticateIkasAdminRequest()` accepts exactly one
   `Authorization: JWT <compact-token>` credential. `JwtHelpers.verifyToken()`

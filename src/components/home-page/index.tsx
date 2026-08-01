@@ -22,17 +22,20 @@ import {
 // sayfada eski token expire olduğunda 401 alıp "kaydedilemedi" hatası
 // vermesini önler. TokenHelpers cache'li, expired token'ı atıp AppBridge'den
 // yenisini çeker.
-async function freshAuthHeader(fallbackToken: string | null): Promise<{ Authorization: string }> {
+async function freshAuthHeader(fallbackToken: string): Promise<{ Authorization: string }> {
   const fresh = await TokenHelpers.getTokenForIframeApp();
-  return { Authorization: `JWT ${fresh || fallbackToken || ''}` };
+  return { Authorization: `JWT ${fresh || fallbackToken}` };
 }
 
 interface HomePageProps {
-  token: string | null;
+  token: string;
   storeName?: string;
 }
 
+type MainTab = 'reviews' | 'widgets';
+
 export default function HomePage({ token, storeName }: HomePageProps) {
+  const [mainTab, setMainTab] = useState<MainTab>('reviews');
   const [activeTab, setActiveTab] = useState<TabKey>('pending');
   const [reviews, setReviews] = useState<Review[]>([]);
   const [page, setPage] = useState(1);
@@ -51,7 +54,6 @@ export default function HomePage({ token, storeName }: HomePageProps) {
   pageSizeRef.current = pageSize;
 
   const fetchReviews = useCallback(async (tab: TabKey, p: number, limit?: number) => {
-    if (!token) return;
     setLoading(true);
     try {
       const statusParam = tab === 'all' ? '' : `&status=${tab}`;
@@ -73,7 +75,6 @@ export default function HomePage({ token, storeName }: HomePageProps) {
   }, [token]);
 
   const fetchAllCounts = useCallback(async () => {
-    if (!token) return;
     const headers = await freshAuthHeader(token);
     try {
       const [pending, approved, rejected, all] = await Promise.all([
@@ -94,8 +95,6 @@ export default function HomePage({ token, storeName }: HomePageProps) {
   }, [token]);
 
   const loadSettings = useCallback(async () => {
-    if (!token) return;
-
     setSettingsLoadState(state => reduceWidgetSettingsLoadState(state, { type: 'start' }));
 
     try {
@@ -119,11 +118,17 @@ export default function HomePage({ token, storeName }: HomePageProps) {
   }, []);
 
   useEffect(() => {
-    if (!token) return;
     void fetchReviews('pending', 1);
     void fetchAllCounts();
-    void loadSettings();
-  }, [token, fetchReviews, fetchAllCounts, loadSettings]);
+  }, [fetchReviews, fetchAllCounts]);
+
+  const handleMainTabChange = useCallback((value: string) => {
+    if (value !== 'reviews' && value !== 'widgets') return;
+    setMainTab(value);
+    if (value === 'widgets' && settingsLoadState.status === 'idle') {
+      void loadSettings();
+    }
+  }, [loadSettings, settingsLoadState.status]);
 
   const handleReviewTabChange = (tab: TabKey) => {
     setActiveTab(tab);
@@ -145,7 +150,6 @@ export default function HomePage({ token, storeName }: HomePageProps) {
   };
 
   const getImagePreviewUrl = useCallback(async (mediaId: string, variant: 'thumb_320x427' | 'w1200' = 'w1200') => {
-    if (!token) return null;
     const response = await axios.get(`/api/admin/reviews/image-preview?mediaId=${encodeURIComponent(mediaId)}&variant=${encodeURIComponent(variant)}`, {
       headers: await freshAuthHeader(token),
     });
@@ -262,17 +266,6 @@ export default function HomePage({ token, storeName }: HomePageProps) {
     }
   };
 
-  if (!token) {
-    return (
-      <div className="max-w-[1200px] mx-auto p-6 bg-background min-h-[100vh]">
-        <div className="text-center p-20 bg-muted rounded-xl border border-dashed">
-          <h3 className="mb-2" style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>Authentication Required</h3>
-          <p style={{ fontSize: typography.fontSize.base, color: colors.textMuted }}>Please authenticate to access the Review Dashboard.</p>
-        </div>
-      </div>
-    );
-  }
-
   const videoPreviewIsPortrait = mediaPreview?.type === 'video'
     && typeof mediaPreview.width === 'number'
     && typeof mediaPreview.height === 'number'
@@ -355,7 +348,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
         </div>
       </div>
 
-      <Tabs defaultValue="reviews" orientation="vertical" className="gap-4">
+      <Tabs value={mainTab} onValueChange={handleMainTabChange} orientation="vertical" className="gap-4">
         <TabsList className="h-fit p-1.5 bg-muted/30 rounded-xl w-44 shrink-0 border border-border/50">
           <TabsTrigger value="reviews" className="py-2 px-3 rounded-lg mb-1" style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium }}>
             <MessageSquare size={15} className="mr-1.5 shrink-0" />
