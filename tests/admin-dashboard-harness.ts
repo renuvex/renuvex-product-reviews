@@ -1,5 +1,9 @@
 import type { FrameLocator, Page, Route } from '@playwright/test';
 import {
+  buildWidgetPreviewPath,
+  getWidgetPreviewRouteParams,
+} from '../src/lib/widgets/preview-routes';
+import {
   RENUVEX_PR_PREVIEW_RENDER,
   RENUVEX_PR_PREVIEW_RENDERED,
   RENUVEX_PR_PREVIEW_RESET_SCROLL,
@@ -7,7 +11,6 @@ import {
 } from '../src/widget/core/namespace.js';
 import {
   PREVIEW_PROTOCOL_VERSION,
-  isWidgetPreviewScene,
 } from '../src/widget/preview/scenes.js';
 
 export const DASHBOARD_ORIGIN = 'http://127.0.0.1:3211';
@@ -250,19 +253,20 @@ export async function setupAdminDashboardRoutes(page: Page, options: SetupOption
       return;
     }
 
-    if (url.origin === DASHBOARD_ORIGIN && url.pathname === '/preview' && method === 'GET') {
-      const widgetId = url.searchParams.get('widget') || 'reviews';
-      const scene = url.searchParams.get('scene') || 'default';
+    if (url.origin === DASHBOARD_ORIGIN && url.pathname.startsWith('/preview/') && method === 'GET') {
+      const previewContext = getWidgetPreviewRouteParams().find(
+        ({ widgetId, scene }) => buildWidgetPreviewPath(widgetId, scene) === url.pathname,
+      );
       log.previewRequests.push(path);
-      if (!isWidgetPreviewScene(widgetId, scene)) {
+      if (!previewContext) {
         await route.fulfill({ status: 404, body: 'Not Found' });
         return;
       }
       await route.fulfill({
         status: 200,
         contentType: 'text/html; charset=utf-8',
-        headers: { 'Cache-Control': 'no-store' },
-        body: previewStubDocument(widgetId, scene),
+        headers: { 'Cache-Control': 'public, max-age=0, must-revalidate' },
+        body: previewStubDocument(previewContext.widgetId, previewContext.scene),
       });
       return;
     }

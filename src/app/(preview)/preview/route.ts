@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { buildWidgetPreviewPath } from '@/lib/widgets/preview-routes';
 import {
-  PREVIEW_PROTOCOL_VERSION,
   getDefaultWidgetPreviewScene,
   isWidgetPreviewScene,
 } from '@/widget/preview/scenes.js';
-import { buildPreviewDocument } from '@/widget/preview/document.js';
 
 /**
- * Standalone, same-origin iframe document used by the widget editor.
- * Fixture data is local; rendered widget output comes from production modules.
+ * Temporary compatibility entry for editor sessions opened before canonical
+ * preview paths were introduced. New callers use the prerendered route.
  */
 export async function GET(request: NextRequest) {
   const widgetId = request.nextUrl.searchParams.get('widget') || 'reviews';
@@ -24,19 +23,10 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  const context = {
-    version: PREVIEW_PROTOCOL_VERSION,
-    widgetId,
-    scene,
-  };
-  const html = buildPreviewDocument(context, Date.now());
-
-  return new NextResponse(html, {
-    headers: {
-      'Cache-Control': 'no-store',
-      'Content-Type': 'text/html; charset=utf-8',
-      'Referrer-Policy': 'no-referrer',
-      'X-Content-Type-Options': 'nosniff',
-    },
-  });
+  const redirectUrl = new URL(buildWidgetPreviewPath(widgetId, scene), request.url);
+  const response = NextResponse.redirect(redirectUrl, 307);
+  response.headers.set('Cache-Control', 'no-store');
+  response.headers.set('Referrer-Policy', 'no-referrer');
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  return response;
 }

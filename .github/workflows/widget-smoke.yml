@@ -126,6 +126,9 @@ jobs:
       - name: Verify admin route bundle isolation
         run: pnpm verify:admin-route-bundles
 
+      - name: Verify preview routes are prerendered
+        run: pnpm verify:preview-routes
+
       - name: Install Chromium
         run: pnpm exec playwright install --with-deps chromium
 

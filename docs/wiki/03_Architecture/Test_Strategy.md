@@ -34,6 +34,7 @@ source_files:
   - "scripts/run-ci-start.mjs"
   - "scripts/ci-environment.mjs"
   - "scripts/verify-admin-route-bundles.mjs"
+  - "scripts/verify-preview-route-prerender.ts"
   - "scripts/wiki-audit.mjs"
   - "scripts/test-review-email-cloudformation-contract.mjs"
   - "scripts/check-widget-runtime.mjs"
@@ -183,7 +184,7 @@ Unit coverage for this layer lives in `tests/unit/widget-origin.test.ts` and `te
 | Widget layout/runtime smoke | `pnpm test:widget-runtime` | Pairwise summary/review layout matrix (`classic`, `compact`, `hero`, `minimal`, `split` x `card`, `list`, `gallery`), rating bar keyboard filtering + badge/summary isolation, compact mobile accordion persistence/motion after rating-bar filter renders, large localized bar-count layout, media gallery toggles, badge/JSON-LD presence, hostile host-theme CSS isolation (a light-DOM `img{width:100%!important}` balloons a control image but cannot reach the shadow-hosted review thumbnail — ADR_0021 regression), and unexpected console errors. |
 | Storefront interactions | `pnpm test:widget-interactions` | Media-gallery lightbox, review-image lightbox, summary filter/popover light-dismiss, keyboard close, review wizard validation, step flow, mocked review submit, and body-scroll-lock regression (opening either overlay locks scroll on BOTH `<html>` and `<body>` and restores on close — ADR_0025). |
 | Cross-browser review media | `pnpm test:widget-media` | Local fast path runs Chromium desktop only. CI runs PR media coverage as isolated matrix jobs for Chromium desktop, Pixel Android emulation, and iPhone WebKit emulation. The scheduled cross-browser workflow adds Firefox desktop and desktop WebKit. The suite pins poster-first card/list/gallery rendering, size presets, no list autoplay/preload, Mux Player lightbox attributes, browser-back cleanup, Mux direct-upload wizard submit, and video-to-image navigation cleanup. |
-| Admin preview/settings | `pnpm test:admin-preview` | Versioned exact-context preview render path, production Reviews renderer, production PDP/listing Badge injectors, complete-map cross-widget icon/color dependencies, Badge alignment/value/count/size controls, no preview API calls, reset-to-top scroll behavior, nested-iframe wheel recovery after a modal pointer-lock cycle, and static `catalog.ts` option/showWhen alignment with widget registries. |
+| Admin preview/settings | `pnpm test:admin-preview` | Canonical static preview paths, versioned exact-context preview rendering, production Reviews renderer, production PDP/listing Badge injectors, complete-map cross-widget icon/color dependencies, Badge alignment/value/count/size controls, no preview API calls, reset-to-top scroll behavior, nested-iframe wheel recovery after a modal pointer-lock cycle, and static `catalog.ts` option/showWhen alignment with widget registries. |
 | Admin dashboard browser | `pnpm test:admin-dashboard` | Builds and starts the production Next.js application with scrubbed synthetic CI configuration, embeds `/dashboard` under a separate-origin parent that implements the installed `@ikas/app-helpers` message contract, and mocks only the declared local API matrix. It proves one cold token request, cache reuse, one loader-close message, fail-closed missing/direct auth, one list + one summary cold start, no summary refresh for pagination/replies/failed mutations, one refresh after successful `200`/`202` moderation and deletion, stale-summary ordering, preservation after latest-summary failure, lazy settings load/retry, available Reviews/Badge editors, planned `Yakında` cards without editor controls, and widget save. The dashboard editor uses a minimal versioned `/preview` protocol stub here; production preview renderers remain the responsibility of `test:admin-preview`. No real ikas token, provider, DB, or backend JWT authorization is exercised. |
 | Prisma multi-file schema | `pnpm prisma:validate`, `pnpm prisma:generate`, `pnpm test:prisma-schema` | Resolves `./prisma` explicitly, refuses model-free generation, restricts schema files to the root entrypoint plus `prisma/models/**`, rejects duplicate model declarations, and requires the discovered model set to equal generated `Prisma.ModelName`. CI runs format a second time and requires a clean Prisma diff. |
 | Migration-free application build | `pnpm build:ci` | Uses synthetic CI values for the application build, generates Prisma, deterministically rebuilds and verifies widget artifacts, then runs `next build --webpack`. Widget regeneration reuses the committed manifest timestamp and the committed public widget origins so exact generated files can be compared; it performs no network call and skips time-based retention pruning. The command never runs migrations, live installation checks, provider calls, or Sentry source-map upload. The Vercel-only `pnpm build` contract remains separate because it applies migrations and checks live installation state. |
@@ -392,8 +393,12 @@ the focused editor still retains AppBridge authentication, settings caching,
 route isolation, and preview admission.
 
 `pnpm test:admin-dashboard` is the canonical sequence: one `build:ci`, the
-route-bundle verifier, then `test:admin-dashboard:built`. CI reuses that build
-and does not compile the application a second time. The test proves client
+route-bundle verifier, the preview-prerender verifier, then
+`test:admin-dashboard:built`. The preview verifier derives its expected route
+set from the scene registry, requires permanent prerender entries and exact
+security/cache headers, and requires the dynamic route fallback to remain
+disabled. CI reuses that build and does not compile the application a second
+time. The test proves client
 shell/AppBridge/UI/network contracts; backend JWT and installation fencing stay
 in unit/integration and post-deploy acceptance tests.
 

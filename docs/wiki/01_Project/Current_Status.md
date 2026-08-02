@@ -80,7 +80,7 @@ Active development on the production test store. Core review, image, Mux video, 
 - Admin dashboard:
   - Review list with status filter, pagination, replies, delete
   - Pending/private AWS review images use authenticated short-lived preview URLs for both moderation thumbnails and full-size image modal previews; signed responses stay `private, no-store` and are not stored in list API data.
-  - Widget editor with per-widget settings panel and live iframe preview at `/preview`
+  - Widget editor with per-widget settings panel and build-time generated live iframe previews at `/preview/<widgetId>/<scene>`
   - Settings persistence in `WidgetSettings` (one row per `(storeId, widgetId)`)
 - Caching: public GETs use `s-maxage=60, stale-while-revalidate=300` at the edge
 - QStash maintenance schedules: daily full maintenance at 03:00 UTC plus monthly AWS image orphan cleanup at day 1 04:00 UTC through signed `/api/internal/scheduled-jobs`; the admin `GET` routes remain manual `CRON_SECRET`-gated ops entrypoints.
@@ -93,6 +93,10 @@ Active development on the production test store. Core review, image, Mux video, 
 - Widget-side uncaught errors forwarded to Sentry via a 637-byte (gzip) in-widget reporter and a rate-limited public endpoint (`/api/public/widget-error`). No SDK shipped to the widget bundle; storefront customer privacy and Core Web Vitals preserved. See [[ADR_0010_Widget_Error_Forwarding]].
 
 ## In Progress / Active Follow-Ups
+- Preview compatibility cleanup: after the first production deployment proves
+  normal editor traffic uses only canonical static preview paths, confirm the
+  legacy `/preview?widget=&scene=` redirect has no current app callers and
+  remove that bounded compatibility route in a separate cleanup.
 - Supabase Data API/RLS/default-grants closure is complete. Production has all
   60 migrations applied, zero public tables without RLS, zero effective Data
   API-role/default-ACL drift, and the unused hosted Data API is disabled. Keep

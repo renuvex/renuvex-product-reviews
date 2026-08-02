@@ -17,7 +17,9 @@ source_files:
   - "src/features/widget-management/components/editor/SettingsPanel.tsx"
   - "src/features/widget-management/components/editor/WidgetEditorState.ts"
   - "src/lib/widget-settings.ts"
+  - "src/lib/widgets/preview-routes.ts"
   - "src/app/(preview)/preview/route.ts"
+  - "src/app/(preview)/preview/[widgetId]/[scene]/route.ts"
   - "src/widget/core/namespace.js"
   - "src/widget/preview/scenes.js"
   - "src/widget/preview/document.js"
@@ -182,9 +184,12 @@ available widget without settings capability returns
   The registry currently exposes Reviews (`reviews`) plus Badge product-detail
   (`pdp`) and listing (`listing`) scenes. Future widgets add an explicit scene
   adapter instead of introducing a parallel React mock preview.
-- The route is `/preview?widget=<id>&scene=<scene>` at
-  [src/app/(preview)/preview/route.ts](src/app/(preview)/preview/route.ts).
-  Unknown widget/scene combinations fail with `404`.
+- Canonical routes are `/preview/<widgetId>/<scene>` at
+  [src/app/(preview)/preview/[widgetId]/[scene]/route.ts](src/app/(preview)/preview/[widgetId]/[scene]/route.ts).
+  They are generated from the exact scene registry during build;
+  `dynamicParams=false` makes unknown combinations fail with `404`. The old
+  query route remains only as a temporary exact-pair redirect for already-open
+  editor sessions.
 - The iframe announces `RENUVEX_PR_WIDGET_READY`; the parent responds with
   versioned `RENUVEX_PR_PREVIEW_RENDER`, including the complete resolved
   settings map. Complete-map delivery preserves cross-widget dependencies such
@@ -219,15 +224,16 @@ state so slow widget assets show an overlay instead of a blank white panel.
 Preview retry remounts only the iframe preview; it does not change the settings
 draft, dirty state, or save behavior.
 
-Preview rendering has no per-interaction DB or external-provider cost. It
-serves one no-store document, committed local SVG fixtures, and the local
+Preview rendering has no per-interaction DB or external-provider cost. The
+canonical fixture document is generated at build time and served without a
+Function invocation; it uses committed local SVG fixtures and the production
 widget runtime. Review submission/upload behavior inside fixture scenes is
 simulated by the existing preview runtime; it does not create reviews or media.
 
-The `/preview` route still cache-busts `widget.js` on each preview HTML response
-with its timestamp query. That freshness behavior is intentionally separate from
-the preview loading overlay and should not be changed without a dedicated cache
-contract review.
+The canonical document uses stable `widget.js?publicApiKey=preview`. Loader
+freshness comes from `must-revalidate`, while runtime and lazy chunks remain
+content-hashed and immutable. `verify:preview-routes` prevents a future change
+from silently returning canonical preview paths to dynamic rendering.
 
 ## Copy And Localization Boundary
 Widget copy customization is not the same thing as product localization.

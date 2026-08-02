@@ -30,6 +30,8 @@ source_files:
   - "src/widget/preview/index.js"
   - "src/widget/preview/document.js"
   - "src/widget/preview/fixtures.js"
+  - "src/app/(preview)/preview/[widgetId]/[scene]/route.ts"
+  - "src/lib/widgets/preview-routes.ts"
   - "src/widget/reviews-section/bootstrap.js"
   - "src/widget/reviews-section/reviews-api.js"
   - "src/widget/reviews-section/render.js"
@@ -242,7 +244,8 @@ Runtime theme selection is not a per-theme bundle split. The live widget receive
 - [scripts/prepare-widget-worker-assets.mjs](scripts/prepare-widget-worker-assets.mjs)
 - [workers/widget-delivery/src/index.ts](workers/widget-delivery/src/index.ts)
 - [wrangler.widget.jsonc](wrangler.widget.jsonc)
-- [src/app/(preview)/preview/route.ts](src/app/(preview)/preview/route.ts)
+- [src/app/(preview)/preview/[widgetId]/[scene]/route.ts](src/app/(preview)/preview/[widgetId]/[scene]/route.ts)
+- [src/app/(preview)/preview/route.ts](src/app/(preview)/preview/route.ts) — temporary validated legacy redirect
 
 ## Obsidian Links
 - [[Widget_Architecture]]

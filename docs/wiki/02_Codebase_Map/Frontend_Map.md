@@ -28,6 +28,8 @@ source_files:
   - "src/features/widget-management/components/WidgetCard.tsx"
   - "src/lib/admin-review-summary.ts"
   - "src/lib/widgets/catalog.ts"
+  - "src/lib/widgets/preview-routes.ts"
+  - "src/app/(preview)/preview/[widgetId]/[scene]/route.ts"
   - "src/features/widget-management/WidgetSettingsLoadState.ts"
   - "src/helpers/token-helpers.ts"
   - "playwright.admin-dashboard.config.ts"
@@ -59,7 +61,8 @@ Next.js 16 (16.2), React 19, TypeScript, Tailwind CSS v4 (`@tailwindcss/postcss`
 | `/dashboard/reviews` | [src/app/dashboard/reviews/page.tsx](src/app/dashboard/reviews/page.tsx) | Review moderation route; owns review list, summary and action state |
 | `/dashboard/widgets` | [src/app/dashboard/widgets/(catalog)/page.tsx](src/app/dashboard/widgets/(catalog)/page.tsx) | Widget catalog route inside the workspace shell; loads settings only after entering the widget route group |
 | `/dashboard/widgets/[widgetId]` | [src/app/dashboard/widgets/[widgetId]/page.tsx](src/app/dashboard/widgets/[widgetId]/page.tsx) | Focused sidebar-free editor route with server-first capability admission, static params for canonical widget IDs, and intent-prefetched client navigation |
-| `/preview` | [src/app/(preview)/preview/route.ts](src/app/(preview)/preview/route.ts) | Standalone HTML iframe — no root layout |
+| `/preview/[widgetId]/[scene]` | [src/app/(preview)/preview/[widgetId]/[scene]/route.ts](src/app/(preview)/preview/[widgetId]/[scene]/route.ts) | Build-time generated standalone preview HTML; exact registered scenes only, no root layout |
+| `/preview?widget=&scene=` | [src/app/(preview)/preview/route.ts](src/app/(preview)/preview/route.ts) | Temporary exact-pair compatibility redirect to the canonical static path |
 
 ### Top-level Layout
 - [src/app/layout.tsx](src/app/layout.tsx) — global font, theme provider, sonner toaster
@@ -158,7 +161,9 @@ provider lifecycle.
 
 ### Live preview pattern (settings)
 1. `WidgetEditor` selects a registered widget scene and mounts
-   `/preview?widget=<id>&scene=<scene>` in one common iframe shell.
+   `/preview/<widgetId>/<scene>` in one common iframe shell. The three current
+   canonical documents are prerendered from the scene registry; the legacy
+   query route performs only a validated temporary redirect.
 2. The iframe sends versioned `RENUVEX_PR_WIDGET_READY` to its exact
    same-origin parent.
 3. The parent sends `RENUVEX_PR_PREVIEW_RENDER` with the complete resolved
