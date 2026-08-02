@@ -50,8 +50,8 @@ code overrides stale prose.
 
 ### [src/features/widget-management/components/WidgetCard.tsx](src/features/widget-management/components/WidgetCard.tsx)
 - **What:** Catalog card and the configurable widget editor admission link.
-- **Why it matters:** The Customize link intentionally uses a native anchor so the editor owns a distinct document and dirty browser Back traversals reach the existing `beforeunload` boundary.
-- **Be careful:** Do not replace that anchor with `next/link`, `router.push`, or custom history interception without revisiting the unsaved-data and request-budget contracts.
+- **Why it matters:** The Customize link uses an intent-prefetched Next.js transition so the persistent auth/settings lifetime survives editor admission while the editor still receives its own sidebar-free route layout and bundle.
+- **Be careful:** Keep default automatic prefetch disabled, preserve the bounded hover/focus/touch prefetch, and do not add custom history interception. Same-document browser Back is not an unsaved-draft guarantee; in-app commands and hard unloads have separate guards.
 
 ### [src/features/widget-management/components/editor/SettingsPanel.tsx](src/features/widget-management/components/editor/SettingsPanel.tsx)
 - **What:** Schema-driven admin settings renderer. Converts every `SettingField` from [catalog.ts](src/lib/widgets/catalog.ts) into the correct control.

@@ -1,16 +1,28 @@
-import React from 'react';
+'use client';
+
+import { useCallback, useRef, type ReactNode } from 'react';
 import { Settings2 } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { colors, componentStyles, radii, shadows, typography } from '@/lib/design-tokens';
 import type { WidgetDefinition } from '@/lib/widgets/catalog';
 
 interface WidgetCardProps {
   widget: WidgetDefinition;
   enabled?: boolean;
-  preview: React.ReactNode;
+  preview: ReactNode;
   customizeHref?: string;
 }
 
 export function WidgetCard({ widget, enabled, preview, customizeHref }: WidgetCardProps) {
+  const router = useRouter();
+  const prefetchedHrefRef = useRef<string | null>(null);
+  const prefetchEditor = useCallback(() => {
+    if (!customizeHref || prefetchedHrefRef.current === customizeHref) return;
+    prefetchedHrefRef.current = customizeHref;
+    router.prefetch(customizeHref);
+  }, [customizeHref, router]);
+
   return (
     <div style={{
       backgroundColor: colors.bgWhite,
@@ -86,13 +98,17 @@ export function WidgetCard({ widget, enabled, preview, customizeHref }: WidgetCa
         {/* Butonlar */}
         {customizeHref ? (
           <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-            <a
+            <Link
               href={customizeHref}
+              prefetch={false}
+              onFocus={prefetchEditor}
+              onMouseEnter={prefetchEditor}
+              onTouchStart={prefetchEditor}
               style={{ ...componentStyles.btnSm, display: 'flex', alignItems: 'center', gap: 6 }}
             >
               <Settings2 size={14} />
               Özelleştir
-            </a>
+            </Link>
           </div>
         ) : null}
       </div>

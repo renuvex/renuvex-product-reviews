@@ -1,7 +1,13 @@
 import { notFound } from 'next/navigation';
 
 import { WidgetEditorScreen } from '@/features/widget-management/WidgetEditorScreen';
-import { resolveConfigurableWidget, resolveWidgetDefinition } from '@/lib/widgets/catalog';
+import { WIDGET_IDS, resolveConfigurableWidget, resolveWidgetDefinition } from '@/lib/widgets/catalog';
+
+export const dynamicParams = true;
+
+export function generateStaticParams() {
+  return WIDGET_IDS.map((widgetId) => ({ widgetId }));
+}
 
 export default async function WidgetEditorPage({ params }: { params: Promise<{ widgetId: string }> }) {
   const { widgetId } = await params;

@@ -4,6 +4,8 @@ import path from 'node:path';
 import { build } from 'esbuild';
 import { describe, expect, it } from 'vitest';
 
+import { WIDGET_IDS } from '@/lib/widgets/catalog';
+
 async function bundledInputs(entryPoint: string) {
   const result = await build({
     entryPoints: [entryPoint],
@@ -70,13 +72,22 @@ describe('admin route dependency boundaries', () => {
     const routeSource = readFileSync(path.join(process.cwd(), 'src/app/dashboard/widgets/[widgetId]/page.tsx'), 'utf8');
     const cardSource = readFileSync(path.join(process.cwd(), 'src/features/widget-management/components/WidgetCard.tsx'), 'utf8');
     const editorSource = readFileSync(path.join(process.cwd(), 'src/features/widget-management/components/editor/WidgetEditor.tsx'), 'utf8');
+    const bundleVerifierSource = readFileSync(path.join(process.cwd(), 'scripts/verify-admin-route-bundles.mjs'), 'utf8');
 
     expect(routeSource).not.toContain("'use client'");
     expect(routeSource).toContain('resolveWidgetDefinition(widgetId)');
     expect(routeSource).toContain('notFound()');
-    expect(cardSource).not.toContain("from 'next/link'");
-    expect(cardSource).toContain('<a');
+    expect(routeSource).toContain('export const dynamicParams = true');
+    expect(routeSource).toContain('export function generateStaticParams()');
+    expect(routeSource).toContain('return WIDGET_IDS.map((widgetId) => ({ widgetId }))');
+    expect(cardSource).toContain("from 'next/link'");
+    expect(cardSource).toContain('<Link');
     expect(cardSource).toContain('href={customizeHref}');
+    expect(cardSource).toContain('prefetch={false}');
+    expect(cardSource).toContain('router.prefetch(customizeHref)');
+    for (const widgetId of WIDGET_IDS) {
+      expect(bundleVerifierSource).toContain(`/dashboard/widgets/${widgetId}`);
+    }
     expect(editorSource).toContain("addEventListener('beforeunload'");
     expect(editorSource).toContain('event.preventDefault()');
     expect(editorSource).toContain('event.returnValue = true');
