@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { buildWidgetPreviewPath } from '../src/lib/widgets/preview-routes';
 import {
   MERCHANT_ORIGIN,
   PUBLIC_KEY,
@@ -2033,7 +2034,7 @@ test('preview video media step simulates upload without public video endpoints',
     });
   });
 
-  await page.goto(`${MERCHANT_ORIGIN}/preview`);
+  await page.goto(`${MERCHANT_ORIGIN}${buildWidgetPreviewPath('reviews', 'reviews')}`);
   await expect.poll(() => hasReviewsWidget(page)).toBe(true);
   await clickInReviewsShadow(page, '.renuvex-pr-write-btn');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(true);

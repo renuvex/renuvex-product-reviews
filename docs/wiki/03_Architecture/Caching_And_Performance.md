@@ -3,7 +3,7 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-02
+updated: 2026-08-02
 last_verified: 2026-07-02
 confidence: high
 tags:
@@ -24,6 +24,8 @@ source_files:
   - "scripts/prepare-widget-worker-assets.mjs"
   - "scripts/clean-widget-runtime-untracked.mjs"
   - "scripts/rebuild-product-review-summaries.mjs"
+  - "scripts/verify-preview-route-prerender.ts"
+  - "src/app/(preview)/preview/[widgetId]/[scene]/route.ts"
   - "src/lib/review-media.ts"
   - "src/lib/review-summary.ts"
   - "src/widget/core/cache.js"
@@ -42,6 +44,18 @@ source_files:
 
 ## Summary
 Two cache layers matter: (1) Vercel **edge cache** for public read APIs and (2) the widget's **sessionStorage cache** (with in-memory fallback when sessionStorage is unavailable / quota-exceeded). Postgres indexes ([[Database_Schema]]) cover the hot query shapes.
+
+## Admin Preview Delivery
+
+The finite Reviews and Badge preview scene registry is emitted as three
+build-time routes under `/preview/<widgetId>/<scene>`. These deterministic HTML
+documents use a stable `widget.js?publicApiKey=preview` URL; loader freshness is
+revalidated and the actual runtime graph remains content-hashed. The old query
+route is a temporary validated redirect, not the editor's normal delivery path.
+`pnpm verify:preview-routes` fail-closes unless every registered scene appears
+as a permanent prerender with the expected security/cache headers and unknown
+dynamic params have no fallback. This removes a Function invocation from normal
+preview opens without caching merchant, auth, settings, or review data.
 
 ## Edge cache (Vercel CDN)
 

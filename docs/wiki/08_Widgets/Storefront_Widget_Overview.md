@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-01
-last_verified: 2026-08-01
+updated: 2026-08-02
+last_verified: 2026-08-02
 confidence: high
 tags:
   - widget
@@ -36,6 +36,7 @@ source_files:
   - "public/widget.js"
   - "public/widget-runtime/build-manifest.json"
   - "src/lib/widgets/catalog.ts"
+  - "src/app/(preview)/preview/[widgetId]/[scene]/route.ts"
 ---
 
 # Storefront Widget Overview
@@ -46,7 +47,7 @@ A single ikas-injected `widget.js` URL that runs on every storefront page. As of
 ## Where the widget runs
 - **Product detail pages** — independent PDP rating badge near title plus optional explicit-mount review block with summary, list, media gallery, photo/video detail lightbox, and "Write a Review" CTA.
 - **Collection / search / listing pages** — small star+count badges injected next to product titles in cards.
-- **Preview iframe** (`/preview?widget=<id>&scene=<scene>`) — production
+- **Preview iframe** (`/preview/<widgetId>/<scene>`) — build-time fixture plus production
   renderer modules against deterministic fixture markup/data, with
   `window.__ikasPreviewMode = true`.
 

@@ -3,8 +3,8 @@ type: api
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-01
-last_verified: 2026-08-01
+updated: 2026-08-02
+last_verified: 2026-08-02
 confidence: high
 tags:
   - api
@@ -29,6 +29,8 @@ source_files:
   - "src/lib/widgets/catalog.ts"
   - "src/app/api/admin/inject-scripts/route.ts"
   - "src/app/(preview)/preview/route.ts"
+  - "src/app/(preview)/preview/[widgetId]/[scene]/route.ts"
+  - "src/lib/widgets/preview-routes.ts"
   - "src/widget/preview/document.js"
   - "src/app/api/public/reviews/route.ts"
   - "src/app/api/public/review-request/route.ts"
@@ -101,7 +103,8 @@ Main API route groups:
   called by the merchant admin UI.
 - **`/api/public/*`** — storefront/widget endpoints are CORS-open where documented; review-center endpoints are host-isolated and session scoped. Public writes are rate-limited via Upstash Redis.
 - **`/api/oauth/*`** — install / callback flow.
-- **`/preview`** — same-origin, fixture-only admin preview document. Preview
+- **`/preview/<widgetId>/<scene>`** — same-origin, fixture-only, build-time
+  generated admin preview document. Preview
   settings and review fixtures stay in memory inside the iframe; there is no
   preview API or database-backed preview storage.
 - **`/api/ikas/*`** — server-side calls to the ikas Admin GraphQL API (example: `get-merchant`).
@@ -218,7 +221,8 @@ Detail in [[Security_And_Rate_Limits]].
 
 | Method + Path | Source | Purpose |
 |---|---|---|
-| GET `/preview?widget=<id>&scene=<scene>` | [route.ts](src/app/(preview)/preview/route.ts) | Validates the registered widget/scene pair, returns a no-store fixture document, and loads the production widget runtime. Settings and deterministic fixture reviews arrive through the exact-origin versioned preview protocol; this route performs no DB or provider read. |
+| GET `/preview/<widgetId>/<scene>` | [route.ts](src/app/(preview)/preview/[widgetId]/[scene]/route.ts) | Prerenders the exact scene registry at build time with fail-closed dynamic params and loads the production widget runtime from a stable URL. Settings and deterministic fixture reviews arrive through the exact-origin versioned preview protocol; this route performs no DB or provider read. |
+| GET `/preview?widget=<id>&scene=<scene>` | [route.ts](src/app/(preview)/preview/route.ts) | Temporary validated compatibility redirect to the canonical static path. Unknown pairs return `404`; query data is not propagated. |
 
 ## Conventions
 - All routes use the App Router signature: `export async function GET/POST/...(request: Request | NextRequest)`.

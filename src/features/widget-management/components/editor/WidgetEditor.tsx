@@ -7,6 +7,7 @@ import { InfoTooltip } from './InfoTooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { colors, componentStyles, radii, typography, opacity } from '@/lib/design-tokens';
 import type { ConfigurableWidgetDefinition } from '@/lib/widgets/catalog';
+import { buildWidgetPreviewPath } from '@/lib/widgets/preview-routes';
 import type { WidgetSettingsMap } from '../../types';
 import { SettingsPanel } from './SettingsPanel';
 import { ColorPickerField } from './ColorPickerField';
@@ -330,7 +331,7 @@ export function WidgetEditor({
   const isDesktopPreview = viewport === 'desktop';
   const previewBackground = OPAQUE_HEX_COLOR_RE.test(previewBgColor) ? previewBgColor : DEFAULT_PREVIEW_BG;
 
-  const iframeSrc = `/preview?widget=${encodeURIComponent(widget.id)}&scene=${encodeURIComponent(activePreviewScene)}`;
+  const iframeSrc = buildWidgetPreviewPath(widget.id, activePreviewScene);
   const handlePreviewRetry = useCallback(() => {
     widgetReadyRef.current = false;
     dispatchPreviewLoadState({ type: 'retry' });

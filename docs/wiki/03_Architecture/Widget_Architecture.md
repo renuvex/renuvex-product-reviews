@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-29
-last_verified: 2026-07-29
+updated: 2026-08-02
+last_verified: 2026-08-02
 confidence: high
 tags:
   - widget
@@ -34,6 +34,9 @@ source_files:
   - "tests/widget-runtime-smoke.spec.ts"
   - "tests/widget-interaction-smoke.spec.ts"
   - "tests/admin-preview-smoke.spec.ts"
+  - "src/app/(preview)/preview/[widgetId]/[scene]/route.ts"
+  - "src/lib/widgets/preview-routes.ts"
+  - "scripts/verify-preview-route-prerender.ts"
   - "tests/unit/public-api-routes.test.ts"
   - "tests/unit/storefront-theme.test.ts"
   - "tests/unit/widget-icon-sprite.test.ts"
@@ -303,14 +306,18 @@ admin editor                         widget.js (preview iframe)
    ├── RENUVEX_PR_PREVIEW_RESET_SCROLL v1 ───►│ scroll to top
 ```
 
-Preview iframe HTML lives at
-[src/app/(preview)/preview/route.ts](src/app/(preview)/preview/route.ts).
-`widget` and `scene` must exist in the registry or the route returns `404`.
-The document loads `widget.js?publicApiKey=preview&v=<timestamp>` so each open
-uses a fresh loader. Both directions require the exact same origin, exact
-window source, protocol version, widget id, and scene. Wildcard target origins,
-sessionStorage handoff, and `/api/preview/*` storage are not part of the
-contract.
+Preview iframe HTML lives at the build-time route
+[src/app/(preview)/preview/[widgetId]/[scene]/route.ts](src/app/(preview)/preview/[widgetId]/[scene]/route.ts).
+`generateStaticParams` derives the exact Reviews, Badge PDP, and Badge listing
+paths from the scene registry; `dynamicParams=false` keeps unknown combinations
+fail-closed. The deterministic document loads the stable
+`widget.js?publicApiKey=preview` loader URL. Deployment invalidation plus the
+loader's revalidation policy and content-hashed runtime chunks own freshness,
+so a per-response timestamp is neither required nor generated. The legacy
+query route is a bounded validated redirect only. Both protocol directions
+require the exact same origin, exact window source, protocol version, widget
+id, and scene. Wildcard target origins, sessionStorage handoff, and
+`/api/preview/*` storage are not part of the contract.
 
 The preview invokes production render functions and CSS, but it intentionally
 uses a controlled fixture page and deterministic review/rating data. This

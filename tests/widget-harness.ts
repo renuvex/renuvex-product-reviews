@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { buildPreviewDocument } from '../src/widget/preview/document.js';
+import { buildWidgetPreviewPath } from '../src/lib/widgets/preview-routes';
 import {
   PREVIEW_PROTOCOL_VERSION,
   getDefaultWidgetPreviewScene,
@@ -459,6 +460,7 @@ export async function setupPreviewRoutes(page: Page, options: SmokeOptions = {})
     widgetId,
     scene,
   };
+  const previewPath = buildWidgetPreviewPath(widgetId, scene);
   const widgets = (settingsResponse(options) as { widgets: Record<string, Record<string, unknown>> }).widgets;
 
   await page.addInitScript(({ initialWidgets, protocolVersion }) => {
@@ -497,12 +499,12 @@ export async function setupPreviewRoutes(page: Page, options: SmokeOptions = {})
   });
   await page.route((url) => (
     url.origin === MERCHANT_ORIGIN &&
-    url.pathname === '/preview'
+    url.pathname === previewPath
   ), async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'text/html; charset=utf-8',
-      body: buildPreviewDocument(context, 'playwright'),
+      body: buildPreviewDocument(context),
     });
   });
   return log;

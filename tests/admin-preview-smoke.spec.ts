@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { collectSettingFields, resolveConfigurableWidget } from '../src/lib/widgets/catalog';
+import { buildWidgetPreviewPath } from '../src/lib/widgets/preview-routes';
 import {
   MERCHANT_ORIGIN,
   dispatchPreviewSettingsUpdate,
@@ -22,7 +23,7 @@ test('admin preview applies layout, toggle, and color updates through preview me
     },
   });
 
-  await page.goto(`${MERCHANT_ORIGIN}/preview`);
+  await page.goto(`${MERCHANT_ORIGIN}${buildWidgetPreviewPath('reviews', 'reviews')}`);
   await expect.poll(() => hasReviewsWidget(page)).toBe(true);
   expect(await textInReviewsShadow(page, '.renuvex-pr-title')).toBe('Musteri Yorumlari');
   expect(await hasInReviewsShadow(page, '.renuvex-pr-summary:not(.renuvex-pr-summary-compact)')).toBe(true);
@@ -57,7 +58,7 @@ test('badge preview uses production PDP renderer and applies content and alignme
     },
   });
 
-  await page.goto(`${MERCHANT_ORIGIN}/preview?widget=badge&scene=pdp`);
+  await page.goto(`${MERCHANT_ORIGIN}${buildWidgetPreviewPath('badge', 'pdp')}`);
   const badge = page.locator('.renuvex-pr-rating-badge--pdp');
   await expect(badge).toHaveCount(1);
   await expect(badge).toHaveAttribute('data-renuvex-align', 'right');
@@ -78,7 +79,7 @@ test('badge listing scene renders production badges and updates visibility witho
     },
   });
 
-  await page.goto(`${MERCHANT_ORIGIN}/preview?widget=badge&scene=listing`);
+  await page.goto(`${MERCHANT_ORIGIN}${buildWidgetPreviewPath('badge', 'listing')}`);
   const badges = page.locator('.renuvex-pr-rating-badge--listing');
   await expect(badges).toHaveCount(3);
   await expect(badges.first()).toHaveAttribute('data-renuvex-align', 'center');
@@ -98,7 +99,7 @@ test('badge listing scene renders production badges and updates visibility witho
 
 test('preview reset-scroll message returns a scrolled reviews scene to the top', async ({ page }) => {
   await setupPreviewRoutes(page);
-  await page.goto(`${MERCHANT_ORIGIN}/preview`);
+  await page.goto(`${MERCHANT_ORIGIN}${buildWidgetPreviewPath('reviews', 'reviews')}`);
   await expect.poll(() => hasReviewsWidget(page)).toBe(true);
 
   await page.evaluate(() => {

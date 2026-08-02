@@ -59,7 +59,7 @@ function fixtureMarkup(context) {
   return reviewsFixture();
 }
 
-export function buildPreviewDocument(context, scriptVersion) {
+export function buildPreviewDocument(context) {
   return `<!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -106,7 +106,7 @@ export function buildPreviewDocument(context, scriptVersion) {
     window.__ikasPreviewMode = true;
     window.__renuvexPreviewContext = ${scriptValue(context)};
   </script>
-  <script src="/widget.js?publicApiKey=preview&v=${encodeURIComponent(String(scriptVersion))}" async></script>
+  <script src="/widget.js?publicApiKey=preview" async></script>
 </body>
 </html>`;
 }
