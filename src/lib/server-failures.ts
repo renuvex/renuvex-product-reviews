@@ -81,6 +81,11 @@ const SERVER_FAILURES = {
     route: 'sync-products',
     operation: 'provider_sync',
   },
+  product_reconciliation_failed: {
+    source: 'internal-api',
+    route: 'product-reconciliation',
+    operation: 'process',
+  },
   storefront_script_sync_failed: {
     source: 'admin-api',
     route: 'inject-scripts',
@@ -100,6 +105,11 @@ const SERVER_FAILURES = {
     source: 'public-api',
     route: 'reviews',
     operation: 'submit',
+  },
+  public_ratings_by_slug_failed: {
+    source: 'public-api',
+    route: 'ratings-by-slug',
+    operation: 'resolve',
   },
 } as const;
 

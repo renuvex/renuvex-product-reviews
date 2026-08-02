@@ -128,6 +128,7 @@ source_files: []
 - [[ADR_0034_AWS_Review_Image_Migration]]
 - [[ADR_0035_QStash_Scheduler_For_Maintenance]]
 - [[ADR_0036_Review_Request_Email_Architecture]]
+- [[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]]
 
 ## Bugs And Fixes
 - [[Bug_Index]]

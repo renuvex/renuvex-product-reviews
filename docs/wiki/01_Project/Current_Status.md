@@ -3,8 +3,8 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-28
-last_verified: 2026-07-28
+updated: 2026-08-03
+last_verified: 2026-08-03
 confidence: high
 source_files: []
 tags:
@@ -93,6 +93,15 @@ Active development on the production test store. Core review, image, Mux video, 
 - Widget-side uncaught errors forwarded to Sentry via a 637-byte (gzip) in-widget reporter and a rate-limited public endpoint (`/api/public/widget-error`). No SDK shipped to the widget bundle; storefront customer privacy and Core Web Vitals preserved. See [[ADR_0010_Widget_Error_Forwarding]].
 
 ## In Progress / Active Follow-Ups
+- Product lifecycle Release A is implemented in source on an additive 62nd
+  migration: snapshots become evidence/tombstones, product webhook payloads are
+  wakeups only, install/manual/daily synchronization uses bounded
+  installation-fenced reconciliation, and slug-only ratings fail closed without
+  direct `Review.slug` fallback. This is not deployed or live-verified yet.
+  Release B consumer/media/email/admin enforcement remains blocked until the
+  deployed schema passes `--expect=expanded`, reconciliation converges, and the
+  read-only `verify:product-lifecycle --expect=ready` gate passes. See
+  [[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]].
 - Preview compatibility cleanup: after the first production deployment proves
   normal editor traffic uses only canonical static preview paths, confirm the
   legacy `/preview?widget=&scene=` redirect has no current app callers and
@@ -133,7 +142,10 @@ Active development on the production test store. Core review, image, Mux video, 
 - Real-device video acceptance is not fully automated. CI covers Chromium, Firefox, WebKit, Pixel emulation, iPhone WebKit emulation, and the Ubuntu GitHub Actions iPhone WebKit matrix; final public launch should still include manual iOS/Android spot checks for video and widget flows.
 - Current script injection relies on DB-tracked script ids because active MCP still does not expose `listStorefrontJSScript`; source intentionally avoids destructive cleanup while ikas docs/MCP disagree. See [[Ikas_Storefront_Script_Capabilities]].
 - Large new storefront surfaces should use the Phase 2 loader/module split pattern and must not be statically imported into the always-loaded runtime. See [[Yotpo_Style_Widget_Modular_Architecture]].
-- DOM-only listing badge fallback now resolves current slugs through `ProductSnapshot` before reading reviews by product id. If a snapshot is missing, the old slug query remains as a last-resort compatibility path; run `/api/admin/sync-products` to repair drift.
+- DOM-only listing badge fallback resolves only one fresh, unambiguous
+  `active_verified` snapshot before reading by product id. Missing, stale,
+  unknown, or conflicting evidence returns no slug-only rating; direct historical
+  `Review.slug` fallback has been removed in Release A source.
 
 ## Important Decisions
 - [[ADR_0001_Project_Stack]] — Next.js 16 App Router + Prisma + Postgres (Supabase)
@@ -144,12 +156,16 @@ Active development on the production test store. Core review, image, Mux video, 
 - [[ADR_0009_Sentry_Observability_Strategy]] — `@sentry/nextjs` on the panel, env-based DSN, `sendDefaultPii: false`, prod-only sample rates, masked Replay; widget bundle excluded
 - [[ADR_0010_Widget_Error_Forwarding]] — tiny widget-side reporter forwards uncaught widget errors via `/api/public/widget-error` so the visibility gap from ADR_0009 is closed without adding a second SDK to the storefront bundle
 - [[ADR_0015_Canonical_Product_Identity]] — `(storeId, productId)` is the canonical review product identity; slug/name are display snapshots and slug reads are fallback-only
+- [[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]] - product absence is a tombstone, reappearing ids conflict, and bounded reconciliation plus live readiness gates consumer enforcement.
 
 ## Next Recommended Steps
-1. Run authenticated dashboard smoke and Sentry post-deploy health after the next meaningful deploy.
-2. Add a periodic Mux asset reconciliation dry-run/report if video ops needs automated orphan evidence.
-3. Validate structured-data SEO on a public PDP with approved reviews.
-4. Keep the deployed V3.2 backend feature-disabled while the AWS
+1. Pass Release A CI, deploy the additive migration/backend, verify
+   `--expect=expanded`, let bounded reconciliation converge, and require
+   `--expect=ready` before preparing Release B.
+2. Run authenticated dashboard smoke and Sentry post-deploy health after the next meaningful deploy.
+3. Add a periodic Mux asset reconciliation dry-run/report if video ops needs automated orphan evidence.
+4. Validate structured-data SEO on a public PDP with approved reviews.
+5. Keep the deployed V3.2 backend feature-disabled while the AWS
    dispatcher/sender, SES/DNS/env, merchant UI, journal, and live-acceptance
    packages proceed through separate gates.
 6. Decide and document Q&A widget scope before adding fields to schema (see [[Open_Questions]]).
@@ -157,7 +173,7 @@ Active development on the production test store. Core review, image, Mux video, 
 8. Build a minimal analytics view in admin (counts, average rating trend).
 
 ## Last Updated
-2026-07-20
+2026-08-03
 
 ## Change Log
 - 2026-07-20: PR #8 deployed the disabled review-email backend and all 59

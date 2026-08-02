@@ -19,7 +19,8 @@ const mocks = vi.hoisted(() => ({
   storeSettingsUpsert: vi.fn(),
   ensureStorefrontScripts: vi.fn(),
   registerProductWebhooks: vi.fn(),
-  syncAllProductsForStore: vi.fn(),
+  startProductReconciliationRun: vi.fn(),
+  dispatchProductReconciliationRun: vi.fn(),
   isReviewEmailEnabled: vi.fn(),
 }));
 
@@ -95,7 +96,14 @@ vi.mock('@/lib/storefront-scripts', () => ({
 vi.mock('@/lib/product-snapshots', () => ({
   buildProductWebhookEndpoint: vi.fn(() => 'https://app.renuvex.app/api/webhooks/ikas/products'),
   registerProductWebhooks: mocks.registerProductWebhooks,
-  syncAllProductsForStore: mocks.syncAllProductsForStore,
+}));
+
+vi.mock('@/lib/product-reconciliation', () => ({
+  startProductReconciliationRun: mocks.startProductReconciliationRun,
+}));
+
+vi.mock('@/lib/product-reconciliation-dispatcher', () => ({
+  dispatchProductReconciliationRun: mocks.dispatchProductReconciliationRun,
 }));
 
 vi.mock('@/lib/review-email/config', () => ({
@@ -185,6 +193,11 @@ beforeEach(() => {
     stateVersion: 1,
     status: 'active',
   });
+  mocks.startProductReconciliationRun.mockResolvedValue({
+    run: { id: '11111111-1111-4111-8111-111111111111', status: 'pending' },
+    created: true,
+  });
+  mocks.dispatchProductReconciliationRun.mockResolvedValue(true);
   mocks.isReviewEmailEnabled.mockReturnValue(false);
   mocks.redisSet.mockImplementation(async (key: string, value: unknown, options?: { nx?: boolean }) => {
     if (options?.nx && records.has(key)) return null;
@@ -459,6 +472,17 @@ describe('ikas OAuth route state contract', () => {
     expect(mocks.ensureStorefrontScripts).toHaveBeenCalledOnce();
     expect(mocks.registerProductWebhooks).toHaveBeenCalledOnce();
     expect(mocks.after).toHaveBeenCalledOnce();
+    const postResponseTask = mocks.after.mock.calls[0]?.[0] as (() => Promise<void>) | undefined;
+    expect(postResponseTask).toBeTypeOf('function');
+    await postResponseTask!();
+    expect(mocks.startProductReconciliationRun).toHaveBeenCalledWith({
+      storeId: 'merchant-1',
+      fence: { authorizedAppId: 'authorized-app-1', generation: 1, stateVersion: 1 },
+      trigger: 'install',
+    });
+    expect(mocks.dispatchProductReconciliationRun).toHaveBeenCalledWith(
+      '11111111-1111-4111-8111-111111111111',
+    );
     expect(session).toMatchObject({
       oauthBrowserBinding: expect.stringMatching(/^[a-f0-9]{64}$/),
       merchantId: 'merchant-1',

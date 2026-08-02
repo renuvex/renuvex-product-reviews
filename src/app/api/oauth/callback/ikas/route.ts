@@ -20,7 +20,9 @@ import { prisma } from '@/lib/prisma';
 import { NextRequest, NextResponse, after } from 'next/server';
 import z from 'zod';
 import { ensureStorefrontScripts } from '@/lib/storefront-scripts';
-import { buildProductWebhookEndpoint, registerProductWebhooks, syncAllProductsForStore } from '@/lib/product-snapshots';
+import { buildProductWebhookEndpoint, registerProductWebhooks } from '@/lib/product-snapshots';
+import { startProductReconciliationRun } from '@/lib/product-reconciliation';
+import { dispatchProductReconciliationRun } from '@/lib/product-reconciliation-dispatcher';
 import { isReviewEmailEnabled } from '@/lib/review-email/config';
 import { buildOrderWebhookEndpoint, registerOrderWebhooks } from '@/lib/review-email/ikas-orders';
 import {
@@ -265,13 +267,20 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Backfill snapshots after the response is sent so a large catalog cannot
-    // delay or fail the install; webhooks + /api/admin/sync-products recover misses.
+    // Reconciliation is bounded and resumable; installation no longer owns an
+    // unbounded provider catalog scan inside one post-response callback.
     after(async () => {
       try {
-        await syncAllProductsForStore(ikas, merchantId, installationFence);
-      } catch (productSyncError) {
-        console.error('Initial product snapshot sync failed:', productSyncError);
+        const { run } = await startProductReconciliationRun({
+          storeId: merchantId,
+          fence: installationFence,
+          trigger: 'install',
+        });
+        if (!(await dispatchProductReconciliationRun(run.id))) {
+          throw new Error('product_reconciliation_dispatch_failed');
+        }
+      } catch {
+        console.error('Initial product reconciliation dispatch failed');
       }
     });
 

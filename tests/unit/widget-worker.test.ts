@@ -131,8 +131,8 @@ describe('widget Worker delivery contract', () => {
       .toBe('https://widget.renuvex.app/api/public/settings?publicApiKey=s1');
     expect(__workerTest.normalizedReadCacheUrl(new URL('https://widget.renuvex.app/api/public/settings?publicApiKey=s1&debug=1')))
       .toBeNull();
-    expect(__workerTest.normalizedReadCacheUrl(new URL('https://widget.renuvex.app/api/public/ratings-by-slug?storeId=s1&slugs=z,a'))?.toString())
-      .toBe('https://widget.renuvex.app/api/public/ratings-by-slug?storeId=s1&slugs=a%2Cz');
+    expect(__workerTest.normalizedReadCacheUrl(new URL('https://widget.renuvex.app/api/public/ratings-by-slug?storeId=s1&slugs=z,a')))
+      .toBeNull();
     expect(__workerTest.normalizedReadCacheUrl(new URL('https://widget.renuvex.app/api/public/reviews?storeId=s1&productId=p1&hasMedia=true'))?.toString())
       .toBe('https://widget.renuvex.app/api/public/reviews?storeId=s1&productId=p1&page=1&limit=10&orderBy=newest&hasMedia=true');
     expect(__workerTest.normalizedReadCacheUrl(new URL('https://widget.renuvex.app/api/public/reviews?storeId=s1&productId=p1&unknown=1'))).toBeNull();
@@ -167,6 +167,24 @@ describe('widget Worker delivery contract', () => {
     expect(firstBody.runtime.requestUrl).toBe('https://app.renuvex.app/api/public/settings?publicApiKey=s1');
     expect(seen).toEqual(['https://app.renuvex.app/api/public/settings?publicApiKey=s1']);
     expect(Array.from(store.keys())).toEqual(['https://widget.renuvex.app/api/public/settings?publicApiKey=s1']);
+  });
+
+  it('proxies slug resolution without browser or edge caching', async () => {
+    const { env, seen, store } = readProxyEnv();
+    const request = new Request('https://widget.renuvex.app/api/public/ratings-by-slug?storeId=s1&slugs=z,a');
+
+    const first = await worker.fetch(request, env);
+    const second = await worker.fetch(request, env);
+
+    expect(first.status).toBe(200);
+    expect(first.headers.get('Cache-Control')).toBe('no-store');
+    expect(first.headers.get('X-Renuvex-Edge-Cache')).toBe('BYPASS');
+    expect(second.headers.get('X-Renuvex-Edge-Cache')).toBe('BYPASS');
+    expect(seen).toEqual([
+      'https://app.renuvex.app/api/public/ratings-by-slug?storeId=s1&slugs=z,a',
+      'https://app.renuvex.app/api/public/ratings-by-slug?storeId=s1&slugs=z,a',
+    ]);
+    expect(store.size).toBe(0);
   });
 
   it('bypasses cache for unknown query params while still reaching the backend origin', async () => {

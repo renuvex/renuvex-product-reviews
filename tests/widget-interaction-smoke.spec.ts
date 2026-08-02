@@ -779,6 +779,7 @@ test('photo upload submit waits for completion and posts AWS image refs', async 
 
   expect(uploadMock.registerBodies).toEqual([{
     storeId: PUBLIC_KEY,
+    productId: 'product-1',
     provider: 'aws_s3',
     assetId: uploadMock.refs[0].assetId,
     uploadSessionId: uploadMock.refs[0].uploadSessionId,

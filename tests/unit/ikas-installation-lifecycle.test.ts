@@ -48,6 +48,9 @@ describe('ikas installation lifecycle fence', () => {
       storeDataErasureRun: {
         updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
+      productReconciliationRun: {
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
       ikasStoreInstallation: {
         upsert: vi.fn().mockResolvedValue({
           ...current,
@@ -73,6 +76,21 @@ describe('ikas installation lifecycle fence', () => {
         finishedAt: new Date('2026-07-10T12:00:00.000Z'),
         nextRetryAt: null,
         sanitizedErrorCode: null,
+      },
+    });
+    expect(tx.productReconciliationRun.updateMany).toHaveBeenCalledWith({
+      where: {
+        storeId: 'store-1',
+        status: { in: ['pending', 'scanning', 'verifying', 'error'] },
+      },
+      data: {
+        status: 'stale_ignored',
+        phase: 'complete',
+        leaseOwner: null,
+        leaseExpiresAt: null,
+        nextRetryAt: null,
+        lastErrorCode: null,
+        finishedAt: new Date('2026-07-10T12:00:00.000Z'),
       },
     });
     expect(tx.authToken.deleteMany).toHaveBeenCalledWith({ where: { merchantId: 'store-1' } });

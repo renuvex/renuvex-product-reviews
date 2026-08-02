@@ -87,6 +87,21 @@ export async function activateIkasStoreInstallation(token: AuthToken, now = new 
         sanitizedErrorCode: null,
       },
     });
+    await tx.productReconciliationRun.updateMany({
+      where: {
+        storeId: token.merchantId,
+        status: { in: ['pending', 'scanning', 'verifying', 'error'] },
+      },
+      data: {
+        status: 'stale_ignored',
+        phase: 'complete',
+        leaseOwner: null,
+        leaseExpiresAt: null,
+        nextRetryAt: null,
+        lastErrorCode: null,
+        finishedAt: now,
+      },
+    });
 
     await tx.authToken.deleteMany({ where: { merchantId: token.merchantId } });
     await tx.authToken.create({

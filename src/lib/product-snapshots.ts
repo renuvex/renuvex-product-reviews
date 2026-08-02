@@ -1,32 +1,33 @@
 import { getRedirectUri } from '@/helpers/api-helpers';
 import { prisma } from '@/lib/prisma';
-import type { ikasAdminGraphQLAPIClient, ListProductsForSyncQueryData, SaveProductWebhooksMutationData } from '@/lib/ikas-client/generated/graphql';
+import type { ikasAdminGraphQLAPIClient, SaveProductWebhooksMutationData } from '@/lib/ikas-client/generated/graphql';
 import type { AuthToken } from '@/models/auth-token';
 import type { Prisma } from '@prisma/client';
 import {
   requireActiveIkasStoreInstallationFence,
   type IkasInstallationFence,
 } from '@/lib/ikas-installation-lifecycle';
+import {
+  decideProductLifecycleWrite,
+  type CurrentProductEvidence,
+  type NormalizedProductEvidence,
+  type ProductLifecycleState,
+} from '@/lib/product-lifecycle';
 
 export const PRODUCT_WEBHOOK_SCOPES = ['store/product/created', 'store/product/updated'] as const;
 
 type IkasClient = ikasAdminGraphQLAPIClient<AuthToken>;
-type IkasProductForSync = ListProductsForSyncQueryData['data'][number];
 export type ProductLike = {
   id?: unknown;
   _id?: unknown;
   productId?: unknown;
   name?: unknown;
+  createdAt?: unknown;
   deleted?: unknown;
   updatedAt?: unknown;
   metaData?: { slug?: unknown } | null;
   slug?: unknown;
   product?: ProductLike;
-};
-
-export type ProductSyncResult = {
-  synced: number;
-  pages: number;
 };
 
 function asString(value: unknown): string | null {
@@ -59,7 +60,7 @@ export function getProductIdFromWebhookData(data: unknown): string | null {
   );
 }
 
-function normalizeProduct(product: ProductLike) {
+export function normalizeProductEvidence(product: ProductLike): NormalizedProductEvidence | null {
   const productId = asString(product.id) || asString(product.productId) || asString(product._id);
   if (!productId) return null;
 
@@ -67,149 +68,144 @@ function normalizeProduct(product: ProductLike) {
     productId,
     slug: asString(product.slug) || asString(product.metaData?.slug),
     name: asString(product.name),
+    providerCreatedAt: timestampToDate(product.createdAt),
     ikasUpdatedAt: timestampToDate(product.updatedAt),
+    deleted: product.deleted === true,
   };
 }
 
-async function persistProductSnapshot(
+export type ProductEvidenceWriteCounts = Record<ProductLifecycleState, number>;
+
+function emptyWriteCounts(): ProductEvidenceWriteCounts {
+  return {
+    unknown: 0,
+    active_verified: 0,
+    unavailable_verified: 0,
+    identity_conflict: 0,
+  };
+}
+
+export async function applyExactProductEvidenceBatch(
   tx: Prisma.TransactionClient,
   storeId: string,
-  product: ProductLike,
-) {
-  const normalized = normalizeProduct(product);
-  if (!normalized) return null;
+  entries: Array<{ productId: string; product: ProductLike | null }>,
+  input: {
+    source: string;
+    now?: Date;
+    reconciliationRunId?: string;
+  },
+): Promise<ProductEvidenceWriteCounts> {
+  const productIds = entries.map((entry) => entry.productId);
+  if (new Set(productIds).size !== productIds.length) throw new Error('duplicate_product_evidence_id');
 
-  if (product.deleted === true) {
-    await tx.productSnapshot.deleteMany({ where: { storeId, productId: normalized.productId } });
-    return null;
-  }
-
-  return tx.productSnapshot.upsert({
-    where: { storeId_productId: { storeId, productId: normalized.productId } },
-    update: {
-      slug: normalized.slug,
-      name: normalized.name,
-      ikasUpdatedAt: normalized.ikasUpdatedAt,
-      lastSyncedAt: new Date(),
-    },
-    create: {
-      storeId,
-      productId: normalized.productId,
-      slug: normalized.slug,
-      name: normalized.name,
-      ikasUpdatedAt: normalized.ikasUpdatedAt,
-      lastSyncedAt: new Date(),
+  const currentRows = await tx.productSnapshot.findMany({
+    where: { storeId, productId: { in: productIds } },
+    select: {
+      productId: true,
+      lifecycleState: true,
+      slug: true,
+      name: true,
+      providerCreatedAt: true,
+      ikasUpdatedAt: true,
+      unavailableAt: true,
+      conflictDetectedAt: true,
     },
   });
-}
+  const currentByProductId = new Map<string, CurrentProductEvidence>(
+    currentRows.map((row) => [row.productId, row]),
+  );
+  const counts = emptyWriteCounts();
+  const now = input.now ?? new Date();
 
-export async function upsertProductSnapshot(
-  storeId: string,
-  product: ProductLike,
-  installationFence?: IkasInstallationFence,
-) {
-  return prisma.$transaction(async (tx) => {
-    if (installationFence) {
-      await requireActiveIkasStoreInstallationFence(tx, storeId, installationFence);
-    }
-    return persistProductSnapshot(tx, storeId, product);
-  });
-}
+  for (const entry of entries) {
+    const evidence = entry.product ? normalizeProductEvidence(entry.product) : null;
+    if (entry.product && !evidence) throw new Error('provider_product_id_missing');
+    if (evidence && evidence.productId !== entry.productId) throw new Error('provider_product_id_mismatch');
+    const current = currentByProductId.get(entry.productId) ?? null;
+    const write = decideProductLifecycleWrite({
+      current,
+      evidence,
+      productId: entry.productId,
+      source: input.source,
+      now,
+      reconciliationRunId: input.reconciliationRunId,
+    });
 
-async function upsertProductSnapshotBatch(
-  storeId: string,
-  products: IkasProductForSync[],
-  installationFence?: IkasInstallationFence,
-) {
-  if (products.length === 0) return 0;
-
-  await prisma.$transaction(async (tx) => {
-    if (installationFence) {
-      await requireActiveIkasStoreInstallationFence(tx, storeId, installationFence);
-    }
-    await Promise.all(products.map((product) => {
-      const normalized = normalizeProduct(product);
-      if (!normalized) {
-        throw new Error('listProduct returned a product without id');
-      }
-
-      if (product.deleted === true) {
-        return tx.productSnapshot.deleteMany({ where: { storeId, productId: normalized.productId } });
-      }
-
-      return tx.productSnapshot.upsert({
-        where: { storeId_productId: { storeId, productId: normalized.productId } },
-        update: {
-          slug: normalized.slug,
-          name: normalized.name,
-          ikasUpdatedAt: normalized.ikasUpdatedAt,
-          lastSyncedAt: new Date(),
-        },
-        create: {
+    if (current) {
+      await tx.productSnapshot.update({
+        where: { storeId_productId: { storeId, productId: entry.productId } },
+        data: write,
+      });
+    } else {
+      await tx.productSnapshot.create({
+        data: {
           storeId,
-          productId: normalized.productId,
-          slug: normalized.slug,
-          name: normalized.name,
-          ikasUpdatedAt: normalized.ikasUpdatedAt,
-          lastSyncedAt: new Date(),
+          productId: entry.productId,
+          slug: evidence?.slug ?? null,
+          name: evidence?.name ?? null,
+          ...write,
         },
       });
-    }));
-  });
-
-  return products.length;
-}
-
-export async function syncAllProductsForStore(
-  ikas: IkasClient,
-  storeId: string,
-  installationFence?: IkasInstallationFence,
-): Promise<ProductSyncResult> {
-  const limit = 200;
-  let page = 1;
-  let synced = 0;
-  let pages = 0;
-
-  while (true) {
-    const response = await ikas.queries.listProductsForSync({ pagination: { limit, page } });
-    const payload = response.data?.listProduct;
-
-    if (!response.isSuccess || !payload) {
-      throw new Error('Failed to list ikas products for snapshot sync');
     }
-
-    synced += await upsertProductSnapshotBatch(storeId, payload.data || [], installationFence);
-    pages += 1;
-
-    if (!payload.hasNext) break;
-    page += 1;
+    counts[write.lifecycleState] += 1;
   }
 
-  return { synced, pages };
+  return counts;
+}
+
+export async function applyExactProductEvidence(
+  tx: Prisma.TransactionClient,
+  storeId: string,
+  productId: string,
+  product: ProductLike | null,
+  input: {
+    source: string;
+    now?: Date;
+    reconciliationRunId?: string;
+  },
+) {
+  return applyExactProductEvidenceBatch(tx, storeId, [{ productId, product }], input);
 }
 
 export async function syncSingleProductForStore(
   ikas: IkasClient,
   storeId: string,
   productId: string,
-  fallbackProduct?: ProductLike,
   installationFence?: IkasInstallationFence,
 ) {
   const response = await ikas.queries.listProductsForSync({
     id: { eq: productId },
     pagination: { limit: 1, page: 1 },
   });
-  const product = response.data?.listProduct?.data?.[0];
+  const payload = response.data?.listProduct;
+  const products = payload && Array.isArray(payload.data) ? payload.data : null;
 
-  if (response.isSuccess && product) {
-    return upsertProductSnapshot(storeId, product, installationFence);
+  if (
+    !response.isSuccess ||
+    !payload ||
+    !Number.isInteger(payload.count) ||
+    payload.count < 0 ||
+    payload.count > 1 ||
+    payload.page !== 1 ||
+    payload.limit !== 1 ||
+    payload.hasNext !== false ||
+    !products ||
+    products.length !== payload.count
+  ) {
+    throw new Error('Failed to verify ikas product snapshot');
   }
+  const unexpected = products.some((product) => product.id !== productId);
+  if (unexpected || products.length > 1) throw new Error('Unexpected ikas product verification response');
+  const product = products[0] ?? null;
 
-  if (fallbackProduct) {
-    return upsertProductSnapshot(storeId, fallbackProduct, installationFence);
-  }
-
-  throw new Error('Failed to sync ikas product snapshot');
+  return prisma.$transaction(async (tx) => {
+    if (installationFence) {
+      await requireActiveIkasStoreInstallationFence(tx, storeId, installationFence);
+    }
+    return applyExactProductEvidence(tx, storeId, productId, product, {
+      source: 'webhook_exact',
+    });
+  });
 }
 
 export function buildProductWebhookEndpoint(host: string) {

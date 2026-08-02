@@ -919,9 +919,21 @@ test('product-like links without nearby media do not trigger the listing fallbac
 });
 
 test('product-like listing DOM triggers the fallback chunk and slug ratings call', async ({ page }) => {
+  await page.addInitScript(({ publicKey }) => {
+    sessionStorage.setItem(`renuvex_pr_ratings_${publicKey}`, JSON.stringify({
+      t: Date.now(),
+      v: { 'premium-shorts': { avg: '5.0', count: 999 } },
+    }));
+  }, { publicKey: PUBLIC_KEY });
   const log = await setupProductListingFallbackPage(page);
   await page.goto(`${MERCHANT_ORIGIN}/clothing`);
   await expect.poll(() => countUrls(log, '/api/public/ratings-by-slug'), { timeout: 5000 }).toBe(1);
+
+  const cached = await page.evaluate((publicKey) => (
+    sessionStorage.getItem(`renuvex_pr_ratings_v2_${publicKey}`)
+  ), PUBLIC_KEY);
+  expect(cached).not.toBeNull();
+  expect(JSON.parse(cached!).v).toEqual({});
 
   expect(hasRuntime(log)).toBe(true);
   expect(hasChunk(log, 'listing-badges-')).toBe(true);

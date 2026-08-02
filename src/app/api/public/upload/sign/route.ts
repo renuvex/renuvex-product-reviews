@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { Redis } from '@upstash/redis';
 import { anonymousPublicCorsOptions, withAnonymousPublicCors } from '@/lib/cors';
 import { prisma } from '@/lib/prisma';
-import { normalizeReviewImageStoreId } from '@/lib/review-images';
+import { normalizeReviewImageProductId, normalizeReviewImageStoreId } from '@/lib/review-images';
 import {
   AWS_REVIEW_IMAGE_PROVIDER,
   base64Sha256ToHex,
@@ -62,12 +62,14 @@ export async function POST(request: Request) {
     }
 
     const payload = body as {
+      productId?: unknown;
       fileName?: unknown;
       contentType?: unknown;
       bytes?: unknown;
       checksumAlgorithm?: unknown;
       checksumSha256?: unknown;
     };
+    const productId = scope?.productId ?? normalizeReviewImageProductId(payload.productId);
     if (payload.checksumAlgorithm !== 'SHA256') {
       return withAnonymousPublicCors(NextResponse.json({ error: 'Invalid checksum algorithm.' }, { status: 400 }));
     }
@@ -91,7 +93,7 @@ export async function POST(request: Request) {
       data: {
         publicId: buildAwsReviewImagePublicId(storeId, intent.assetId),
         storeId,
-        productId: scope?.productId ?? null,
+        productId,
         uploadSessionId: intent.uploadSessionId,
         url: null,
         assetId: intent.assetId,

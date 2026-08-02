@@ -4,10 +4,12 @@ import {
   ikasAdminAuthorizationLostResponse,
   ikasAdminAuthenticationResponse,
 } from '@/lib/auth-helpers';
-import { buildProductWebhookEndpoint, registerProductWebhooks, syncAllProductsForStore } from '@/lib/product-snapshots';
+import { buildProductWebhookEndpoint, registerProductWebhooks } from '@/lib/product-snapshots';
 import { NextRequest, NextResponse } from 'next/server';
 import { reportServerFailure } from '@/lib/server-failures';
 import { IkasInstallationError } from '@/lib/ikas-installation-lifecycle';
+import { startProductReconciliationRun } from '@/lib/product-reconciliation';
+import { dispatchProductReconciliationRun } from '@/lib/product-reconciliation-dispatcher';
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,18 +24,21 @@ export async function POST(request: NextRequest) {
     }
 
     const endpoint = buildProductWebhookEndpoint(host);
-    const [webhooks, sync] = await Promise.all([
-      registerProductWebhooks(ikas, endpoint),
-      syncAllProductsForStore(ikas, principal.merchantId, principal),
-    ]);
+    const webhooks = await registerProductWebhooks(ikas, endpoint);
+    const { run } = await startProductReconciliationRun({
+      storeId: principal.merchantId,
+      fence: principal,
+      trigger: 'manual',
+    });
+    await dispatchProductReconciliationRun(run.id);
 
     return NextResponse.json({
       data: {
-        synced: sync.synced,
-        pages: sync.pages,
+        runId: run.id,
+        status: run.status,
         webhooks: webhooks.map((webhook) => ({ id: webhook.id, scope: webhook.scope, endpoint: webhook.endpoint })),
       },
-    });
+    }, { status: 202 });
   } catch (error) {
     if (error instanceof IkasInstallationError) {
       return ikasAdminAuthorizationLostResponse();

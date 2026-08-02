@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { anonymousPublicCorsOptions, withAnonymousPublicCors } from '@/lib/cors';
 import { checkFixedWindowRateLimit, getClientIp } from '@/lib/public-rate-limit';
 import { publicRatingFromSummary } from '@/lib/review-summary';
+import { resolveSafeSlugProductIds } from '@/lib/product-lifecycle';
+import { reportServerFailure } from '@/lib/server-failures';
 
 const RATINGS_RATE_LIMIT_MAX = 300;
 const RATINGS_RATE_LIMIT_WINDOW_SEC = 60;
@@ -20,6 +22,12 @@ function rateLimitedResponse() {
   return res;
 }
 
+function dataResponse(data: Record<string, { avg: string; count: number }>, status = 200) {
+  const response = withAnonymousPublicCors(NextResponse.json({ data }, { status }));
+  response.headers.set('Cache-Control', 'no-store');
+  return response;
+}
+
 /**
  * GET /api/public/ratings-by-slug?storeId=<id>&slugs=slug1,slug2,...
  * Returns approved review count and average rating per slug.
@@ -31,13 +39,13 @@ export async function GET(request: Request) {
     const slugsParam = searchParams.get('slugs');
 
     if (!storeId || typeof storeId !== 'string' || !slugsParam) {
-      return withAnonymousPublicCors(NextResponse.json({ data: {} }));
+      return dataResponse({});
     }
 
     const slugs = slugsParam.split(',').filter(Boolean);
 
     if (slugs.length === 0) {
-      return withAnonymousPublicCors(NextResponse.json({ data: {} }));
+      return dataResponse({});
     }
 
     // Max 100 slug — sonsuz sorgu engeli
@@ -46,7 +54,7 @@ export async function GET(request: Request) {
       .slice(0, 100);
 
     if (safeSlugs.length === 0) {
-      return withAnonymousPublicCors(NextResponse.json({ data: {} }));
+      return dataResponse({});
     }
 
     const rateLimit = await checkFixedWindowRateLimit({
@@ -66,23 +74,14 @@ export async function GET(request: Request) {
         storeId,
         slug: { in: safeSlugs },
       },
-      orderBy: [
-        { lastSyncedAt: 'desc' },
-        { ikasUpdatedAt: 'desc' },
-        { updatedAt: 'desc' },
-        { productId: 'asc' },
-      ],
-      select: { slug: true, productId: true },
+      select: {
+        slug: true,
+        productId: true,
+        lifecycleState: true,
+        lastVerifiedAt: true,
+      },
     });
-
-    // Ordered freshest-first: when a slug maps to multiple snapshots (slug
-    // reassigned between products) the most recently synced one wins below.
-    const slugToProductId: Record<string, string> = {};
-    for (const snapshot of snapshots) {
-      if (snapshot.slug && !slugToProductId[snapshot.slug]) {
-        slugToProductId[snapshot.slug] = snapshot.productId;
-      }
-    }
+    const slugToProductId = resolveSafeSlugProductIds(snapshots);
 
     const resolvedProductIds = Array.from(new Set(Object.values(slugToProductId)));
     if (resolvedProductIds.length > 0) {
@@ -105,35 +104,9 @@ export async function GET(request: Request) {
       }
     }
 
-    const unresolvedSlugs = safeSlugs.filter((slug) => !slugToProductId[slug]);
-    if (unresolvedSlugs.length > 0) {
-      const reviews = await prisma.review.findMany({
-        where: {
-          storeId,
-          slug: { in: unresolvedSlugs },
-          status: 'approved',
-        },
-        select: { slug: true, rating: true },
-      });
-
-      const map: Record<string, { sum: number; count: number }> = {};
-      for (const r of reviews) {
-        if (!map[r.slug]) map[r.slug] = { sum: 0, count: 0 };
-        map[r.slug].sum += r.rating;
-        map[r.slug].count += 1;
-      }
-
-      for (const slug of Object.keys(map)) {
-        const { sum, count } = map[slug];
-        data[slug] = { avg: (sum / count).toFixed(1), count };
-      }
-    }
-
-    const res = withAnonymousPublicCors(NextResponse.json({ data }));
-    res.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
-    return res;
-  } catch (error: any) {
-    console.error('[ratings-by-slug] ERROR:', error);
-    return withAnonymousPublicCors(NextResponse.json({ data: {} }, { status: 500 }));
+    return dataResponse(data);
+  } catch {
+    reportServerFailure('public_ratings_by_slug_failed');
+    return dataResponse({}, 500);
   }
 }

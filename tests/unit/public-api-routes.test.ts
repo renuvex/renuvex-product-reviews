@@ -741,9 +741,10 @@ describe('/api/public/ratings', () => {
 describe('/api/public/ratings-by-slug', () => {
   it('resolves current product ids by slug and reads aggregate summaries', async () => {
     checkFixedWindowRateLimitMock.mockResolvedValue({ allowed: true });
+    const verifiedAt = new Date();
     prismaMock.productSnapshot.findMany.mockResolvedValue([
-      { slug: 'premium-shorts', productId: 'product-1' },
-      { slug: 'linen-shirt', productId: 'product-2' },
+      { slug: 'premium-shorts', productId: 'product-1', lifecycleState: 'active_verified', lastVerifiedAt: verifiedAt },
+      { slug: 'linen-shirt', productId: 'product-2', lifecycleState: 'active_verified', lastVerifiedAt: verifiedAt },
     ]);
     prismaMock.productReviewSummary.findMany.mockResolvedValue([
       summaryRow({ productId: 'product-1', approvedCount: 12, ratingSum: 57, averageRating: 4.75 }),
@@ -768,6 +769,23 @@ describe('/api/public/ratings-by-slug', () => {
         'linen-shirt': { avg: '4.0', count: 2 },
       },
     });
+    expect(response.headers.get('Cache-Control')).toBe('no-store');
+  });
+
+  it('returns no rating for ambiguous or unverified slug evidence', async () => {
+    checkFixedWindowRateLimitMock.mockResolvedValue({ allowed: true });
+    prismaMock.productSnapshot.findMany.mockResolvedValue([
+      { slug: 'shared-slug', productId: 'product-1', lifecycleState: 'active_verified', lastVerifiedAt: new Date() },
+      { slug: 'shared-slug', productId: 'product-2', lifecycleState: 'unknown', lastVerifiedAt: null },
+    ]);
+    const { GET } = await import('@/app/api/public/ratings-by-slug/route');
+
+    const response = await GET(new Request('https://app.test/api/public/ratings-by-slug?storeId=store-1&slugs=shared-slug'));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ data: {} });
+    expect(prismaMock.productReviewSummary.findMany).not.toHaveBeenCalled();
+    expect(prismaMock.review.findMany).not.toHaveBeenCalled();
   });
 });
 

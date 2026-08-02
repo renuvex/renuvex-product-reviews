@@ -69,6 +69,7 @@ export const LIST_PRODUCTS_FOR_SYNC = gql`
       data {
         id
         name
+        createdAt
         deleted
         updatedAt
         metaData {
