@@ -1,24 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const prismaMock = vi.hoisted(() => ({
-  reviewMedia: {
-    findFirst: vi.fn(),
-  },
-  videoUploadSession: {
-    findFirst: vi.fn(),
-  },
-}));
-
 const authenticateIkasAdminRequestMock = vi.hoisted(() => vi.fn());
+const resolveAdminMuxSignedPlaybackIdMock = vi.hoisted(() => vi.fn());
 const signMuxPlaybackTokenMock = vi.hoisted(() => vi.fn());
-
-vi.mock('@/lib/prisma', () => ({
-  prisma: prismaMock,
-}));
 
 vi.mock('@/lib/auth-helpers', () => ({
   authenticateIkasAdminRequest: authenticateIkasAdminRequestMock,
   ikasAdminAuthenticationResponse: vi.fn(),
+}));
+
+vi.mock('@/lib/media/admin-video-access', () => ({
+  resolveAdminMuxSignedPlaybackId: resolveAdminMuxSignedPlaybackIdMock,
 }));
 
 vi.mock('@/lib/media/providers/mux', () => ({
@@ -46,8 +38,7 @@ describe('/api/admin/reviews/video-playback', () => {
   });
 
   it('returns Mux Player signed playback attributes without caching', async () => {
-    prismaMock.reviewMedia.findFirst.mockResolvedValue({ providerAssetId: 'asset-1' });
-    prismaMock.videoUploadSession.findFirst.mockResolvedValue({ signedPlaybackId: 'signed-playback-1' });
+    resolveAdminMuxSignedPlaybackIdMock.mockResolvedValue('signed-playback-1');
     signMuxPlaybackTokenMock
       .mockResolvedValueOnce('video-token')
       .mockResolvedValueOnce('thumbnail-token');
@@ -58,6 +49,10 @@ describe('/api/admin/reviews/video-playback', () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get('Cache-Control')).toBe('private, no-store');
+    expect(resolveAdminMuxSignedPlaybackIdMock).toHaveBeenCalledWith({
+      mediaId: 'media-1',
+      storeId: 'store-1',
+    });
     expect(body.data).toEqual({
       playbackId: 'signed-playback-1',
       playbackToken: 'video-token',

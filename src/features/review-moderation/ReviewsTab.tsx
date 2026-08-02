@@ -20,6 +20,7 @@ interface ReviewsTabProps {
   onDeleteReview: (id: string) => void;
   onMediaOpen: (media: ReviewMedia, reviewStatus: string) => void;
   getImagePreviewUrl: (mediaId: string, variant: 'thumb_320x427' | 'w1200') => Promise<string | null>;
+  getVideoThumbnailUrl: (mediaId: string) => Promise<string | null>;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
 }
@@ -33,7 +34,7 @@ function renderStars(count: number) {
 export function ReviewsTab({
   activeTab, reviews, loading, page, total, pageSize, tabCounts,
   onTabChange, onStatusChange, onReply, onDeleteReply, onDeleteReview,
-  onMediaOpen, getImagePreviewUrl, onPageChange, onPageSizeChange,
+  onMediaOpen, getImagePreviewUrl, getVideoThumbnailUrl, onPageChange, onPageSizeChange,
 }: ReviewsTabProps) {
   const totalPages = Math.ceil(total / pageSize);
 
@@ -98,6 +99,7 @@ export function ReviewsTab({
                   onDeleteReview={onDeleteReview}
                   onMediaOpen={onMediaOpen}
                   getImagePreviewUrl={getImagePreviewUrl}
+                  getVideoThumbnailUrl={getVideoThumbnailUrl}
                   renderStars={renderStars}
                 />
               ))}

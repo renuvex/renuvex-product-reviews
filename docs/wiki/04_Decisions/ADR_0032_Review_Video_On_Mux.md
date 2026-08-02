@@ -43,7 +43,10 @@ source_files:
   - "src/app/api/public/upload/video/status/route.ts"
   - "src/app/api/public/upload/video/metrics/route.ts"
   - "src/app/api/webhooks/mux/route.ts"
+  - "src/app/api/admin/reviews/video-thumbnail/route.ts"
   - "src/app/api/admin/reviews/video-playback/route.ts"
+  - "src/lib/media/admin-video-access.ts"
+  - "src/lib/media/admin-review-media.ts"
   - "src/widget/reviews-section/review-form-modal/media/video-upload.js"
   - "src/widget/core/review-media.js"
   - "tests/unit/media-jobs.test.ts"
@@ -80,6 +83,7 @@ This ADR describes the target architecture and the code/migration state. Deploy,
 9. **Upload performance evidence is separate from provider lifecycle.** Browser-to-Mux direct upload timing is measured with sanitized `VideoUploadPerformanceSample` rows. `WebhookEvent`, `MediaProviderJob`, and `VideoUploadSession` remain the lifecycle source of truth; performance samples do not store tokens, upload URLs, signed URLs, playback IDs, raw user-agent, IP, or file names.
 10. **Cleanup recovers late Mux asset ids.** Direct upload cancel is not the only cleanup mechanism because Mux cancel only applies while an upload is still waiting. `cleanup_video` retrieves the Mux upload by `providerUploadId` before cancel, recovers `asset_id`, and deletes known or recovered assets even when `VideoUploadSession.providerAssetId` was not persisted yet or direct-upload cancel is no longer valid. A late `video.upload.asset_created` webhook for an `aborted` or `failed` session is routed to an asset-scoped cleanup job instead of normal resolve/reconcile work. Abandoned ready sessions that never reached review submit can release consumed quota when `consumedAt` is still null; review-consumed sessions are never refunded by abandoned-upload cleanup.
 11. **Playback uses official Mux Player.** Approved storefront playback exposes an additive public `playbackId` and trusted Mux delivery/poster URLs; provider ids, private/signed playback ids, upload URLs, and tokens stay server-side. The widget lazy-loads `@mux/mux-player`, disables Mux Data tracking/cookies for this phase, and keeps a trusted `.m3u8` parsing fallback only for rollout overlap. Pending/admin preview returns short-lived `playbackToken` and `thumbnailToken` attributes for Mux Player while retaining legacy signed URL fields temporarily for deploy overlap.
+12. **Admin list thumbnails have less authority than full playback.** The review-list response does not expose raw Mux provider identifiers or a tokenless poster derived from a signed playback ID. A tenant-scoped admin endpoint resolves the exact ready media/session pair and issues only a short-lived thumbnail JWT; the full playback endpoint remains a separate modal-only capability. Thumbnail failure degrades to a visible fallback without disabling moderation or the authenticated full-preview action.
 
 ## Migration Plan
 The migration remains expand/contract:

@@ -23,6 +23,7 @@ source_files:
   - "src/features/admin-shell/AdminAuthBoundary.tsx"
   - "src/features/admin-shell/AdminWorkspaceShell.tsx"
   - "src/features/review-moderation/ReviewModerationScreen.tsx"
+  - "src/features/review-moderation/ReviewRow.tsx"
   - "src/features/widget-management/WidgetCatalogScreen.tsx"
   - "src/features/widget-management/WidgetEditorScreen.tsx"
   - "src/features/widget-management/components/WidgetCard.tsx"
@@ -113,6 +114,13 @@ video processing) and deletion refresh both list and summary, while replies and
 failed mutations do not refresh counts. A monotonically increasing request
 sequence prevents an older summary response from overwriting a newer result;
 the latest failure preserves the last verified counters.
+
+Ready signed-Mux video rows do not render the stored provider poster directly.
+Each visible row requests a short-lived thumbnail-only URL from the authenticated
+admin endpoint, while opening the full preview uses the separate playback
+endpoint. Thumbnail loading failure keeps the play action available and falls
+back without exposing provider identifiers or granting playback authority to the
+list view.
 
 Pattern: `AppBridgeHelper.closeLoader() → TokenHelpers → ApiRequests → backend route → ikas client`.
 

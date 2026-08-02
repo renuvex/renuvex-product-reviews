@@ -35,6 +35,7 @@ describe('admin video preview contract', () => {
     const i18nSource = readFileSync(path.join(process.cwd(), 'src/lib/mux-player/review-player-i18n.ts'), 'utf8');
 
     expect(source).toContain('/api/admin/reviews/video-playback?mediaId=');
+    expect(source).toContain('/api/admin/reviews/video-thumbnail?mediaId=');
     expect(source).toContain('Onaylanmam\u0131\u015f m\u00fc\u015fteri videosu');
     expect(source).toContain('playbackId={mediaPreview.playbackId}');
     expect(source).toContain('playbackToken={mediaPreview.playbackToken}');
@@ -43,6 +44,9 @@ describe('admin video preview contract', () => {
     expect(source).toContain('w-[min(92vw,760px)]');
     expect(source).toContain('h-[min(72vh,640px)]');
     expect(source).not.toContain('max-h-[86vh] max-w-[90vw]');
+    const rowSource = readFileSync(path.join(process.cwd(), 'src/features/review-moderation/ReviewRow.tsx'), 'utf8');
+    expect(rowSource).toContain('getVideoThumbnailUrl(item.id)');
+    expect(rowSource).not.toContain('<img src={item.posterUrl}');
     expect(playerSource).toContain('ensureAdminReviewMuxPlayerTheme');
     expect(playerSource).toContain('<mux-player');
     expect(playerSource).toContain('ADMIN_REVIEW_PLAYER_COLORS');
