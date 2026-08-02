@@ -30,6 +30,8 @@ export function ReviewModerationScreen() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const pageSizeRef = React.useRef(pageSize);
+  const reviewRequestSequenceRef = React.useRef(0);
+  const reviewAbortControllerRef = React.useRef<AbortController | null>(null);
   const summaryRequestSequenceRef = React.useRef(0);
 
   useEffect(() => {
@@ -37,26 +39,41 @@ export function ReviewModerationScreen() {
   }, [pageSize]);
 
   const fetchReviews = useCallback(async (tab: TabKey, p: number, limit?: number) => {
+    const requestSequence = ++reviewRequestSequenceRef.current;
+    reviewAbortControllerRef.current?.abort();
+    const controller = new AbortController();
+    reviewAbortControllerRef.current = controller;
     setLoading(true);
     setReviewLoadError(false);
+    window.scrollTo({ top: 0, behavior: 'auto' });
     try {
       const statusParam = tab === 'all' ? '' : `&status=${tab}`;
       const res = await axios.get(`/api/admin/reviews?page=${p}&limit=${limit ?? pageSizeRef.current}${statusParam}`, {
         headers: await getAuthHeader(),
+        signal: controller.signal,
       });
+      if (requestSequence !== reviewRequestSequenceRef.current) return;
       if (res.data?.data) {
         setReviews(res.data.data as Review[]);
         setTotal(res.data.pagination.total);
         setPage(p);
         setHasLoadedReviews(true);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } catch (error) {
+      if (requestSequence !== reviewRequestSequenceRef.current || axios.isCancel(error)) return;
       if (!handleApiAuthenticationFailure(error)) setReviewLoadError(true);
     } finally {
-      setLoading(false);
+      if (requestSequence === reviewRequestSequenceRef.current) {
+        if (reviewAbortControllerRef.current === controller) reviewAbortControllerRef.current = null;
+        setLoading(false);
+      }
     }
   }, [getAuthHeader, handleApiAuthenticationFailure]);
+
+  useEffect(() => () => {
+    reviewRequestSequenceRef.current += 1;
+    reviewAbortControllerRef.current?.abort();
+  }, []);
 
   const fetchReviewSummary = useCallback(async () => {
     const requestSequence = ++summaryRequestSequenceRef.current;
@@ -85,8 +102,9 @@ export function ReviewModerationScreen() {
   }, [fetchReviews, fetchReviewSummary]);
 
   const handleReviewTabChange = (tab: TabKey) => {
+    if (tab === activeTab) return;
     setActiveTab(tab);
-    fetchReviews(tab, 1);
+    void fetchReviews(tab, 1);
   };
 
   const handleStatusChange = async (id: string, newStatus: string) => {

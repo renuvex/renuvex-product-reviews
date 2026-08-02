@@ -3,8 +3,8 @@ type: database
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-01
-last_verified: 2026-08-01
+updated: 2026-08-02
+last_verified: 2026-08-02
 confidence: high
 tags:
   - database
@@ -40,6 +40,7 @@ source_files:
   - "prisma/migrations/20260710150000_harden_review_email_installation_lifecycle/migration.sql"
   - "prisma/migrations/20260710210000_add_review_email_retention_analytics_journal/migration.sql"
   - "prisma/migrations/20260715120000_add_review_email_batch_envelope_v32/migration.sql"
+  - "prisma/migrations/20260802170000_add_admin_review_list_indexes/migration.sql"
   - "src/lib/review-media.ts"
   - "src/lib/review-summary.ts"
   - "src/lib/cleanup-orphan-images.ts"
@@ -169,6 +170,8 @@ Customer reviews. Public storefront submits; admin moderates.
 Indexes:
 - `[storeId, productId, status]`
 - `[storeId, status]`
+- `[storeId, status, createdAt desc, id desc]` for filtered admin moderation pages
+- `[storeId, createdAt desc, id desc]` for all-status admin moderation pages
 - `[storeId, slug, status]`
 - partial `[storeId, productId, createdAt] where status='approved' and hasImages=true`
 - partial `[storeId, productId, createdAt desc, id desc] where status='approved'`
@@ -184,7 +187,8 @@ Common queries:
 - Public: `findMany({ storeId, productId, status: 'approved' })` + deterministic ordering + filters. Legacy `page/limit` is supported; widget load-more uses `nextCursor` keyset pagination when available.
 - Public listing/PDP badges, summary distribution, and exact review-list totals: `ProductReviewSummary` by `(storeId, productId)`
 - Public slug fallback: resolve current `ProductSnapshot` slug to product id, then read `ProductReviewSummary`; legacy direct slug read remains last resort for unresolved slugs
-- Admin: `findMany({ storeId, status? })` ordered by `createdAt desc`
+- Admin: `findMany({ storeId, status? })` ordered deterministically by
+  `createdAt desc, id desc`; exact pagination count remains a separate query.
 
 ### `ReviewMedia`
 Normalized review media rows. `Review.images` remains as a compatibility mirror, but new public image reads require AWS `ReviewMedia` rows with public variant descriptors.

@@ -4,7 +4,7 @@ project: renuvex-product-reviews
 status: active
 created: 2026-05-05
 updated: 2026-08-02
-last_verified: 2026-07-02
+last_verified: 2026-08-02
 confidence: high
 tags:
   - performance
@@ -18,6 +18,8 @@ related:
   - "[[ADR_0026_Product_Review_Summary_Read_Model]]"
 source_files:
   - "prisma/schema.prisma"
+  - "prisma/models/reviews.prisma"
+  - "prisma/migrations/20260802170000_add_admin_review_list_indexes/migration.sql"
   - "vercel.json"
   - "wrangler.widget.jsonc"
   - "scripts/build-widget.mjs"
@@ -35,6 +37,8 @@ source_files:
   - "src/app/api/public/reviews/route.ts"
   - "src/app/api/public/ratings/route.ts"
   - "src/app/api/public/ratings-by-slug/route.ts"
+  - "src/app/api/admin/reviews/route.ts"
+  - "src/features/review-moderation/ReviewModerationScreen.tsx"
   - "workers/widget-delivery/src/index.ts"
   - "tests/unit/widget-asset-cache.test.ts"
   - "tests/unit/widget-worker.test.ts"
@@ -42,8 +46,38 @@ source_files:
 
 # Caching & Performance
 
+## Agent Brief
+
+Use this page for public cache policy, static widget asset delivery, preview
+delivery, and measured admin-review query behavior. Verify cache headers and
+query/index shapes in the listed source files before changing them. Local
+`EXPLAIN ANALYZE` evidence is not a production latency or capacity guarantee.
+
 ## Summary
 Two cache layers matter: (1) Vercel **edge cache** for public read APIs and (2) the widget's **sessionStorage cache** (with in-memory fallback when sessionStorage is unavailable / quota-exceeded). Postgres indexes ([[Database_Schema]]) cover the hot query shapes.
+
+## Admin Review Navigation
+
+The admin review route is uncached and tenant-scoped. Its first-page list query
+uses deterministic `createdAt DESC, id DESC` ordering with one of two matching
+B-tree indexes: `(storeId, status, createdAt DESC, id DESC)` for filtered tabs
+and `(storeId, createdAt DESC, id DESC)` for All Reviews. The response projects
+only fields used by moderation rows plus bounded media metadata. Exact total
+count remains a separate query so numbered pagination semantics do not change.
+
+Disposable PostgreSQL 17 evidence on 2026-08-02 used 100,000 synthetic reviews
+for one store (75,000 approved, 20,000 pending, 5,000 rejected). Page-one list
+execution changed from approximately 28.0 ms to 0.10 ms for Pending, 60.6 ms
+to 0.14 ms for Approved, and 99.4 ms to 0.15 ms for All Reviews after the two
+indexes were applied. The same test's deepest All Reviews offset changed from
+approximately 208 ms to 49.5 ms. These are local query-plan measurements, not
+production latency or capacity guarantees. Deep offset remains O(offset), and
+exact counts remain O(matching rows); a future keyset/admin-pagination change
+requires separate UX and API design evidence.
+
+The two indexes occupied approximately 17.7 MB together in that synthetic
+database. This is an intentional storage/write-amplification tradeoff for the
+admin list hot path; existing compact count indexes were not removed.
 
 ## Admin Preview Delivery
 

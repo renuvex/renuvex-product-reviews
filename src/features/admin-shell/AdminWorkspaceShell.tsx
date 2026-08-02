@@ -24,7 +24,6 @@ function AdminNavigation() {
           <Link
             key={href}
             href={href}
-            prefetch={false}
             className={`mb-1 flex min-h-9 items-center rounded-lg px-3 py-2 last:mb-0 ${active ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:bg-background/70 hover:text-foreground'}`}
             aria-current={active ? 'page' : undefined}
             style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium }}

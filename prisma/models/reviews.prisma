@@ -29,6 +29,8 @@ model Review {
   @@index([storeId, productId, status])
   @@index([storeId, productId, status, hasVideo])
   @@index([storeId, status])
+  @@index([storeId, status, createdAt(sort: Desc), id(sort: Desc)], map: "Review_admin_store_status_createdAt_id_idx")
+  @@index([storeId, createdAt(sort: Desc), id(sort: Desc)], map: "Review_admin_store_createdAt_id_idx")
   @@index([storeId, slug, status])
   @@index([storeId, verifiedBuyer, createdAt])
 }

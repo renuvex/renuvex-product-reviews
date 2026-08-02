@@ -1933,6 +1933,83 @@ describe('/api/public/reviews', () => {
 });
 
 describe('/api/admin/reviews', () => {
+  it('lists one tenant with deterministic index-aligned ordering and a bounded projection', async () => {
+    authenticateIkasAdminRequestMock.mockResolvedValue(activeAdminAuth());
+    prismaMock.review.findMany.mockResolvedValue([{
+      id: 'review-1',
+      productId: 'product-1',
+      productName: 'Product 1',
+      rating: 5,
+      comment: 'Useful review',
+      author: 'Mert',
+      status: 'approved',
+      merchantReply: null,
+      hasVideo: false,
+      createdAt: new Date('2026-08-02T12:00:00.000Z'),
+      media: [],
+    }]);
+    prismaMock.review.count.mockResolvedValue(51);
+    const { GET } = await import('@/app/api/admin/reviews/route');
+
+    const response = await GET(new Request('https://app.test/api/admin/reviews?page=2&limit=50&status=approved'));
+
+    expect(response.status).toBe(200);
+    expect(prismaMock.review.findMany).toHaveBeenCalledWith({
+      where: { storeId: 'store-1', status: 'approved' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      skip: 50,
+      take: 50,
+      select: {
+        id: true,
+        productId: true,
+        productName: true,
+        rating: true,
+        comment: true,
+        author: true,
+        status: true,
+        merchantReply: true,
+        hasVideo: true,
+        createdAt: true,
+        media: {
+          orderBy: { position: 'asc' },
+          select: {
+            id: true,
+            resourceType: true,
+            provider: true,
+            variantStatus: true,
+            variantManifest: true,
+            visible: true,
+            durationMs: true,
+            width: true,
+            height: true,
+            position: true,
+            processingStatus: true,
+          },
+        },
+      },
+    });
+    expect(prismaMock.review.count).toHaveBeenCalledWith({
+      where: { storeId: 'store-1', status: 'approved' },
+    });
+    await expect(response.json()).resolves.toEqual({
+      data: [{
+        id: 'review-1',
+        productId: 'product-1',
+        productName: 'Product 1',
+        rating: 5,
+        comment: 'Useful review',
+        author: 'Mert',
+        status: 'approved',
+        merchantReply: null,
+        hasVideo: false,
+        createdAt: '2026-08-02T12:00:00.000Z',
+        images: '[]',
+        media: [],
+      }],
+      pagination: { page: 2, limit: 50, total: 51, totalPages: 2 },
+    });
+  });
+
   it('updates product summary when a review becomes approved', async () => {
     authenticateIkasAdminRequestMock.mockResolvedValue(activeAdminAuth());
     prismaMock.review.findFirst.mockResolvedValue({

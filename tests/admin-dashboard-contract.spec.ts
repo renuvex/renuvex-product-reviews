@@ -187,6 +187,24 @@ test('pagination and moderation preserve visible review behavior', async ({ page
   expect(log.unexpectedRequests).toEqual([]);
 });
 
+test('status changes hide stale rows and only the latest review response can render', async ({ page }) => {
+  const log = await setupAdminDashboardRoutes(page, { reviewDelaysMs: [0, 400, 0] });
+  const dashboard = await openAdminHarness(page);
+  await expectDashboardReady(dashboard);
+
+  await dashboard.getByRole('button', { name: 'Onaylanan Yorumlar (4)' }).click();
+  await expect(dashboard.getByRole('status').filter({ hasText: 'Yorumlar yükleniyor' })).toBeVisible();
+  await expect(dashboard.getByText('İlk Müşteri', { exact: true })).toHaveCount(0);
+
+  await dashboard.getByRole('button', { name: 'Reddedilen Yorumlar (2)' }).click();
+  await expect(dashboard.getByText('Reddedilen Müşteri', { exact: true })).toBeVisible();
+  await expect.poll(() => log.reviewCompletions.map(({ call }) => call)).toEqual([1, 3, 2]);
+  await expect(dashboard.getByText('Reddedilen Müşteri', { exact: true })).toBeVisible();
+  await expect(dashboard.getByText('Onaylı Müşteri', { exact: true })).toHaveCount(0);
+  expect(requestsFor(log, 'GET', '/api/admin/reviews/summary')).toHaveLength(1);
+  expect(log.unexpectedRequests).toEqual([]);
+});
+
 test('202 moderation refreshes list and summary without assuming final approval', async ({ page }) => {
   const log = await setupAdminDashboardRoutes(page, { moderationStatus: 202 });
   const dashboard = await openAdminHarness(page);

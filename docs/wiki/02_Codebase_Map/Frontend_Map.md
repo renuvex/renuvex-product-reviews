@@ -115,6 +115,15 @@ failed mutations do not refresh counts. A monotonically increasing request
 sequence prevents an older summary response from overwriting a newer result;
 the latest failure preserves the last verified counters.
 
+The paginated review list has an independent monotonic request sequence and
+abort controller. Starting a new status/page request cancels the previous
+client request; only the latest sequence may commit rows, pagination, loading,
+or error state. While that request is pending, the route keeps the last
+verified rows in memory for error recovery but renders a stable loading state
+instead of displaying rows from the previously selected category. The two
+frequent workspace links use Next.js production prefetch for route code; this
+does not run review or settings APIs before the destination feature mounts.
+
 Ready signed-Mux video rows do not render the stored provider poster directly.
 Each visible row requests a short-lived thumbnail-only URL from the authenticated
 admin endpoint, while opening the full preview uses the separate playback
