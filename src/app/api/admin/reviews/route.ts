@@ -73,6 +73,7 @@ export async function GET(request: Request) {
           productId: true,
           productName: true,
           rating: true,
+          title: true,
           comment: true,
           author: true,
           status: true,

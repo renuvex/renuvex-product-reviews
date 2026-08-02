@@ -115,6 +115,11 @@ failed mutations do not refresh counts. A monotonically increasing request
 sequence prevents an older summary response from overwriting a newer result;
 the latest failure preserves the last verified counters.
 
+Each moderation row renders a stored non-empty review title in full between the
+rating and comment. Reviews without a title do not render a placeholder or
+reserve title space. This is an admin projection/display contract only; the
+storefront review layout and review creation rules remain independent.
+
 The paginated review list has an independent monotonic request sequence and
 abort controller. Starting a new status/page request cancels the previous
 client request; only the latest sequence may commit rows, pagination, loading,

@@ -108,6 +108,7 @@ function review(
     productId: `product-${id}`,
     productName: `Ürün ${id}`,
     rating: 5,
+    title: id === 'review-1' ? 'Günlük kullanım için başarılı' : null,
     comment: `${author} tarafından yazılan test yorumu.`,
     author,
     status,

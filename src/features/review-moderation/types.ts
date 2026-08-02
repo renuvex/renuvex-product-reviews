@@ -20,6 +20,7 @@ export interface Review {
   productId: string;
   productName: string | null;
   rating: number;
+  title: string | null;
   comment: string | null;
   author: string;
   status: string;

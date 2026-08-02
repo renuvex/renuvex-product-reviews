@@ -136,6 +136,7 @@ export function ReviewRow({ review, onStatusChange, onReply, onDeleteReply, onDe
   const [expanded, setExpanded] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
+  const title = review.title?.trim() || '';
   const comment = review.comment || '';
   const isLong = comment.length > COMMENT_LIMIT;
   const displayedComment = isLong && !expanded ? comment.slice(0, COMMENT_LIMIT) + '...' : comment;
@@ -173,6 +174,15 @@ export function ReviewRow({ review, onStatusChange, onReply, onDeleteReply, onDe
         <div className="flex items-center gap-3 mb-2">
           <div className="flex gap-0.5">{renderStars(review.rating)}</div>
         </div>
+
+        {title && (
+          <h3
+            className="mb-1 leading-normal break-words"
+            style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}
+          >
+            {title}
+          </h3>
+        )}
 
         {comment && (
           <div>

@@ -14,6 +14,7 @@ async function expectDashboardReady(dashboard: FrameLocator) {
   await expect(dashboard.getByRole('heading', { name: 'Değerlendirmeler' })).toBeVisible();
   await expect(dashboard.getByText('Kanıt Mağazası', { exact: true })).toBeVisible();
   await expect(dashboard.getByText('İlk Müşteri', { exact: true })).toBeVisible();
+  await expect(dashboard.getByRole('heading', { level: 3, name: 'Günlük kullanım için başarılı' })).toBeVisible();
 }
 
 async function expectWorkspaceChrome(dashboard: FrameLocator) {
@@ -156,6 +157,7 @@ test('pagination and moderation preserve visible review behavior', async ({ page
 
   await dashboard.getByRole('button', { name: 'Onaylanan Yorumlar (4)' }).click();
   await expect(dashboard.getByText('Onaylı Müşteri', { exact: true })).toBeVisible();
+  await expect(dashboard.getByRole('heading', { level: 3 })).toHaveCount(0);
   expect(requestsFor(log, 'GET', '/api/admin/reviews/summary')).toHaveLength(1);
 
   await dashboard.getByRole('button', { name: 'Onay Bekleyen Yorumlar (21)' }).click();
