@@ -4,6 +4,14 @@ import path from 'node:path';
 
 const root = process.cwd();
 const nextDirectory = path.join(root, '.next');
+const expectedPrerenderedEditorRoutes = [
+  '/dashboard/widgets/reviews',
+  '/dashboard/widgets/badge',
+  '/dashboard/widgets/carousel',
+  '/dashboard/widgets/popup',
+  '/dashboard/widgets/qa',
+  '/dashboard/widgets/summary',
+];
 
 const routeDefinitions = {
   reviews: {
@@ -80,6 +88,11 @@ for (const definition of Object.values(routeDefinitions)) {
   if (typeof appPaths[definition.appPath] !== 'string') fail(`missing_app_route:${definition.appPath}`);
 }
 
+const prerenderManifest = readJson('prerender-manifest.json');
+for (const route of expectedPrerenderedEditorRoutes) {
+  if (!Object.hasOwn(prerenderManifest.routes, route)) fail(`editor_route_not_prerendered:${route}`);
+}
+
 const manifests = Object.fromEntries(Object.entries(routeDefinitions).map(([key, definition]) => [
   key,
   readClientManifest(definition.manifest),
@@ -116,5 +129,6 @@ console.log(JSON.stringify({
     source: 'next_client_reference_manifest',
     scope: 'selected_owner_module_chunk_sets_not_complete_route_initial_javascript',
   },
+  prerenderedEditorRoutes: expectedPrerenderedEditorRoutes,
   ownerModuleChunkSets: report,
 }, null, 2));

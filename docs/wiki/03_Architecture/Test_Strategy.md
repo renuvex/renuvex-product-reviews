@@ -380,11 +380,12 @@ feature work. The suite uses Playwright request interception, which disables
 HTTP cache, so it does not claim second-open browser-cache reuse. It also pins
 feature-local API retry states, dirty modal navigation, native `beforeunload`,
 and the absence of custom history manipulation. Configurable catalog links are
-also pinned as native document navigations: a catalog document marker must not
-survive editor admission, valid session-token state must avoid a second token
-request, and the new document may start at most one merchant lookup, one theme
-sync, one settings GET, and one preview. Dirty browser Back is tested in both
-cancel and accept directions; clean browser Back must leave without a dialog.
+pinned as intent-prefetched client transitions: the catalog document marker
+must survive editor admission, AppBridge loader closure remains one, and the
+existing merchant, theme-sync, and settings requests must not restart. The
+bundle verifier also requires every canonical widget ID to appear in the
+prerender manifest. Clean browser Back returns to the catalog without a dialog;
+dirty same-document browser Back is explicitly not claimed as protected.
 It also asserts the workspace header/navigation is present on Reviews and the
 widget catalog but absent on unknown, planned, and configurable editor routes;
 the focused editor still retains AppBridge authentication, settings caching,
