@@ -12,6 +12,7 @@ interface ReviewRowProps {
   onDeleteReview: (id: string) => void;
   onMediaOpen: (media: ReviewMedia, reviewStatus: string) => void;
   getImagePreviewUrl: (mediaId: string, variant: 'thumb_320x427' | 'w1200') => Promise<string | null>;
+  getVideoThumbnailUrl: (mediaId: string) => Promise<string | null>;
   renderStars: (n: number) => React.ReactNode;
 }
 
@@ -73,7 +74,65 @@ function ReviewImageThumbnail({
   );
 }
 
-export function ReviewRow({ review, onStatusChange, onReply, onDeleteReply, onDeleteReview, onMediaOpen, getImagePreviewUrl, renderStars }: ReviewRowProps) {
+function ReviewVideoThumbnail({
+  item,
+  getVideoThumbnailUrl,
+}: {
+  item: ReviewMedia;
+  getVideoThumbnailUrl: ReviewRowProps['getVideoThumbnailUrl'];
+}) {
+  const needsSignedThumbnail = item.previewMode === 'signed' && item.canPreview;
+  const [signedThumbnailUrl, setSignedThumbnailUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(needsSignedThumbnail);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!needsSignedThumbnail) {
+      return () => { cancelled = true; };
+    }
+    getVideoThumbnailUrl(item.id)
+      .then((url) => {
+        if (cancelled) return;
+        if (url) setSignedThumbnailUrl(url);
+        else setFailed(true);
+      })
+      .catch(() => {
+        if (!cancelled) setFailed(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [getVideoThumbnailUrl, item.id, needsSignedThumbnail]);
+
+  if (signedThumbnailUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={signedThumbnailUrl}
+        alt=""
+        className="absolute inset-0 h-full w-full object-cover"
+        onError={() => {
+          setSignedThumbnailUrl(null);
+          setFailed(true);
+        }}
+      />
+    );
+  }
+  if (loading) {
+    return (
+      <span className="absolute inset-0 flex items-center justify-center text-white/75" aria-label="Video kucuk onizlemesi yukleniyor">
+        <LoaderCircle className="animate-spin" size={14} />
+      </span>
+    );
+  }
+  return (
+    <span className="sr-only" aria-label={failed ? 'Video kucuk onizlemesi yuklenemedi' : 'Video'} />
+  );
+}
+
+export function ReviewRow({ review, onStatusChange, onReply, onDeleteReply, onDeleteReview, onMediaOpen, getImagePreviewUrl, getVideoThumbnailUrl, renderStars }: ReviewRowProps) {
   const [expanded, setExpanded] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
@@ -149,15 +208,16 @@ export function ReviewRow({ review, onStatusChange, onReply, onDeleteReply, onDe
                 key={item.id}
                 type="button"
                 className="relative w-10 h-10 overflow-hidden rounded border border-border bg-black text-white disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={item.processingStatus !== 'ready' || !item.posterUrl}
+                disabled={item.processingStatus !== 'ready' || !item.canPreview}
                 onClick={() => onMediaOpen(item, review.status)}
                 aria-label={item.processingStatus === 'ready' ? 'Yorum videosunu ac' : 'Video isleniyor'}
                 title={item.processingStatus === 'ready' ? 'Videoyu oynat' : 'Video isleniyor'}
               >
-                {item.posterUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={item.posterUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
-                )}
+                <ReviewVideoThumbnail
+                  key={`${item.id}:${item.previewMode}:${item.canPreview}`}
+                  item={item}
+                  getVideoThumbnailUrl={getVideoThumbnailUrl}
+                />
                 <span className="absolute inset-0 flex items-center justify-center bg-black/25"><Play size={16} fill="currentColor" /></span>
               </button>
             ))}

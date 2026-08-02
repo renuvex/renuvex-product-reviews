@@ -32,6 +32,8 @@ source_files:
   - "src/app/api/public/upload/video/complete/route.ts"
   - "src/app/api/public/upload/video/metrics/route.ts"
   - "src/app/api/webhooks/mux/route.ts"
+  - "src/app/api/admin/reviews/video-thumbnail/route.ts"
+  - "src/app/api/admin/reviews/video-playback/route.ts"
   - "src/widget/reviews-section/review-form-modal/media/video-upload.js"
   - "prisma/migrations/20260621003000_review_video_mux_contract_drop_legacy_columns/migration.sql"
   - "tests/unit/media-jobs.test.ts"
@@ -120,11 +122,12 @@ Verify in order:
 6. Asset `ready` creates a ready `VideoUploadSession` with `provider='mux'`, `providerAssetId`, `signedPlaybackId`, and no public playback ID yet.
 7. Quota moves from reserved to consumed exactly once.
 8. Review submission consumes the ready token, creates a pending video review, and keeps `ReviewMedia.visible=false`.
-9. Admin preview obtains a short-lived signed video JWT and a separate thumbnail JWT through `/api/admin/reviews/video-playback`.
-10. Approval enqueues `publish_video`; the job creates/converges one public playback ID and only then makes the review/media public.
-11. Storefront uses tokenless public Mux URLs (`stream.mux.com`, `image.mux.com`) only after approval.
-12. Rejection/hide enqueues `protect_video` and removes public playback IDs.
-13. Delete/cancel/expiry cleanup is idempotent and deletes/cancels Mux upload/assets without refunding consumed quota for ready-but-unsubmitted sessions. Mux direct upload cancel only covers uploads that are still waiting; cleanup must also retrieve the Mux upload by `providerUploadId` and delete a recovered `asset_id` if the asset was created before `providerAssetId` was persisted. A late `video.upload.asset_created` webhook for an `aborted` or `failed` session should enqueue asset-scoped `cleanup_video`, not normal resolve/reconcile work.
+9. The admin review row obtains only a short-lived thumbnail URL through `/api/admin/reviews/video-thumbnail`; it must not issue a tokenless `image.mux.com` request for signed media. A thumbnail failure may show the fallback, but must not disable the authenticated preview action.
+10. The full admin preview obtains a short-lived signed video JWT and a separate thumbnail JWT through `/api/admin/reviews/video-playback`.
+11. Approval enqueues `publish_video`; the job creates/converges one public playback ID and only then makes the review/media public.
+12. Storefront uses tokenless public Mux URLs (`stream.mux.com`, `image.mux.com`) only after approval.
+13. Rejection/hide enqueues `protect_video` and removes public playback IDs.
+14. Delete/cancel/expiry cleanup is idempotent and deletes/cancels Mux upload/assets without refunding consumed quota for ready-but-unsubmitted sessions. Mux direct upload cancel only covers uploads that are still waiting; cleanup must also retrieve the Mux upload by `providerUploadId` and delete a recovered `asset_id` if the asset was created before `providerAssetId` was persisted. A late `video.upload.asset_created` webhook for an `aborted` or `failed` session should enqueue asset-scoped `cleanup_video`, not normal resolve/reconcile work.
 
 ## Upload Performance Evidence
 For physical canary uploads, compare these surfaces before making product or provider conclusions:

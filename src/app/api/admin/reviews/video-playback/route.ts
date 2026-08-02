@@ -3,13 +3,12 @@ import {
   authenticateIkasAdminRequest,
   ikasAdminAuthenticationResponse,
 } from '@/lib/auth-helpers';
-import { prisma } from '@/lib/prisma';
+import { resolveAdminMuxSignedPlaybackId } from '@/lib/media/admin-video-access';
 import {
   buildMuxPosterUrl,
   buildMuxSignedPlaybackUrl,
   signMuxPlaybackToken,
 } from '@/lib/media/providers/mux';
-import { VIDEO_PROVIDER } from '@/lib/media/constants';
 import { reportServerFailure } from '@/lib/server-failures';
 
 export async function GET(request: Request) {
@@ -20,35 +19,23 @@ export async function GET(request: Request) {
     const mediaId = new URL(request.url).searchParams.get('mediaId');
     if (!mediaId) return NextResponse.json({ error: 'Media ID is required' }, { status: 400 });
 
-    const media = await prisma.reviewMedia.findFirst({
-      where: {
-        id: mediaId,
-        resourceType: 'video',
-        provider: VIDEO_PROVIDER,
-        processingStatus: 'ready',
-        review: { storeId: user.merchantId },
-      },
-      select: { providerAssetId: true },
+    const playbackId = await resolveAdminMuxSignedPlaybackId({
+      mediaId,
+      storeId: user.merchantId,
     });
-    if (!media?.providerAssetId) return NextResponse.json({ error: 'Video not found' }, { status: 404 });
-
-    const session = await prisma.videoUploadSession.findFirst({
-      where: { provider: VIDEO_PROVIDER, providerAssetId: media.providerAssetId },
-      select: { signedPlaybackId: true },
-    });
-    if (!session?.signedPlaybackId) return NextResponse.json({ error: 'Video not found' }, { status: 404 });
+    if (!playbackId) return NextResponse.json({ error: 'Video not found' }, { status: 404 });
 
     const [playbackToken, thumbnailToken] = await Promise.all([
-      signMuxPlaybackToken(session.signedPlaybackId, 'video', 15 * 60),
-      signMuxPlaybackToken(session.signedPlaybackId, 'thumbnail', 15 * 60),
+      signMuxPlaybackToken(playbackId, 'video', 15 * 60),
+      signMuxPlaybackToken(playbackId, 'thumbnail', 15 * 60),
     ]);
     const response = NextResponse.json({
       data: {
-        playbackId: session.signedPlaybackId,
+        playbackId,
         playbackToken,
         thumbnailToken,
-        url: buildMuxSignedPlaybackUrl(session.signedPlaybackId, playbackToken),
-        posterUrl: buildMuxPosterUrl(session.signedPlaybackId, thumbnailToken),
+        url: buildMuxSignedPlaybackUrl(playbackId, playbackToken),
+        posterUrl: buildMuxPosterUrl(playbackId, thumbnailToken),
         expiresIn: 15 * 60,
       },
     });

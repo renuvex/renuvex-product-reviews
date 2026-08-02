@@ -27,6 +27,7 @@ import {
   requireActiveIkasStoreInstallationFence,
 } from '@/lib/ikas-installation-lifecycle';
 import { reportServerFailure } from '@/lib/server-failures';
+import { serializeAdminReviewMedia } from '@/lib/media/admin-review-media';
 
 const REVIEW_NOT_FOUND = 'review-not-found';
 
@@ -77,37 +78,7 @@ export async function GET(request: Request) {
     const sanitizedReviews = reviews.map(review => ({
       ...review,
       images: JSON.stringify([]),
-      media: review.media.map((item) => {
-        const awsDescriptor = item.resourceType === 'image' && item.provider === AWS_REVIEW_IMAGE_PROVIDER
-          ? buildAwsReviewImagePublicDescriptor(item.variantManifest)
-          : null;
-        const awsPublicReady = item.provider === AWS_REVIEW_IMAGE_PROVIDER && item.variantStatus === 'public_ready' && item.visible;
-        const awsImage = item.resourceType === 'image' && item.provider === AWS_REVIEW_IMAGE_PROVIDER;
-        return {
-          id: item.id,
-          type: item.resourceType === 'video' ? 'video' : 'image',
-          provider: item.provider,
-          providerAssetId: item.providerAssetId,
-          variantStatus: item.variantStatus,
-          url: item.resourceType === 'image'
-            ? (awsPublicReady ? awsDescriptor?.url ?? null : null)
-            : null,
-          thumbnailUrl: item.resourceType === 'image' && item.provider === AWS_REVIEW_IMAGE_PROVIDER && awsPublicReady
-            ? awsDescriptor?.thumbnailUrl ?? null
-            : null,
-          posterUrl: item.posterUrl,
-          durationMs: item.durationMs,
-          width: item.width,
-          height: item.height,
-          position: item.position,
-          processingStatus: item.processingStatus,
-          visible: item.visible,
-          previewMode: awsImage ? (awsPublicReady ? 'public' : 'signed') : 'unsupported',
-          canPreview: item.resourceType === 'image'
-            ? (awsImage ? Boolean(item.variantManifest) : false)
-            : item.processingStatus === 'ready',
-        };
-      }),
+      media: review.media.map(serializeAdminReviewMedia),
     }));
 
     return NextResponse.json({

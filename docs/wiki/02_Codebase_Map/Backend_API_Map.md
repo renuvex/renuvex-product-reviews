@@ -24,6 +24,10 @@ source_files:
   - "src/lib/review-email/public-access.ts"
   - "src/app/api/admin/reviews/route.ts"
   - "src/app/api/admin/reviews/summary/route.ts"
+  - "src/app/api/admin/reviews/video-thumbnail/route.ts"
+  - "src/app/api/admin/reviews/video-playback/route.ts"
+  - "src/lib/media/admin-video-access.ts"
+  - "src/lib/media/admin-review-media.ts"
   - "src/app/api/admin/settings/route.ts"
   - "src/lib/admin-review-summary.ts"
   - "src/lib/widgets/catalog.ts"
@@ -117,7 +121,8 @@ Main API route groups:
 | GET `/api/admin/reviews/summary` | [route.ts](src/app/api/admin/reviews/summary/route.ts) | Tenant-scoped moderation counts from one `Review.groupBy(status)`. Returns exact `pending`, `approved`, `rejected`, and `total` fields with `private, no-store`; unknown stored statuses affect only `total`. |
 | PUT `/api/admin/reviews` `{ id, status?, merchantReply? }` | same | Update status / reply |
 | DELETE `/api/admin/reviews?id=` | same | Hard delete |
-| GET `/api/admin/reviews/video-playback?mediaId=` | [route.ts](src/app/api/admin/reviews/video-playback/route.ts) | Short-lived signed Mux Player attributes (`playbackId`, `playbackToken`, `thumbnailToken`) for pending/admin video preview. Legacy signed `url`/`posterUrl` remain temporarily for overlap. Provider ids stay server-side. |
+| GET `/api/admin/reviews/video-thumbnail?mediaId=` | [route.ts](src/app/api/admin/reviews/video-thumbnail/route.ts) | Tenant-scoped, short-lived Mux thumbnail URL for the admin review row. The route resolves only ready signed video belonging to the authenticated store and issues a 15-minute thumbnail-only JWT. Responses are `private, no-store`; playback credentials and provider identifiers are not returned. |
+| GET `/api/admin/reviews/video-playback?mediaId=` | [route.ts](src/app/api/admin/reviews/video-playback/route.ts) | Short-lived signed Mux Player attributes (`playbackId`, `playbackToken`, `thumbnailToken`) for the full pending/admin video preview modal. The list-thumbnail path is separate and does not receive playback authority. Provider ids stay server-side. |
 | GET `/api/admin/settings` | [route.ts](src/app/api/admin/settings/route.ts) | Available and configurable widget settings as a defaults-merged map, plus read-only `meta.videoUsage` for the current UTC month. Planned, unknown, and non-configurable stored rows are excluded by query allowlist and response guard. |
 | PUT `/api/admin/settings` `{ widgetId, settings }` | same | Authenticates, validates a plain JSON body, resolves the widget capability fail-closed, validates/sanitizes settings, then fences and upserts. Unknown IDs return `400`; planned or non-configurable widgets return `409` before any write or theme-sync side effect. |
 | POST `/api/admin/inject-scripts` | [route.ts](src/app/api/admin/inject-scripts/route.ts) | Non-destructively create/update this app's loader script on each storefront; recreates only for known missing/deleted script ids |
@@ -283,6 +288,7 @@ Detail in [[Security_And_Rate_Limits]].
 - 2026-07-03: AWS-only review-image source teardown removed legacy upload/register branches, metadata backfill, provider cleanup scripts, dependency, and widget trust. Public image upload now uses AWS S3 presigned POST + register, reads use provider-neutral AWS public variant descriptors, and cleanup uses AWS object-family evidence.
 - 2026-06-20: Added `/api/public/upload/video/metrics` and returned `chunkAttempts` from video initiate so Mux direct-upload transfer/retry timing can be measured separately from processing/webhook lifecycle.
 - 2026-06-15: Added the uncached public video capability endpoint, quota-aware access reasons, structured initiate errors, and read-only admin video usage metadata. Cached public settings remain unchanged; atomic initiate reservation is still authoritative.
+- 2026-08-02: Admin review rows now resolve ready signed-Mux posters through a tenant-scoped thumbnail-only endpoint. Raw tokenless signed posters and provider identifiers are removed from the list response; the full playback endpoint remains isolated to the preview modal.
 - 2026-06-23: Admin video preview route now returns signed Mux Player attributes additively while keeping legacy signed URL fields during rollout overlap. Public review media returns additive `playbackId` for approved videos so storefront playback can prefer official Mux Player without exposing provider ids or signed/private playback ids.
 - 2026-06-20: Moved Review Video to Mux direct upload, Mux webhook audit/dedupe, provider-neutral media jobs, admin signed playback, and public playback IDs after approval. Removed the previous upload-parts route and previous video-provider adapters from active source. See [[ADR_0032_Review_Video_On_Mux]].
 - 2026-06-14: Hardened Review Video provider boundaries. Public video routes return stable error codes for malformed JSON, QStash signature failures return `401` instead of generic `500`, signed malformed payloads return `400`, and readiness remains DB-owned.

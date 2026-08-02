@@ -61,6 +61,11 @@ const SERVER_FAILURES = {
     route: 'reviews-video-playback',
     operation: 'sign',
   },
+  admin_video_thumbnail_failed: {
+    source: 'admin-api',
+    route: 'reviews-video-thumbnail',
+    operation: 'sign',
+  },
   review_email_settings_read_failed: {
     source: 'admin-api',
     route: 'review-email-settings',

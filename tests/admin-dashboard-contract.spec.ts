@@ -77,6 +77,34 @@ test('review data does not wait for the independent merchant request', async ({ 
   expect(log.merchantCompletions).toBe(1);
 });
 
+test('signed video rows request one authorized thumbnail without loading a raw Mux poster URL', async ({ page }) => {
+  const log = await setupAdminDashboardRoutes(page, { signedVideo: true });
+  const dashboard = await openAdminHarness(page);
+
+  await expectDashboardReady(dashboard);
+  const videoButton = dashboard.getByRole('button', { name: 'Yorum videosunu ac' });
+  await expect(videoButton).toBeEnabled();
+  await expect.poll(() => requestsFor(log, 'GET', '/api/admin/reviews/video-thumbnail').length).toBe(1);
+  await expect(videoButton.locator('img')).toHaveAttribute('src', /^data:image\/svg\+xml,/);
+
+  expect(requestsFor(log, 'GET', '/api/admin/reviews/video-thumbnail')).toEqual([
+    expect.objectContaining({ path: '/api/admin/reviews/video-thumbnail?mediaId=video-media-1' }),
+  ]);
+  expect(log.unexpectedRequests).toEqual([]);
+});
+
+test('video thumbnail failure keeps the ready moderation action available without retrying forever', async ({ page }) => {
+  const log = await setupAdminDashboardRoutes(page, { signedVideo: true, videoThumbnailStatus: 500 });
+  const dashboard = await openAdminHarness(page);
+
+  await expectDashboardReady(dashboard);
+  const videoButton = dashboard.getByRole('button', { name: 'Yorum videosunu ac' });
+  await expect(videoButton).toBeEnabled();
+  await expect(videoButton.getByLabel('Video kucuk onizlemesi yuklenemedi')).toBeAttached();
+  expect(requestsFor(log, 'GET', '/api/admin/reviews/video-thumbnail')).toHaveLength(1);
+  expect(log.unexpectedRequests).toEqual([]);
+});
+
 test('valid authorized-app cache avoids a token request', async ({ page }) => {
   const cachedToken = buildSyntheticAdminJwt();
   await page.context().addInitScript(({ dashboardOrigin, storageKey, token }) => {

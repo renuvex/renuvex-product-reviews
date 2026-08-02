@@ -95,6 +95,9 @@ source_files:
   - "tests/unit/media-reconciliation.test.ts"
   - "tests/unit/media-route-contracts.test.ts"
   - "tests/unit/admin-video-preview-contract.test.ts"
+  - "tests/unit/admin-video-access.test.ts"
+  - "tests/unit/admin-video-thumbnail-route.test.ts"
+  - "tests/unit/admin-review-media.test.ts"
   - "tests/unit/review-summary.test.ts"
   - "tests/integration/review-email-installation-fence.test.ts"
   - "tests/integration/review-email-v5-db-guarantees.test.ts"
@@ -346,7 +349,7 @@ Widget interaction coverage pins the mobile reliability contract: progress/statu
 
 Unit route contracts separately pin video observability: malformed or expected client errors and missing provider configuration do not consume Sentry error quota, while unexpected initiate, completion, cancellation, and Mux webhook failures call `captureException` exactly once with `source=media-job` and the route-specific `task` tag used by production alerts. Upload metrics tests verify rate limiting, invalid-token rejection, and sanitized one-row-per-session samples that do not persist tokens or upload URLs. The Mux webhook contract verifies raw-body signature handling through the provider adapter, duplicate event dedupe, orphan audit rows, and conversion of upload/asset events into existing `MediaProviderJob` work.
 
-The admin video preview contract keeps pending/rejected UGC visibly marked as unapproved, renders signed playback through Mux Player with `playback-token` and `thumbnail-token`, disables tracking/cookies in this phase, and obtains playback only from the short-lived signed admin endpoint. Admin image preview coverage separately pins AWS private-image thumbnails and full-size previews to the authenticated image-preview endpoint, verifies signed responses stay `private, no-store`, and keeps image loading copy separate from the video loader. Approved video and image previews do not show the moderation warning.
+The admin video preview contract keeps pending/rejected UGC visibly marked as unapproved, renders full signed playback through Mux Player with `playback-token` and `thumbnail-token`, disables tracking/cookies in this phase, and obtains playback only from the short-lived signed playback endpoint. Review-row video posters use a separate tenant-scoped endpoint that issues a 15-minute thumbnail-only JWT; the admin list cannot expose or request a tokenless poster for a signed playback ID. Unit tests pin exact store/media resolution and provider-field stripping, while the production-mode dashboard test proves one thumbnail request, no raw `image.mux.com` request, and a usable full-preview action when thumbnail loading fails. Admin image preview coverage separately pins AWS private-image thumbnails and full-size previews to the authenticated image-preview endpoint, verifies signed responses stay `private, no-store`, and keeps image loading copy separate from the video loader. Approved video and image previews do not show the moderation warning.
 
 Playwright device descriptors emulate viewport, input, and browser-engine behavior; they do not prove physical-device codec, memory, thermal, or network behavior. Real iPhone Safari and Android Chrome acceptance remains a release gate before enabling video for merchants.
 

@@ -44,6 +44,8 @@ interface SetupOptions {
   merchantDelayMs?: number;
   reviewFailureCalls?: number[];
   settingsSaveStatus?: 200 | 500;
+  signedVideo?: boolean;
+  videoThumbnailStatus?: 200 | 500;
 }
 
 interface MockState {
@@ -92,7 +94,13 @@ function json(route: Route, body: unknown, status = 200) {
   });
 }
 
-function review(id: string, author: string, status: string, merchantReply: string | null = null) {
+function review(
+  id: string,
+  author: string,
+  status: string,
+  merchantReply: string | null = null,
+  media: Array<Record<string, unknown>> = [],
+) {
   return {
     id,
     productId: `product-${id}`,
@@ -103,8 +111,8 @@ function review(id: string, author: string, status: string, merchantReply: strin
     status,
     merchantReply,
     images: '[]',
-    media: [],
-    hasVideo: false,
+    media,
+    hasVideo: media.some((item) => item.type === 'video'),
     createdAt: '2026-07-30T12:00:00.000Z',
   };
 }
@@ -127,7 +135,7 @@ function summaryResponse(state: MockState) {
   };
 }
 
-function reviewsResponse(url: URL, state: MockState) {
+function reviewsResponse(url: URL, state: MockState, options: SetupOptions) {
   const status = url.searchParams.get('status');
   const page = Number(url.searchParams.get('page') || 1);
   const limit = Number(url.searchParams.get('limit') || 20);
@@ -143,7 +151,21 @@ function reviewsResponse(url: URL, state: MockState) {
   } else if (status === 'pending') {
     data = [state.moderated || state.deleted
       ? review('pending-2', 'Sonraki Müşteri', 'pending')
-      : review('review-1', 'İlk Müşteri', 'pending')];
+      : review('review-1', 'İlk Müşteri', 'pending', null, options.signedVideo ? [{
+          id: 'video-media-1',
+          type: 'video',
+          url: null,
+          thumbnailUrl: null,
+          posterUrl: null,
+          durationMs: 12_000,
+          width: 720,
+          height: 1280,
+          position: 0,
+          processingStatus: 'ready',
+          visible: false,
+          previewMode: 'signed',
+          canPreview: true,
+        }] : [])];
   } else if (status === 'approved') {
     data = [review('approved-1', 'Onaylı Müşteri', 'approved')];
   } else if (status === 'rejected') {
@@ -297,7 +319,25 @@ export async function setupAdminDashboardRoutes(page: Page, options: SetupOption
           await json(route, { error: 'review_fixture_failure' }, 500);
           return;
         }
-        await json(route, reviewsResponse(url, state));
+        await json(route, reviewsResponse(url, state, options));
+        return;
+      }
+
+      if (url.pathname === '/api/admin/reviews/video-thumbnail' && method === 'GET') {
+        if (url.searchParams.get('mediaId') !== 'video-media-1') {
+          await json(route, { error: 'video_not_found' }, 404);
+          return;
+        }
+        if ((options.videoThumbnailStatus ?? 200) === 500) {
+          await json(route, { error: 'admin_video_thumbnail_failed' }, 500);
+          return;
+        }
+        await json(route, {
+          data: {
+            url: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="80"%3E%3Crect width="80" height="80" fill="%23222"/%3E%3C/svg%3E',
+            expiresIn: 900,
+          },
+        });
         return;
       }
 

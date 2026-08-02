@@ -112,6 +112,14 @@ export function ReviewModerationScreen() {
     return typeof signedUrl === 'string' && signedUrl ? signedUrl : null;
   }, [getAuthHeader]);
 
+  const getVideoThumbnailUrl = useCallback(async (mediaId: string) => {
+    const response = await axios.get(`/api/admin/reviews/video-thumbnail?mediaId=${encodeURIComponent(mediaId)}`, {
+      headers: await getAuthHeader(),
+    });
+    const signedUrl = response.data?.data?.url;
+    return typeof signedUrl === 'string' && signedUrl ? signedUrl : null;
+  }, [getAuthHeader]);
+
   const handleMediaOpen = async (media: ReviewMedia, reviewStatus: string) => {
     if (media.type === 'image') {
       if (media.url && media.previewMode !== 'signed') {
@@ -304,6 +312,7 @@ export function ReviewModerationScreen() {
           onDeleteReview={handleDeleteReview}
           onMediaOpen={handleMediaOpen}
           getImagePreviewUrl={getImagePreviewUrl}
+          getVideoThumbnailUrl={getVideoThumbnailUrl}
           onPageChange={(nextPage) => void fetchReviews(activeTab, nextPage)}
           onPageSizeChange={(size) => {
             setPageSize(size);

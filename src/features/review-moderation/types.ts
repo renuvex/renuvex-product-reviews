@@ -2,12 +2,10 @@ export interface ReviewMedia {
   id: string;
   type: 'image' | 'video';
   url: string | null;
-  thumbnailUrl?: string | null;
-  provider?: string | null;
-  providerAssetId?: string | null;
+  thumbnailUrl: string | null;
   variantStatus?: string | null;
-  previewMode?: 'public' | 'signed' | string | null;
-  canPreview?: boolean;
+  previewMode: 'public' | 'signed' | 'unsupported';
+  canPreview: boolean;
   posterUrl: string | null;
   durationMs: number | null;
   width: number | null;
