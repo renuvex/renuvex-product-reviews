@@ -3,8 +3,8 @@ type: database
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-30
-last_verified: 2026-07-30
+updated: 2026-08-02
+last_verified: 2026-08-02
 confidence: high
 tags:
   - database
@@ -44,6 +44,7 @@ source_files:
   - "prisma/migrations/20260716120000_add_review_email_eligibility_cutoff/migration.sql"
   - "prisma/migrations/20260720120000_align_ikas_review_email_contracts/migration.sql"
   - "prisma/migrations/20260728120000_harden_supabase_data_api_surface/migration.sql"
+  - "prisma/migrations/20260802170000_add_admin_review_list_indexes/migration.sql"
   - "src/lib/ikas-installation-lifecycle.ts"
   - "src/lib/cleanup-orphan-images.ts"
   - "src/lib/review-email/"
@@ -75,7 +76,7 @@ Postgres (Supabase) accessed via Prisma. Core review/media models now include th
 |---|---|
 | [prisma/schema.prisma](prisma/schema.prisma) | Multi-file entrypoint; owns the generator and datasource blocks |
 | [prisma/models/](prisma/models/) | Domain-owned Prisma model sources |
-| [prisma/migrations/](prisma/migrations/) | Immutable migration history (60 migrations at the 2026-07-30 verification baseline) |
+| [prisma/migrations/](prisma/migrations/) | Immutable migration history (61 source migrations after the 2026-08-02 admin-list index addition; production applied count remains a separately verified live-state fact) |
 | [src/lib/prisma.ts](src/lib/prisma.ts) | Prisma client singleton |
 | [src/models/auth-token/index.ts](src/models/auth-token/index.ts) | `AuthToken` interface |
 | [src/models/auth-token/manager.ts](src/models/auth-token/manager.ts) | `AuthTokenManager` reads tokens and refreshes existing rows without recreating erased installations; install/delete writes belong to the lifecycle helper and erasure transaction. |
@@ -216,7 +217,9 @@ exception text; unknown failures use fixed context fallbacks.
 
 On `Review`:
 - `[storeId, productId, status]` — canonical listing/search badge resolution by ikas product id
-- `[storeId, status]` — admin filtered list
+- `[storeId, status]` — compact exact-count and status-prefix support
+- `[storeId, status, createdAt desc, id desc]` — deterministic filtered admin moderation pages without sorting every matching row
+- `[storeId, createdAt desc, id desc]` — deterministic all-status admin moderation pages
 - `[storeId, slug, status]` — legacy combined slug fallback path (composite added 2026-04)
 
 `[storeId, productId, status]` also covers the leftmost `(storeId, productId)` prefix, and `[storeId, slug, status]` covers `(storeId, slug)`. The old two-column prefix indexes were removed in `20260518130000_drop_redundant_review_indexes` to reduce write amplification on the highest-write table.
@@ -307,6 +310,10 @@ code run together, so a migration must not break the old code.
   this pattern for live multi-merchant data.
 
 ## Recent migration themes (chronological)
+
+- 2026-08-02: Added two additive B-tree indexes matching the admin moderation
+  list's tenant/status/order shapes. The smaller `[storeId, status]` index stays
+  in place for exact counts; no existing index was dropped.
 - `align_ikas_review_email_contracts` - nullable immutable line-delivery
   evidence and bounded current-customer consent evidence; defaults move to the
   current-customer subscription contract without historical backfill

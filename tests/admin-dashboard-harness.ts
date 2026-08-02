@@ -31,6 +31,7 @@ export interface AdminDashboardNetworkLog {
   unexpectedRequests: string[];
   previewRequests: string[];
   nextAssetRequests: string[];
+  reviewCompletions: Array<{ call: number; status: number; path: string }>;
   summaryCompletions: Array<{ call: number; status: number }>;
   merchantCompletions: number;
 }
@@ -43,6 +44,7 @@ interface SetupOptions {
   summaryDelaysMs?: number[];
   merchantDelayMs?: number;
   reviewFailureCalls?: number[];
+  reviewDelaysMs?: number[];
   settingsSaveStatus?: 200 | 500;
   signedVideo?: boolean;
   videoThumbnailStatus?: 200 | 500;
@@ -237,6 +239,7 @@ export async function setupAdminDashboardRoutes(page: Page, options: SetupOption
     unexpectedRequests: [],
     previewRequests: [],
     nextAssetRequests: [],
+    reviewCompletions: [],
     summaryCompletions: [],
     merchantCompletions: 0,
   };
@@ -315,11 +318,11 @@ export async function setupAdminDashboardRoutes(page: Page, options: SetupOption
 
       if (url.pathname === '/api/admin/reviews' && method === 'GET') {
         const call = ++state.reviewCallCount;
-        if (options.reviewFailureCalls?.includes(call)) {
-          await json(route, { error: 'review_fixture_failure' }, 500);
-          return;
-        }
-        await json(route, reviewsResponse(url, state, options));
+        const delayMs = options.reviewDelaysMs?.[call - 1] ?? 0;
+        if (delayMs > 0) await new Promise((resolve) => setTimeout(resolve, delayMs));
+        const status = options.reviewFailureCalls?.includes(call) ? 500 : 200;
+        log.reviewCompletions.push({ call, status, path });
+        await json(route, status === 200 ? reviewsResponse(url, state, options) : { error: 'review_fixture_failure' }, status);
         return;
       }
 

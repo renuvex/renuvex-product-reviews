@@ -117,7 +117,7 @@ Main API route groups:
 
 | Method + Path | Source | Purpose |
 |---|---|---|
-| GET `/api/admin/reviews?page&limit&status` | [route.ts](src/app/api/admin/reviews/route.ts) | Paginated reviews for `merchantId` |
+| GET `/api/admin/reviews?page&limit&status` | [route.ts](src/app/api/admin/reviews/route.ts) | Offset-paginated reviews for `merchantId`, ordered deterministically by `createdAt DESC, id DESC`. The query selects only moderation-row fields and is backed by separate filtered/all-status list indexes; exact pagination count remains a separate query. |
 | GET `/api/admin/reviews/summary` | [route.ts](src/app/api/admin/reviews/summary/route.ts) | Tenant-scoped moderation counts from one `Review.groupBy(status)`. Returns exact `pending`, `approved`, `rejected`, and `total` fields with `private, no-store`; unknown stored statuses affect only `total`. |
 | PUT `/api/admin/reviews` `{ id, status?, merchantReply? }` | same | Update status / reply |
 | DELETE `/api/admin/reviews?id=` | same | Hard delete |

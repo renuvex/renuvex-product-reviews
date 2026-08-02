@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star } from 'lucide-react';
+import { LoaderCircle, Star } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
 import { colors, componentStyles, typography } from '@/lib/design-tokens';
 import { Review, ReviewMedia, TabKey, TABS } from './types';
@@ -81,9 +81,14 @@ export function ReviewsTab({
       </div>
 
       {/* Yorum listesi */}
-      <Card>
+      <Card aria-busy={loading}>
         <CardContent className="p-0">
-          {reviews.length === 0 && !loading ? (
+          {loading ? (
+            <div className="flex h-32 items-center justify-center px-6" role="status">
+              <LoaderCircle className="animate-spin text-primary" size={24} aria-hidden="true" />
+              <span className="sr-only">Yorumlar yükleniyor...</span>
+            </div>
+          ) : reviews.length === 0 ? (
             <div className="h-24 flex items-center justify-center px-6" style={{ fontSize: typography.fontSize.base, color: colors.textMuted }}>
               Bu kategoride henüz yorum bulunamadı.
             </div>
