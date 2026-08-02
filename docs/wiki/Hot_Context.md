@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-07-28
-last_verified: 2026-07-28
+updated: 2026-08-03
+last_verified: 2026-08-03
 confidence: high
 tags:
   - hot-context
@@ -22,6 +22,7 @@ related:
   - "[[ADR_0034_AWS_Review_Image_Migration]]"
   - "[[ADR_0035_QStash_Scheduler_For_Maintenance]]"
   - "[[ADR_0036_Review_Request_Email_Architecture]]"
+  - "[[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]]"
   - "[[Theme_Adapter_Playbook]]"
   - "[[Test_Strategy]]"
 source_files:
@@ -44,7 +45,7 @@ source_files:
   - "src/lib/media/providers/aws-review-image.ts"
   - "workers/widget-delivery/src/index.ts"
   - "scripts/build-widget.mjs"
-  - "config/widget-performance-budget.json"
+  - "src/lib/product-reconciliation.ts"
 ---
 
 # Hot Context
@@ -60,20 +61,15 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
-- 2026-07-28: Source hardening now serializes OAuth activation and uninstall
-  erasure by store, marks older nonterminal runs `stale_ignored`, and rechecks
-  the exact app/generation before and after journal I/O plus every destructive
-  batch. Production release `d6f0f4f` is live. One QStash-signed continuation
-  closed the generation-5 run as `stale_ignored`; the generation-6 installation
-  and exact token remained active, review/media counts were unchanged, and no
-  journal evidence or cleanup job was created.
-- 2026-07-28: Admin auth now requires strict JWT and an exact active
-  installation/token pair. Final writes repeat the fence. Production drift is
-  zero after conditional removal of one expired legacy orphan credential; the
-  intended store retained its active pair.
-- 2026-07-28: Token exchange still requires browser-bound, single-use Redis
-  state. A dashboard callback without state is discarded and receives
-  one bounded restart; repeats and Redis failure fail closed.
+- 2026-08-03: Product lifecycle Release A is source-only: tombstones, bounded
+  reconciliation and safe slug resolution are implemented. Release B remains
+  blocked by deploy-time expanded and readiness verification.
+- 2026-07-28: Store erasure retries are installation-fenced; the stale live run
+  closed without deleting current review/media data. See [[Maintenance_Runbook]].
+- 2026-07-28: Strict JWT admin auth requires the exact active installation/token
+  pair and final writes repeat the generation fence.
+- 2026-07-28: OAuth state is browser-bound, single-use and fail-closed; the
+  bounded dashboard compatibility restart never exchanges an unbound code.
 - 2026-07-28: Supabase CLI and Dashboard confirm Free plan, no managed backup,
   and PITR off. Journal rollout remains blocked: upgrade to Pro, observe the
   first backup, verify its live window, then update the copy register and rerun
@@ -93,10 +89,11 @@ source_files:
 - Storefront is Turkish-first; future EN/DE needs real i18n, not only merchant copy.
 - Keep post-deploy smoke after runtime widget changes.
 - Worker V2 read origin: `widget.renuvex.app`; write/upload/video/lazy-sync origin: `app.renuvex.app`.
-- Supabase RLS/default-grants closure is live: all 60 migrations are applied,
-  every public table has RLS, the verifier reports zero grant/default-ACL drift,
-  and the unused hosted Data API is disabled. Server-side Prisma and the
-  production app remained healthy after closure.
+- Supabase RLS/default-grants closure was live-verified for the then-deployed
+  migration set: every public table had RLS, the verifier reported zero
+  grant/default-ACL drift, and the unused hosted Data API was disabled. Release
+  A's new lifecycle table must independently pass the same expanded-schema gate
+  after deployment; source validation is not live evidence.
 - Theme adapters depend on `listStorefront.themes[].isMainTheme`; no ikas theme webhook exists.
 - Deferred gaps: unsupported-theme warning UI, authenticated dashboard smoke, Sentry post-deploy health.
 - Review-email V5/V3.2 backend is deployed but disabled. Activation still needs
@@ -104,6 +101,10 @@ source_files:
   sender/DNS/sandbox evidence, product/legal gates, and live acceptance. Signed
   app-deleted delivery and safe stale-run closure are proven; journal
   activation is not.
+- Product lifecycle Release A still needs CI, additive migration/backend deploy,
+  `verify:product-lifecycle --expect=expanded`, bounded reconciliation convergence,
+  and `--expect=ready`. Public/media/email/admin consumer enforcement in Release
+  B must not deploy before that readiness gate passes.
 
 ## Read Next
 - [[Current_Status]]

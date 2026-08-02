@@ -116,15 +116,6 @@ function normalizedReadCacheUrl(url: URL): URL | null {
     return normalized;
   }
 
-  if (url.pathname === '/api/public/ratings-by-slug') {
-    if (!hasOnlyKnownParams(params, new Set(['storeId', 'slugs']))) return null;
-    appendIfPresent(normalized.searchParams, params, 'storeId');
-    const slugs = uniqueSortedCsvValues(params.get('slugs'));
-    if (!normalized.searchParams.get('storeId') || !slugs) return null;
-    normalized.searchParams.set('slugs', slugs.join(','));
-    return normalized;
-  }
-
   if (url.pathname === '/api/public/reviews') {
     if (!hasOnlyKnownParams(params, new Set(['storeId', 'productId', 'page', 'limit', 'orderBy', 'rating', 'hasImages', 'hasMedia', 'cursor']))) {
       return null;
@@ -153,8 +144,11 @@ function normalizedReadCacheUrl(url: URL): URL | null {
 function isCacheablePublicReadPath(pathname: string): boolean {
   return pathname === '/api/public/settings' ||
     pathname === '/api/public/ratings' ||
-    pathname === '/api/public/ratings-by-slug' ||
     pathname === '/api/public/reviews';
+}
+
+function isPublicReadPath(pathname: string): boolean {
+  return isCacheablePublicReadPath(pathname) || pathname === '/api/public/ratings-by-slug';
 }
 
 function getBackendApiOrigin(env: WidgetEnv): string {
@@ -199,10 +193,15 @@ function isStoreableReadResponse(response: Response): boolean {
   return contentType.toLowerCase().includes('application/json');
 }
 
-function clientReadResponse(response: Response, status: EdgeCacheStatus, method: string): Response {
+function clientReadResponse(
+  response: Response,
+  status: EdgeCacheStatus,
+  method: string,
+  cacheControl = STABLE_CACHE_CONTROL,
+): Response {
   const headers = withCors(new Headers(response.headers));
   headers.delete('Set-Cookie');
-  headers.set('Cache-Control', STABLE_CACHE_CONTROL);
+  headers.set('Cache-Control', cacheControl);
   headers.set(EDGE_CACHE_HEADER, status);
   return new Response(method === 'HEAD' ? null : response.body, {
     status: response.status,
@@ -233,14 +232,20 @@ async function storeInCache(ctx: ExecutionContextLike | undefined, cache: CacheL
 
 async function proxyPublicRead(request: Request, env: WidgetEnv, ctx?: ExecutionContextLike): Promise<Response | null> {
   const url = new URL(request.url);
-  if (!isCacheablePublicReadPath(url.pathname)) return null;
+  if (!isPublicReadPath(url.pathname)) return null;
+  const forceNoStore = url.pathname === '/api/public/ratings-by-slug';
 
   if (request.method === 'HEAD') {
     const originResponse = await getFetch(env)(createBackendRequest(request, toBackendUrl(env, url), 'HEAD'));
-    return clientReadResponse(originResponse, 'BYPASS', request.method);
+    return clientReadResponse(
+      originResponse,
+      'BYPASS',
+      request.method,
+      forceNoStore ? NO_STORE_CACHE_CONTROL : STABLE_CACHE_CONTROL,
+    );
   }
 
-  const normalizedUrl = normalizedReadCacheUrl(url);
+  const normalizedUrl = forceNoStore ? null : normalizedReadCacheUrl(url);
   const shouldCache = normalizedUrl !== null;
   const originUrl = toBackendUrl(env, normalizedUrl || url);
   const cache = shouldCache ? getDefaultCache(env) : null;
@@ -261,7 +266,12 @@ async function proxyPublicRead(request: Request, env: WidgetEnv, ctx?: Execution
   }
 
   const originResponse = await getFetch(env)(createBackendRequest(request, originUrl));
-  return clientReadResponse(originResponse, 'BYPASS', request.method);
+  return clientReadResponse(
+    originResponse,
+    'BYPASS',
+    request.method,
+    forceNoStore ? NO_STORE_CACHE_CONTROL : STABLE_CACHE_CONTROL,
+  );
 }
 
 async function serveAsset(request: Request, env: Env, cacheControl: string): Promise<Response> {

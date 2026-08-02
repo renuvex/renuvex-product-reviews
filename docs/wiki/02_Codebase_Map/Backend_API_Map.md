@@ -3,8 +3,8 @@ type: api
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-02
-last_verified: 2026-08-02
+updated: 2026-08-03
+last_verified: 2026-08-03
 confidence: high
 tags:
   - api
@@ -17,6 +17,7 @@ related:
   - "[[ADR_0006_Trusted_Review_Image_URL_Policy]]"
   - "[[ADR_0007_Photo_Strip_Cap_And_Rotation]]"
   - "[[ADR_0015_Canonical_Product_Identity]]"
+  - "[[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]]"
   - "[[ADR_0026_Product_Review_Summary_Read_Model]]"
   - "[[ADR_0028_Review_Cursor_Pagination]]"
 source_files:
@@ -41,6 +42,9 @@ source_files:
   - "src/app/api/public/widget-error/route.ts"
   - "src/app/api/public/ratings/route.ts"
   - "src/app/api/public/ratings-by-slug/route.ts"
+  - "src/lib/product-lifecycle.ts"
+  - "src/lib/product-reconciliation.ts"
+  - "src/app/api/internal/product-reconciliation/route.ts"
   - "src/app/api/public/settings/route.ts"
   - "src/app/api/public/storefront-theme/lazy-sync/route.ts"
   - "src/app/api/public/upload/sign/route.ts"
@@ -127,12 +131,13 @@ Main API route groups:
 | PUT `/api/admin/settings` `{ widgetId, settings }` | same | Authenticates, validates a plain JSON body, resolves the widget capability fail-closed, validates/sanitizes settings, then fences and upserts. Unknown IDs return `400`; planned or non-configurable widgets return `409` before any write or theme-sync side effect. |
 | POST `/api/admin/inject-scripts` | [route.ts](src/app/api/admin/inject-scripts/route.ts) | Non-destructively create/update this app's loader script on each storefront; recreates only for known missing/deleted script ids |
 | POST `/api/admin/storefront-theme/sync` | [route.ts](src/app/api/admin/storefront-theme/sync/route.ts) | Lightweight active theme sync from ikas `listStorefront`; no script create/update |
-| POST `/api/admin/sync-products` | [route.ts](src/app/api/admin/sync-products/route.ts) | Register product webhooks and backfill `ProductSnapshot` from ikas `listProduct` |
-| GET `/api/admin/daily-maintenance` (Bearer CRON) | [route.ts](src/app/api/admin/daily-maintenance/route.ts) | Manual/admin maintenance route for batch storefront theme verification, pending upload cleanup, storefront script reconciliation, video lifecycle work, and provider job redispatch. Scheduled daily execution is now owned by the QStash-signed `/api/internal/scheduled-jobs` receiver. |
+| POST `/api/admin/sync-products` | [route.ts](src/app/api/admin/sync-products/route.ts) | Register product webhooks, create or reuse one installation-fenced bounded reconciliation run, dispatch its opaque id, and return `202`. It no longer performs an unbounded catalog scan in the request. |
+| GET `/api/admin/daily-maintenance` (Bearer CRON) | [route.ts](src/app/api/admin/daily-maintenance/route.ts) | Manual/admin maintenance route for batch storefront theme verification, pending upload cleanup, storefront script reconciliation, video lifecycle work, provider job redispatch, and bounded product-reconciliation discovery/redispatch. Scheduled daily execution is owned by the QStash-signed `/api/internal/scheduled-jobs` receiver. |
 | GET `/api/admin/reconcile-storefront-scripts` (Bearer CRON) | [route.ts](src/app/api/admin/reconcile-storefront-scripts/route.ts) | Explicit non-destructive storefront script reconciliation for existing merchants |
 | GET `/api/admin/cleanup-pending-uploads` (Bearer CRON) | [route.ts](src/app/api/admin/cleanup-pending-uploads/route.ts) | Explicit PendingReviewImage cleanup using the same helper as daily maintenance |
 | GET `/api/admin/cleanup-images` (Bearer CRON) | [route.ts](src/app/api/admin/cleanup-images/route.ts) | Monthly AWS review-image family orphan scan with the existing two-phase quarantine/circuit-breaker model. It groups by `storeId + assetId` and does not perform bucket-wide blind deletes |
 | POST `/api/internal/scheduled-jobs` | [route.ts](src/app/api/internal/scheduled-jobs/route.ts) | QStash-signed scheduler receiver for `daily-maintenance-full` and `cleanup-images`. Verifies raw-body `Upstash-Signature`, uses `ScheduledJobRunLock` for `task + scheduleSlot` idempotency, and replaces Vercel Cron as the scheduler source of truth. |
+| POST `/api/internal/product-reconciliation` | [route.ts](src/app/api/internal/product-reconciliation/route.ts) | QStash raw-body-signature receiver accepting only one opaque run UUID. DB state owns store/app/generation, lease, scan page, exact-candidate cursor, retry, and completion. One delivery handles at most one 200-product page or one 50-id exact batch. |
 | POST `/api/internal/review-email/due-jobs` | [route.ts](src/app/api/internal/review-email/due-jobs/route.ts) | `CRON_SECRET` + global-feature-gated source-only due-job claimer. Claims due `ReviewEmailJob` rows with DB `FOR UPDATE SKIP LOCKED` and returns opaque job ids for a future dispatcher; it does not send email. |
 | POST `/api/internal/review-email/reconcile-orders` | [route.ts](src/app/api/internal/review-email/reconcile-orders/route.ts) | `CRON_SECRET` + global-feature-gated source-only reconciliation entrypoint. Store ownership is derived from the authorized-app token, and active-installation/merchant-enabled checks are fenced before cursor creation or `listOrder(updatedAt)` processing. |
 | POST `/api/internal/review-email/store-erasure` | [route.ts](src/app/api/internal/review-email/store-erasure/route.ts) | QStash raw-body-signature receiver for bounded store-uninstall continuation. It accepts only an opaque run UUID; DB state plus verified immutable journal evidence owns the phase, tenant, and idempotency contract. |
@@ -171,11 +176,11 @@ installation version fence in the final transaction; losing that race returns
 | POST `/api/public/review-center/items/{itemId}/skip` | [route.ts](src/app/api/public/review-center/items/[itemId]/skip/route.ts) | Idempotently resolves one product without reviewing it, cancels its pending media through the outbox, and completes the batch only when every product is resolved. |
 | GET/POST `/api/public/review-center/unsubscribe?token=` | [route.ts](src/app/api/public/review-center/unsubscribe/route.ts) | Host-isolated confirmation and idempotent store/category recipient unsubscribe. POST serializes against send commit, creates durable suppression, and cancels pending physical email while leaving product review rights separate. |
 | GET `/api/public/ratings?storeId&productIds=a,b,c` | [route.ts](src/app/api/public/ratings/route.ts) | Bulk avg+count per canonical ikas product id from `ProductReviewSummary` (primary listing/search badge path; see [[ADR_0015_Canonical_Product_Identity]] and [[ADR_0026_Product_Review_Summary_Read_Model]]); shares a 300/min/IP read rate limit with `ratings-by-slug` |
-| GET `/api/public/ratings-by-slug?storeId&slugs=a,b,c` | [route.ts](src/app/api/public/ratings-by-slug/route.ts) | DOM-only fallback: resolve current slug through `ProductSnapshot`, then read `ProductReviewSummary` by product id; legacy direct slug read is last resort; shares the rating-read rate limit |
+| GET `/api/public/ratings-by-slug?storeId&slugs=a,b,c` | [route.ts](src/app/api/public/ratings-by-slug/route.ts) | DOM-only fail-closed hint: resolve a slug only through exactly one fresh `active_verified` snapshot with no unknown/stale/conflict candidate, then read `ProductReviewSummary` by product id. It never queries `Review.slug`, always returns `no-store`, and shares the rating-read limit. |
 | GET `/api/public/settings?publicApiKey=<merchantId>` | [route.ts](src/app/api/public/settings/route.ts) | Pure cacheable widget config read (per widgetId) plus public runtime flags including additive `runtime.themeSyncDue`. Does not read auth tokens, call ikas, or schedule theme sync. Cloud name **not** in response — it is build-time injected into the widget bundle (see [[ADR_0008_Cloud_Name_Build_Time_Only]]). |
 | POST `/api/public/storefront-theme/lazy-sync` body `{ publicApiKey }` | [route.ts](src/app/api/public/storefront-theme/lazy-sync/route.ts) | Best-effort storefront theme freshness trigger. Rate-limits first, returns `204` when the stored theme state is fresh, and schedules `syncStorefrontThemeForToken(..., 'lazy_storefront')` via `after()` only when stale. This route is write/control-plane and is not Worker-cached. |
-| POST `/api/public/upload/sign` body `{ storeId, fileName, contentType, bytes, checksumAlgorithm:"SHA256", checksumSha256 }` | [route.ts](src/app/api/public/upload/sign/route.ts) | Creates an AWS `PendingReviewImage` upload intent and returns an S3 presigned POST contract (`provider:"aws_s3"`, `uploadUrl`, fields, `assetId`, `uploadSessionId`, `objectKey`). No AWS credentials, public URL, or original filename are returned. |
-| POST `/api/public/upload/register` body `{ storeId, provider:"aws_s3", assetId, uploadSessionId, objectKey, contentType, bytes, checksumAlgorithm:"SHA256", checksumSha256 }` | [route.ts](src/app/api/public/upload/register/route.ts) | Validates the AWS intent and S3 object/head/tag/checksum evidence, generates private variants, and marks the pending image `private_ready` before review submit can use it. |
+| POST `/api/public/upload/sign` body `{ storeId, productId?, fileName, contentType, bytes, checksumAlgorithm:"SHA256", checksumSha256 }` | [route.ts](src/app/api/public/upload/sign/route.ts) | Creates an AWS `PendingReviewImage` upload intent and returns an S3 presigned POST contract. Release A persists an exact product id when the current widget supplies it while temporarily accepting the old runtime without it; Release B will make it mandatory behind the lifecycle gate. |
+| POST `/api/public/upload/register` body `{ storeId, productId?, provider:"aws_s3", assetId, uploadSessionId, objectKey, contentType, bytes, checksumAlgorithm:"SHA256", checksumSha256 }` | [route.ts](src/app/api/public/upload/register/route.ts) | Validates the AWS intent and S3 object/head/tag/checksum evidence, including product-id consistency when supplied, generates private variants, and marks the pending image `private_ready`. Missing product id remains Release A compatibility only. |
 | GET `/api/public/upload/video/capability?storeId=` | [route.ts](src/app/api/public/upload/video/capability/route.ts) | Fresh `no-store` video capability check with a 60/min/IP fixed-window limit. Returns only `{ enabled, reason }`; quota counts and provider configuration remain server-private. |
 | POST `/api/public/upload/video/initiate` | [route.ts](src/app/api/public/upload/video/initiate/route.ts) | Start gated Mux direct upload; validates feature gates, quota, product/store ownership, MIME, and 150MB size. Returns opaque session token, Mux upload URL, suggested chunk size, and chunk attempts without exposing provider ids or credentials. |
 | POST `/api/public/upload/video/complete` | [route.ts](src/app/api/public/upload/video/complete/route.ts) | Mark direct upload complete, enqueue `resolve_video_asset`, and move session toward processing without trusting client-side provider ids. |
@@ -211,7 +216,7 @@ Detail in [[Security_And_Rate_Limits]].
 
 | Method + Path | Source | Purpose |
 |---|---|---|
-| POST `/api/webhooks/ikas/products` | [route.ts](src/app/api/webhooks/ikas/products/route.ts) | Validate ikas webhook signature, process product create/update events, refresh `ProductSnapshot` |
+| POST `/api/webhooks/ikas/products` | [route.ts](src/app/api/webhooks/ikas/products/route.ts) | Validate the ikas signature and use the payload only to identify a product id. An exact provider query plus installation-generation fence writes evidence; raw payload cannot create/reactivate a snapshot. |
 | POST `/api/webhooks/ikas/orders` | [route.ts](src/app/api/webhooks/ikas/orders/route.ts) | Verifies ikas HMAC before branching. Order events are wake-up signals; webhook audit creation, merchant-enabled state, canonical `merchantId`, order sync, and uninstall erasure use the installation-generation fence. `store/app/deleted` runs PII/auth-token erasure even when review email is disabled; stale old-install events are ignored and failed current erasures retry. |
 | POST `/api/webhooks/mux` | [route.ts](src/app/api/webhooks/mux/route.ts) | Validate Mux raw-body signature, dedupe/audit `WebhookEvent`, resolve upload/asset ids, and enqueue provider-neutral media jobs. Webhook storage never persists payloads, tokens, signed URLs, or upload URLs. |
 
@@ -220,7 +225,7 @@ Detail in [[Security_And_Rate_Limits]].
 | Method + Path | Source | Purpose |
 |---|---|---|
 | GET `/api/oauth/authorize/ikas?storeName=` | [route.ts](src/app/api/oauth/authorize/ikas/route.ts) | Canonicalize the ikas store, bind a 256-bit state to the encrypted browser session, persist a hashed ten-minute Redis transaction, then redirect. Redis failure returns `503` without redirect. |
-| GET `/api/oauth/callback/ikas?code&storeName[&state][&signature]` | [route.ts](src/app/api/oauth/callback/ikas/route.ts) | Token exchange requires atomically consumed browser-bound state; reject expiry, replay, wrong browser/store, and validate a supplied signature before consumption. A dashboard callback without state discards its code and may claim one bounded browser/store marker to restart authorization; repeated state-less callbacks fail closed. After valid state, fetch merchant/app, atomically activate a new installation generation and replace stale merchant tokens, **auto-inject widget script per storefront**, register product webhooks, and register order/uninstall webhooks only when global + merchant email settings are enabled; then return `303` directly to the trusted ikas Admin authorized-app URL with no bearer-token query handoff. `ProductSnapshot` backfill runs post-response via `after()`. |
+| GET `/api/oauth/callback/ikas?code&storeName[&state][&signature]` | [route.ts](src/app/api/oauth/callback/ikas/route.ts) | Token exchange requires atomically consumed browser-bound state; reject expiry, replay, wrong browser/store, and validate a supplied signature before consumption. After valid state, fetch merchant/app, atomically activate a new installation generation, auto-inject the widget, register webhooks, and return `303` directly to the trusted ikas Admin URL. Post-response work creates/reuses and dispatches a bounded installation-fenced product reconciliation run; no unbounded catalog scan or bearer-token query handoff occurs. |
 
 ## Preview iframe
 

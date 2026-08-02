@@ -93,7 +93,6 @@ describe('product webhook installation/token pairing', () => {
       { client: true },
       'store-1',
       'product-1',
-      { productId: 'product-1' },
       {
         authorizedAppId: 'app-1',
         generation: 3,

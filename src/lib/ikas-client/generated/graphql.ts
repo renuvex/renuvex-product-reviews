@@ -139,6 +139,7 @@ export type ListProductsForSyncQueryData = {
   data: Array<{
   id: string;
   name: string;
+  createdAt?: number;
   deleted: boolean;
   updatedAt?: number;
   metaData?: {
@@ -327,6 +328,7 @@ export class GeneratedQueries {
       data {
         id
         name
+        createdAt
         deleted
         updatedAt
         metaData {

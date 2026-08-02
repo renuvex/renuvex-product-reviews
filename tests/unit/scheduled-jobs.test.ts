@@ -14,6 +14,7 @@ const maintenanceMock = vi.hoisted(() => ({
   retryFailedStoreReviewEmailErasures: vi.fn(),
   retryPendingReviewEmailDataSubjectRuns: vi.fn(),
   runReviewEmailLifecycleMaintenance: vi.fn(),
+  runProductReconciliationMaintenance: vi.fn(),
 }));
 
 vi.mock('@/lib/cleanup-pending-uploads', () => ({ cleanupPendingUploads: maintenanceMock.cleanupPendingUploads }));
@@ -38,6 +39,9 @@ vi.mock('@/lib/review-email/maintenance', () => ({
 }));
 vi.mock('@/lib/review-email/data-subject', () => ({
   retryPendingReviewEmailDataSubjectRuns: maintenanceMock.retryPendingReviewEmailDataSubjectRuns,
+}));
+vi.mock('@/lib/product-reconciliation', () => ({
+  runProductReconciliationMaintenance: maintenanceMock.runProductReconciliationMaintenance,
 }));
 vi.mock('@/lib/prisma', () => ({ prisma: { mediaCleanupRun: { create: maintenanceMock.mediaCleanupRunCreate } } }));
 
@@ -80,6 +84,12 @@ describe('scheduled job helpers', () => {
       expiredRequests: 0,
       activeKeyVersions: [],
       retention: { runId: 'purge-1', mode: 'report', batches: 1, candidates: {}, deleted: {}, elapsedMs: 1 },
+    });
+    maintenanceMock.runProductReconciliationMaintenance.mockResolvedValue({
+      created: 0,
+      dispatched: 0,
+      dispatchFailed: 0,
+      redispatched: 0,
     });
   });
 

@@ -3,8 +3,8 @@ type: database
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-02
-last_verified: 2026-08-02
+updated: 2026-08-03
+last_verified: 2026-08-03
 confidence: high
 tags:
   - database
@@ -24,6 +24,7 @@ source_files:
   - "prisma/models/storefront.prisma"
   - "prisma/models/media.prisma"
   - "prisma/models/operations.prisma"
+  - "prisma/models/product-lifecycle.prisma"
   - "prisma/models/review-email-config.prisma"
   - "prisma/models/review-email-orders.prisma"
   - "prisma/models/review-email-delivery.prisma"
@@ -45,6 +46,7 @@ source_files:
   - "prisma/migrations/20260720120000_align_ikas_review_email_contracts/migration.sql"
   - "prisma/migrations/20260728120000_harden_supabase_data_api_surface/migration.sql"
   - "prisma/migrations/20260802170000_add_admin_review_list_indexes/migration.sql"
+  - "prisma/migrations/20260803120000_add_product_lifecycle_evidence/migration.sql"
   - "src/lib/ikas-installation-lifecycle.ts"
   - "src/lib/cleanup-orphan-images.ts"
   - "src/lib/review-email/"
@@ -54,6 +56,7 @@ source_files:
   - "src/lib/media/sessions.ts"
   - "scripts/rebuild-product-review-summaries.mjs"
   - "scripts/verify-supabase-data-api-surface.mjs"
+  - "scripts/verify-product-lifecycle.ts"
 ---
 
 # Database Map
@@ -76,7 +79,7 @@ Postgres (Supabase) accessed via Prisma. Core review/media models now include th
 |---|---|
 | [prisma/schema.prisma](prisma/schema.prisma) | Multi-file entrypoint; owns the generator and datasource blocks |
 | [prisma/models/](prisma/models/) | Domain-owned Prisma model sources |
-| [prisma/migrations/](prisma/migrations/) | Immutable migration history (61 source migrations after the 2026-08-02 admin-list index addition; production applied count remains a separately verified live-state fact) |
+| [prisma/migrations/](prisma/migrations/) | Immutable migration history (62 source migrations after the additive product-lifecycle evidence migration; production applied count remains a separately verified live-state fact) |
 | [src/lib/prisma.ts](src/lib/prisma.ts) | Prisma client singleton |
 | [src/models/auth-token/index.ts](src/models/auth-token/index.ts) | `AuthToken` interface |
 | [src/models/auth-token/manager.ts](src/models/auth-token/manager.ts) | `AuthTokenManager` reads tokens and refreshes existing rows without recreating erased installations; install/delete writes belong to the lifecycle helper and erasure transaction. |
@@ -86,10 +89,11 @@ Postgres (Supabase) accessed via Prisma. Core review/media models now include th
 | Domain file | Ownership |
 |---|---|
 | `auth-installation.prisma` | OAuth tokens and installation generation |
-| `reviews.prisma` | Reviews, normalized review media, summaries, and product snapshots |
+| `reviews.prisma` | Reviews, normalized review media, and summaries |
 | `storefront.prisma` | Store and widget settings |
 | `media.prisma` | Image/video upload and provider lifecycle |
 | `operations.prisma` | Cleanup, scheduled-run locks, and quarantine |
+| `product-lifecycle.prisma` | Product evidence snapshots, tombstones, and bounded reconciliation runs |
 | `review-email-config.prisma` | Merchant review-email settings |
 | `review-email-orders.prisma` | Ikas order evidence, reconciliation, and receipt fence |
 | `review-email-delivery.prisma` | Batch, request, token, session, job, attempt, and event |
@@ -110,13 +114,14 @@ normal migration workflow below.
 | Model | Primary key | Purpose |
 |---|---|---|
 | `AuthToken` | `authorizedAppId` | OAuth tokens per app installation; refresh updates only an existing tenant-matching row. `[merchantId, updatedAt]` supports reinstall cleanup and latest-token lookup. |
-| `IkasStoreInstallation` | `storeId`, unique `authorizedAppId` | Active/erasing/erased installation generation and tombstone used by the shared PostgreSQL transaction advisory-lock fence. Activation atomically marks older nonterminal store-erasure runs `stale_ignored`. |
+| `IkasStoreInstallation` | `storeId`, unique `authorizedAppId` | Active/erasing/erased installation generation and tombstone used by the shared PostgreSQL transaction advisory-lock fence. Activation atomically marks older nonterminal store-erasure and product-reconciliation runs `stale_ignored`. |
 | `Review` | `id` (uuid) | Reviews; denormalized (`productName`, `slug`); status workflow; additive `hasVideo` marks video-bearing reviews and `moderationVersion` dedupes async provider moderation jobs. Review-request tokens can set `reviewRequestId`, `verifiedBuyer`, `verifiedAt`, and `verificationSource`. |
 | `ReviewMedia` | `id` (uuid), unique `publicId` | Normalized trusted media rows. New images are AWS-backed (`provider='aws_s3'`) and use `variantManifest`; videos use Mux. `visible` + `Review.status` remains the public gate. |
 | `ProductReviewSummary` | `id` (uuid), unique `(storeId, productId)` | Product-level aggregate read model for public badge, structured-data, summary distribution, and exact filtered review-list counts |
 | `StoreSettings` | `id` (uuid), unique `storeId` | Per-merchant config; tracks storefront script/theme sync state and additive `videoMonthlyLimit` quota gate (default `0`, so video stays closed). |
 | `WidgetSettings` | `id` (uuid), unique `(storeId, widgetId)` | Per-widget JSON settings |
-| `ProductSnapshot` | `id` (uuid), unique `(storeId, productId)` | Current ikas product slug/name snapshot for fallback resolution |
+| `ProductSnapshot` | `id` (uuid), unique `(storeId, productId)` | Product identity evidence with `unknown`, fresh active, unavailable tombstone, or sticky identity-conflict state; slug/name remain non-identity metadata. |
+| `ProductReconciliationRun` | `id` (uuid), unique daily store/generation/trigger slot | Bounded scan/exact-verification progress, lease, retry, counters, and installation-generation fence for missed product webhook convergence. |
 | `PendingReviewImage` | `publicId` | Legacy-named pending media registry. AWS image upload intents and Mux video sessions stage here behind provider-aware fields until review submit or cleanup. |
 | `MediaCleanupRun` | `id` (uuid) | Audit log, one row per `cleanup-images` cron run (scan/quarantine/sweep counts, breaker status, `sampleDeleted` sample). See [[ADR_0030_Cleanup_Hardening]] |
 | `OrphanImageQuarantine` | `publicId` | Two-phase orphan-deletion state: orphans are marked here, then hard-deleted only after a grace window if still orphaned. See [[ADR_0030_Cleanup_Hardening]] |

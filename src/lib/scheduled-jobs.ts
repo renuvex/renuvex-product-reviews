@@ -14,6 +14,7 @@ import { runReviewEmailLifecycleMaintenance } from '@/lib/review-email/maintenan
 import { retryFailedStoreReviewEmailErasures } from '@/lib/review-email/erasure';
 import { retryPendingReviewEmailDataSubjectRuns } from '@/lib/review-email/data-subject';
 import { normalizeReviewEmailFailure, reportReviewEmailFailure } from '@/lib/review-email/failures';
+import { runProductReconciliationMaintenance } from '@/lib/product-reconciliation';
 
 export const SCHEDULED_JOB_TASKS = ['daily-maintenance-full', 'cleanup-images'] as const;
 export type ScheduledJobTask = (typeof SCHEDULED_JOB_TASKS)[number];
@@ -31,6 +32,7 @@ export type DailyMaintenanceResult = {
   reviewEmailLifecycle: unknown;
   reviewEmailDataSubjectRetry: unknown;
   storeDataErasure: unknown;
+  productReconciliation: unknown;
   errors: Array<{ task: string; error: string }>;
 };
 
@@ -76,6 +78,7 @@ export async function runDailyMaintenance(input: { full: boolean }): Promise<Sch
   let reviewEmailLifecycle = null;
   let reviewEmailDataSubjectRetry = null;
   let storeDataErasure = null;
+  let productReconciliation = null;
 
   try {
     storefrontThemes = await reconcileStorefrontThemes();
@@ -165,6 +168,17 @@ export async function runDailyMaintenance(input: { full: boolean }): Promise<Sch
       reportReviewEmailFailure('store_erasure', failure);
       errors.push({ task: 'store-data-erasure-retry', error: failure.code });
     }
+
+    try {
+      productReconciliation = await runProductReconciliationMaintenance();
+      if (productReconciliation.dispatchFailed > 0) {
+        throw new Error('product_reconciliation_dispatch_failed');
+      }
+    } catch (error) {
+      const message = errorMessage(error);
+      reportCronTaskError('daily-maintenance', 'product-reconciliation', error);
+      errors.push({ task: 'product-reconciliation', error: message });
+    }
   }
 
   const data: DailyMaintenanceResult = {
@@ -178,6 +192,7 @@ export async function runDailyMaintenance(input: { full: boolean }): Promise<Sch
     reviewEmailLifecycle,
     reviewEmailDataSubjectRetry,
     storeDataErasure,
+    productReconciliation,
     errors,
   };
   return { status: errors.length ? 500 : 200, body: { data } };

@@ -16,6 +16,7 @@ related:
   - "[[ADR_0003_Review_Data_Model]]"
   - "[[Ikas_Storefront_Events]]"
   - "[[Listing_Rating_Widget]]"
+  - "[[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]]"
 source_files:
   - "src/app/api/public/ratings/route.ts"
   - "src/app/api/public/ratings-by-slug/route.ts"
@@ -26,7 +27,7 @@ source_files:
   - "src/widget/core/storefront-context.js"
   - "src/widget/listing-badges/collect.js"
   - "src/widget/listing-badges/ratings.js"
-  - "prisma/models/reviews.prisma"
+  - "prisma/models/product-lifecycle.prisma"
 ---
 
 # ADR_0015 - Canonical Product Identity
@@ -75,12 +76,16 @@ Listing/search badges now prefer the canonical path:
 
 The legacy `/api/public/ratings-by-slug` endpoint remains only as a fallback for
 DOM-only paths where ikas Events did not provide product ids. That fallback now
-first resolves `slug -> productId` through the local `ProductSnapshot` read model
-before using the old `Review.slug` query as the last resort.
+resolves `slug -> productId` only through fresh, unambiguous product-lifecycle
+evidence. It never reads `Review.slug` as an identity fallback and never lets
+the newest snapshot win an ambiguous slug.
 
-`ProductSnapshot` is maintained by install-time `listProduct` backfill, manual
-`POST /api/admin/sync-products`, and ikas product webhooks registered through
-`saveWebhooks` for `store/product/created` and `store/product/updated`.
+`ProductSnapshot` evidence is maintained by bounded install/manual/daily
+reconciliation and exact provider reads after ikas product webhook wakeups.
+Deletion creates a tombstone; a tombstoned id that reappears becomes
+`identity_conflict`. See
+[[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]] for the lifecycle and
+rollout gates that supersede the old direct-slug fallback decision.
 
 ## Reasoning
 Product ids are stable; slugs are mutable. Using slugs as identity makes review
@@ -110,9 +115,9 @@ fields define identity.
   policy as other public read routes.
 - `Review` has a new `[storeId, productId, status]` index to cover the hot
   product-id rating lookup.
-- DOM-only listing fallback can resolve current slugs through `ProductSnapshot`
-  and then read reviews by `productId`. If a product is absent from the snapshot,
-  the endpoint keeps the old slug query as a last-resort compatibility path.
+- DOM-only listing fallback resolves a slug only through one fresh
+  `active_verified` snapshot. Missing, stale, unknown, or conflicting evidence
+  returns no rating rather than attaching historical reviews by slug.
 - The local `ProductSnapshot` table is a read model/cache. ikas remains the
   source of truth; webhook misses can be repaired by running the admin backfill
   endpoint.

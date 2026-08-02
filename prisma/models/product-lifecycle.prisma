@@ -1,0 +1,58 @@
+model ProductSnapshot {
+  id                          String    @id @default(uuid())
+  storeId                     String
+  productId                   String
+  slug                        String?
+  name                        String?
+  lifecycleState              String    @default("unknown") @db.VarChar(32)
+  providerCreatedAt           DateTime?
+  ikasUpdatedAt               DateTime?
+  lastVerifiedAt              DateTime?
+  unavailableAt               DateTime?
+  conflictDetectedAt          DateTime?
+  lastEvidenceSource          String?   @db.VarChar(32)
+  lastSeenReconciliationRunId String?
+  lastSyncedAt                DateTime  @default(now())
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @updatedAt
+
+  @@unique([storeId, productId])
+  @@index([storeId, slug])
+  @@index([storeId, lifecycleState, lastVerifiedAt])
+  @@index([storeId, lastSeenReconciliationRunId, productId])
+}
+
+model ProductReconciliationRun {
+  id                       String    @id @default(uuid())
+  storeId                  String
+  authorizedAppId          String    @db.VarChar(128)
+  installationGeneration   Int
+  installationStateVersion Int
+  trigger                  String    @db.VarChar(32)
+  scheduleSlot             String?   @db.VarChar(32)
+  status                   String    @default("pending") @db.VarChar(32)
+  phase                    String    @default("scan") @db.VarChar(32)
+  nextPage                 Int       @default(1)
+  candidateCursor          String?
+  scannedCount             Int       @default(0)
+  verifiedCount            Int       @default(0)
+  activeCount              Int       @default(0)
+  unavailableCount         Int       @default(0)
+  conflictCount            Int       @default(0)
+  reconstructedCount       Int       @default(0)
+  attempts                 Int       @default(0)
+  leaseOwner               String?   @db.VarChar(64)
+  leaseExpiresAt           DateTime?
+  nextRetryAt              DateTime?
+  lastErrorCode            String?   @db.VarChar(128)
+  startedAt                DateTime?
+  finishedAt               DateTime?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  @@unique([storeId, installationGeneration, trigger, scheduleSlot])
+  @@index([status, nextRetryAt, createdAt])
+  @@index([leaseExpiresAt])
+  @@index([storeId, createdAt])
+  @@index([storeId, installationGeneration, status])
+}

@@ -10,9 +10,13 @@ on:
       - 'prisma/**'
       - 'scripts/lib/supabase-data-api-surface-audit.mjs'
       - 'scripts/verify-supabase-data-api-surface.mjs'
+      - 'scripts/verify-product-lifecycle.ts'
       - 'src/lib/auth-helpers.ts'
       - 'src/lib/ikas-installation-lifecycle.ts'
       - 'src/lib/prisma.ts'
+      - 'src/lib/product-lifecycle.ts'
+      - 'src/lib/product-reconciliation.ts'
+      - 'src/lib/product-snapshots.ts'
       - 'src/lib/review-email/**'
       - 'src/models/auth-token/**'
       - 'tests/integration/**'
@@ -27,9 +31,13 @@ on:
       - 'prisma/**'
       - 'scripts/lib/supabase-data-api-surface-audit.mjs'
       - 'scripts/verify-supabase-data-api-surface.mjs'
+      - 'scripts/verify-product-lifecycle.ts'
       - 'src/lib/auth-helpers.ts'
       - 'src/lib/ikas-installation-lifecycle.ts'
       - 'src/lib/prisma.ts'
+      - 'src/lib/product-lifecycle.ts'
+      - 'src/lib/product-reconciliation.ts'
+      - 'src/lib/product-snapshots.ts'
       - 'src/lib/review-email/**'
       - 'src/models/auth-token/**'
       - 'tests/integration/**'
@@ -121,6 +129,9 @@ jobs:
 
       - name: Verify Data API grants and RLS surface
         run: pnpm verify:supabase-data-api-surface
+
+      - name: Verify expanded product lifecycle schema
+        run: pnpm verify:product-lifecycle --expect=expanded
 
       - name: Run PostgreSQL integration tests
         run: pnpm test:integration:review-email

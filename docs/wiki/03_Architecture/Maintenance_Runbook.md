@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-06-09
-updated: 2026-07-28
-last_verified: 2026-07-28
+updated: 2026-08-03
+last_verified: 2026-08-03
 confidence: high
 tags:
   - runbook
@@ -18,6 +18,7 @@ related:
   - "[[ADR_0029_Review_Media_Metadata]]"
   - "[[ADR_0030_Cleanup_Hardening]]"
   - "[[ADR_0035_QStash_Scheduler_For_Maintenance]]"
+  - "[[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]]"
   - "[[Database_Map]]"
   - "[[Async_Media_Pipeline]]"
   - "[[Review_Video_Manual_Repair_Runbook]]"
@@ -31,6 +32,10 @@ source_files:
   - "src/lib/review-email/batch-jobs.ts"
   - "src/lib/review-email/journal-coverage.ts"
   - "src/lib/ikas-installation-lifecycle.ts"
+  - "src/lib/product-reconciliation.ts"
+  - "src/lib/product-reconciliation-dispatcher.ts"
+  - "src/app/api/internal/product-reconciliation/route.ts"
+  - "scripts/verify-product-lifecycle.ts"
   - "src/app/api/admin/daily-maintenance/route.ts"
   - "src/app/api/admin/cleanup-images/route.ts"
   - "src/app/api/internal/scheduled-jobs/route.ts"
@@ -82,10 +87,30 @@ QStash is the active maintenance scheduler per [[ADR_0035_QStash_Scheduler_For_M
 ## Manual admin endpoints
 | Endpoint | Former cadence | What it does |
 |---|---|---|
-| `GET /api/admin/daily-maintenance` | `0 3 * * *` (daily 03:00) | Storefront theme reconcile (always) + on full run: pending-upload cleanup, storefront-script reconcile, video session/job reconciliation when configured, retryable DSR/uninstall erasure, and bounded review-email lifecycle/retention maintenance. Retention still runs while outbound review email is disabled so expired evidence cannot accumulate behind a feature flag. |
+| `GET /api/admin/daily-maintenance` | `0 3 * * *` (daily 03:00) | Storefront theme reconcile (always) + on full run: pending-upload cleanup, storefront-script reconcile, video session/job reconciliation when configured, retryable DSR/uninstall erasure, bounded product reconciliation, and review-email lifecycle/retention maintenance. Retention still runs while outbound review email is disabled. |
 | `GET /api/admin/cleanup-images` | `0 4 1 * *` (monthly) | AWS review-image orphan **two-phase** cleanup behind a circuit-breaker (ADR_0012 + [[ADR_0030_Cleanup_Hardening]]): scan scoped S3 object families, mark orphan families, then sweep after grace if still orphaned. Writes a `MediaCleanupRun` audit row. |
 
 Both require `Authorization: Bearer <CRON_SECRET>`.
+
+Product reconciliation reuses the daily QStash schedule but owns separate
+DB-backed runs and a signed continuation endpoint. Maintenance redispatches due
+pending/error/expired-lease runs, then creates at most one daily run for each
+active installation. A continuation accepts only `{ "runId": "<uuid>" }` and
+processes one scan page (maximum 200) or exact candidate batch (maximum 50).
+Missing provider pagination evidence, API failure, or a partial scan cannot mark
+a product unavailable. Reinstall closes nonterminal older-generation runs as
+`stale_ignored`. Use the aggregate-only read verifier:
+
+```text
+pnpm verify:product-lifecycle --expect=expanded
+pnpm verify:product-lifecycle --expect=ready
+```
+
+`expanded` is the post-migration schema/RLS/default-deny gate. `ready` is a
+later live rollout gate requiring a fresh completed run per active installation
+and zero missing/unknown/stale active evidence. Do not start Release B consumer
+enforcement, resolve identity conflicts by SQL, or treat source-only code as
+live evidence. See [[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]].
 
 Review-email erasure uses one store advisory-lock order:
 `IkasStoreInstallation` first, then the exact `StoreDataErasureRun` row. OAuth

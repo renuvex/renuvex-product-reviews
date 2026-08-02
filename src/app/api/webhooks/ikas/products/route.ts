@@ -1,7 +1,7 @@
 import { getIkas } from '@/helpers/api-helpers';
 import { AuthTokenManager } from '@/models/auth-token/manager';
 import { prisma } from '@/lib/prisma';
-import { getProductIdFromWebhookData, PRODUCT_WEBHOOK_SCOPES, syncSingleProductForStore, type ProductLike } from '@/lib/product-snapshots';
+import { getProductIdFromWebhookData, PRODUCT_WEBHOOK_SCOPES, syncSingleProductForStore } from '@/lib/product-snapshots';
 import { getParsedIkasWebhookData, validateIkasWebhookSignature, type IkasWebhook } from '@ikas/admin-api-client';
 import { NextResponse } from 'next/server';
 import {
@@ -62,7 +62,6 @@ export async function POST(request: Request) {
       ikas,
       webhook.merchantId,
       productId,
-      parsedData as ProductLike,
       installationFence,
     );
 

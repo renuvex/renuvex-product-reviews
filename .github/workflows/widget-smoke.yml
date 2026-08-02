@@ -264,6 +264,9 @@ jobs:
       - name: Verify Data API grants and RLS surface
         run: pnpm verify:supabase-data-api-surface
 
+      - name: Verify expanded product lifecycle schema
+        run: pnpm verify:product-lifecycle --expect=expanded
+
       - name: Run PostgreSQL integration tests
         run: pnpm test:integration:review-email
 

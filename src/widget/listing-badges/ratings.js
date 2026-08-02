@@ -55,7 +55,7 @@ function fetchJsonData(url) {
 export async function fetchRatings(input) {
   var targets = normalizeTargets(input);
   var slugs = Object.keys(targets);
-  var ratingsKey = 'renuvex_pr_ratings_' + PUBLIC_API_KEY;
+  var ratingsKey = 'renuvex_pr_ratings_v2_' + PUBLIC_API_KEY;
   var ratings = {};
 
   var cached = cacheGet(ratingsKey);
@@ -117,6 +117,10 @@ export async function fetchRatings(input) {
   });
 
   markEmpty(ratings, missing, targets);
-  cacheSet(ratingsKey, JSON.stringify({ t: Date.now(), v: ratings }));
+  var exactIdRatings = {};
+  Object.keys(ratings).forEach(function(slug) {
+    if (ratings[slug] && ratings[slug]._productId) exactIdRatings[slug] = ratings[slug];
+  });
+  cacheSet(ratingsKey, JSON.stringify({ t: Date.now(), v: exactIdRatings }));
   return ratings;
 }

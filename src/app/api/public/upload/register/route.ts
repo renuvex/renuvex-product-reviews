@@ -4,7 +4,7 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { Redis } from '@upstash/redis';
 import { anonymousPublicCorsOptions, withAnonymousPublicCors } from '@/lib/cors';
-import { normalizeReviewImageStoreId } from '@/lib/review-images';
+import { normalizeReviewImageProductId, normalizeReviewImageStoreId } from '@/lib/review-images';
 import {
   AWS_REVIEW_IMAGE_PROVIDER,
   buildAwsReviewImagePublicId,
@@ -52,12 +52,13 @@ export async function POST(request: Request) {
       return withAnonymousPublicCors(NextResponse.json({ error: 'Invalid request body.' }, { status: 400 }));
     }
 
-    const payload = body as { storeId?: unknown; provider?: unknown; itemId?: unknown };
+    const payload = body as { storeId?: unknown; productId?: unknown; provider?: unknown; itemId?: unknown };
     const scope = await resolveReviewCenterItemScope(prisma, request, payload.itemId);
     const storeId = scope?.storeId ?? normalizeReviewImageStoreId(payload?.storeId);
     if (!storeId) {
       return withAnonymousPublicCors(NextResponse.json({ error: 'Invalid store.' }, { status: 400 }));
     }
+    const productId = scope?.productId ?? normalizeReviewImageProductId(payload.productId);
 
     const store = await prisma.storeSettings.findUnique({
       where: { storeId },
@@ -90,6 +91,9 @@ export async function POST(request: Request) {
       pending.productId !== scope.productId
     )) {
       return withAnonymousPublicCors(NextResponse.json({ error: 'Upload intent scope mismatch.' }, { status: 409 }));
+    }
+    if (productId && pending.productId !== productId) {
+      return withAnonymousPublicCors(NextResponse.json({ error: 'Upload intent product mismatch.' }, { status: 409 }));
     }
     if (pending.uploadExpiresAt && pending.uploadExpiresAt <= new Date()) {
       return withAnonymousPublicCors(NextResponse.json({ error: 'Upload intent expired.' }, { status: 400 }));

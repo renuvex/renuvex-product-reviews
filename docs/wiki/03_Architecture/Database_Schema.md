@@ -3,8 +3,8 @@ type: database
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-02
-last_verified: 2026-08-02
+updated: 2026-08-03
+last_verified: 2026-08-03
 confidence: high
 tags:
   - database
@@ -26,6 +26,7 @@ source_files:
   - "prisma/models/storefront.prisma"
   - "prisma/models/media.prisma"
   - "prisma/models/operations.prisma"
+  - "prisma/models/product-lifecycle.prisma"
   - "prisma/models/review-email-config.prisma"
   - "prisma/models/review-email-orders.prisma"
   - "prisma/models/review-email-delivery.prisma"
@@ -41,6 +42,7 @@ source_files:
   - "prisma/migrations/20260710210000_add_review_email_retention_analytics_journal/migration.sql"
   - "prisma/migrations/20260715120000_add_review_email_batch_envelope_v32/migration.sql"
   - "prisma/migrations/20260802170000_add_admin_review_list_indexes/migration.sql"
+  - "prisma/migrations/20260803120000_add_product_lifecycle_evidence/migration.sql"
   - "src/lib/review-media.ts"
   - "src/lib/review-summary.ts"
   - "src/lib/cleanup-orphan-images.ts"
@@ -186,7 +188,7 @@ in migration `20260518130000_drop_redundant_review_indexes`.
 Common queries:
 - Public: `findMany({ storeId, productId, status: 'approved' })` + deterministic ordering + filters. Legacy `page/limit` is supported; widget load-more uses `nextCursor` keyset pagination when available.
 - Public listing/PDP badges, summary distribution, and exact review-list totals: `ProductReviewSummary` by `(storeId, productId)`
-- Public slug fallback: resolve current `ProductSnapshot` slug to product id, then read `ProductReviewSummary`; legacy direct slug read remains last resort for unresolved slugs
+- Public slug fallback: resolve exactly one fresh `active_verified` `ProductSnapshot` slug to product id, then read `ProductReviewSummary`; unresolved, stale, unknown, or conflicting slugs return no rating and never query `Review.slug` as identity
 - Admin: `findMany({ storeId, status? })` ordered deterministically by
   `createdAt desc, id desc`; exact pagination count remains a separate query.
 
@@ -302,7 +304,8 @@ Constraints:
 Read pattern (admin and public): `resolveConfigurableWidget(widgetId) → getWidgetDefaults(widget) ⊕ sanitizeSettings(widget, row.settings)`. Query allowlists and response guards exclude unknown/planned rows. See [src/lib/widget-settings.ts](src/lib/widget-settings.ts).
 
 ### `ProductSnapshot`
-Local read model for ikas product identity snapshots. ikas remains the source of truth.
+Local product-lifecycle evidence model. ikas remains the source of truth, while
+the row is retained as a tombstone when current product availability disappears.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -311,14 +314,37 @@ Local read model for ikas product identity snapshots. ikas remains the source of
 | `productId` | String | ikas product UUID |
 | `slug` | String? | Current ikas slug snapshot |
 | `name` | String? | Current ikas name snapshot |
+| `lifecycleState` | String | `unknown`, `active_verified`, `unavailable_verified`, or sticky `identity_conflict` |
+| `providerCreatedAt` | DateTime? | Audit evidence only; never proves safe reactivation |
 | `ikasUpdatedAt` | DateTime? | ikas product `updatedAt` timestamp |
+| `lastVerifiedAt` | DateTime? | Exact provider evidence time; active evidence expires after the 36-hour Renuvex policy window |
+| `unavailableAt`, `conflictDetectedAt` | DateTime? | Tombstone/conflict transition evidence |
+| `lastEvidenceSource` | String? | Fixed internal source label without provider payload |
+| `lastSeenReconciliationRunId` | String? | Marks ids observed by a complete-run scan page |
 | `lastSyncedAt` | DateTime | Last local sync time |
 
 Indexes:
 - unique `[storeId, productId]`
 - `[storeId, slug]`
+- `[storeId, lifecycleState, lastVerifiedAt]`
+- `[storeId, lastSeenReconciliationRunId, productId]`
 
-Maintained by install-time `listProduct` backfill, `/api/admin/sync-products`, and `/api/webhooks/ikas/products`.
+Maintained by exact product-webhook reads and bounded install/manual/daily
+reconciliation. Missing products are never hard-deleted. See
+[[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]].
+
+### `ProductReconciliationRun`
+
+DB-owned progress for a bounded product catalog scan followed by exact
+verification of referenced/current candidates not seen in the scan. It stores
+the exact authorized app, installation generation/state version, trigger/slot,
+scan page, candidate cursor, counters, lease, retry, fixed error code, and
+completion timestamps.
+
+State and phase values are protected by DB CHECK constraints. RLS is enabled and
+the hosted Data API roles retain no direct table privileges. Daily runs are
+unique per store/generation/trigger/slot. Reinstall atomically closes all older
+nonterminal runs as `stale_ignored`.
 
 ### `PendingReviewImage`
 Provider-agnostic registry of uploads not yet attached to a `Review`. The model name is legacy, but current review-image source writes AWS S3 upload intents. See [[ADR_0012_Pending_Upload_Registry]] and [[ADR_0034_AWS_Review_Image_Migration]].

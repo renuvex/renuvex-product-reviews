@@ -321,6 +321,7 @@ export function createStepPhotos(state, opts) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               storeId: PUBLIC_API_KEY,
+              productId: state.get().productId,
               fileName: f.name || 'review-image',
               contentType: f.type,
               bytes: f.size,
@@ -360,6 +361,7 @@ export function createStepPhotos(state, opts) {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 storeId: PUBLIC_API_KEY,
+                productId: state.get().productId,
                 provider: 'aws_s3',
                 assetId: imageRef.assetId,
                 uploadSessionId: imageRef.uploadSessionId,

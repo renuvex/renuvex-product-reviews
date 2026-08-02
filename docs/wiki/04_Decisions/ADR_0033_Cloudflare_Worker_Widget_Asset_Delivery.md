@@ -139,13 +139,13 @@ V2 public-read proxy cache contract:
 | Public read | Worker behavior |
 |---|---|
 | `/api/public/ratings` | Cacheable only with `storeId` and normalized sorted `productIds` |
-| `/api/public/ratings-by-slug` | Cacheable only with `storeId` and normalized sorted `slugs` |
+| `/api/public/ratings-by-slug` | Allowlisted pass-through only; always `no-store` and never written to edge cache because lifecycle ambiguity must be resolved by fresh backend evidence |
 | `/api/public/reviews` | Cacheable only with `storeId`, `productId`, and normalized known filters/page/cursor params |
 | `/api/public/settings` | Cacheable only with `publicApiKey` |
 | Unknown params or long URLs | Bypass cache and pass through to `app.renuvex.app` |
 | Non-200, non-JSON, `Set-Cookie`, 4xx/5xx/429 | Not cached |
 
-Edge cache TTL is 60 seconds. Browser-facing `Cache-Control` remains `public, max-age=0, must-revalidate`, and responses include `X-Renuvex-Edge-Cache: HIT | MISS | BYPASS` for diagnostics.
+Cacheable read TTL is 60 seconds. Browser-facing cacheable responses remain `public, max-age=0, must-revalidate`. `ratings-by-slug` instead returns `Cache-Control: no-store` with `X-Renuvex-Edge-Cache: BYPASS`. All proxied reads retain the diagnostic header.
 
 ## Rollout
 The rollout completed on 2026-06-28:
