@@ -3,8 +3,8 @@ type: ikas
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-01
-last_verified: 2026-07-01
+updated: 2026-08-09
+last_verified: 2026-08-09
 confidence: high
 tags:
   - ikas
@@ -34,7 +34,7 @@ source_files:
 # ikas Theme Limitations
 
 ## Summary
-The widget runs inside arbitrary merchant themes. ikas does not expose a browser-runtime theme detector or stable DOM mount points today, so the widget still needs Storefront Events for page/product context plus DOM heuristics or adapters for placement. ikas developer feedback on 2026-05-23 says Admin API `listStorefront` can identify the published theme by checking `themes[].isMainTheme: true`. Direct ikas feedback also says standard `data-*` storefront attributes are planned for ikas Studio, but are too early and too sparsely deployed to rely on today.
+The widget runs inside arbitrary merchant themes. ikas does not expose a browser-runtime theme detector or stable DOM mount points today, so the widget still needs Storefront Events for page/product context plus DOM heuristics or adapters for placement. The active-theme fields observed in May 2026 are no longer present in the live v1/v2 schema as of 2026-08-09. Automatic theme-based placement is therefore fail-closed; script management and explicit review mounts continue without treating historical theme metadata as current evidence.
 
 ## What we control
 - A single `<script>` per storefront via `StorefrontJSScript`.
@@ -48,19 +48,20 @@ The widget runs inside arbitrary merchant themes. ikas does not expose a browser
 - Theme-level CSS specificity conflicts.
 
 ## Active Theme Detection
-- Direct ikas developer feedback on 2026-05-23: there is no dedicated active-theme detector, but calling `listStorefront` and selecting the nested theme record with `themes[].isMainTheme: true` identifies the theme currently published.
-- Schema verification on 2026-05-23 confirmed `isMainTheme` is on `StorefrontTheme`, not directly on `Storefront`. The current query requests `mainStorefrontThemeId` plus `themes { id name themeId themeVersionId isMainTheme deleted }`.
+- Historical evidence: direct ikas developer feedback and schema verification on 2026-05-23 exposed nested `themes[].isMainTheme` and `mainStorefrontThemeId`.
+- Current evidence: live v1 and v2 introspection plus repository codegen on 2026-08-09 show those fields are absent from `Storefront`; the supported query now requests only `id` and `name`.
+- Renuvex records new observations as `provider_unavailable` and coerces older stored metadata to `legacy_unverifiable`. Neither status can unlock `autoPlacementEnabled`.
 - This is an Admin/API-side signal, not a storefront browser global. The storefront widget cannot safely read it by itself without backend/public-settings plumbing.
-- The app stores non-sensitive resolved metadata in `StoreSettings.storefrontTheme`, then exposes only `runtime.themeAdapterKey/source` from public settings. Adapter selection uses stable ikas `themeId` first because merchant-facing theme names are editable. Ozy maps by known theme id; unknown active theme ids use the generic adapter; no active theme signal falls back to Ozy for backwards compatibility.
+- The app stores only non-sensitive evidence in `StoreSettings.storefrontTheme` and exposes runtime gates through public settings. With current provider-unavailable evidence, it uses the generic adapter, disables automatic placement, and preserves the explicit shadow-isolated review mount.
 - `StoreSettings.storefrontTheme` now uses a v2 JSON state: `{ syncStatus, stable, pending, lastCheckedAt, verificationDueAt, verifiedAt }`. Public settings read the stable theme while a newly observed theme is pending.
 - This helps choose an adapter automatically, but it does not provide stable DOM anchors for product title, product card, or review block placement.
 
 ## Theme Sync Lifecycle
-- Install and manual script repair still call the script lifecycle, and that path also updates theme metadata using the same `listStorefront` response.
-- Admin dashboard open calls `POST /api/admin/storefront-theme/sync`, which only reads `listStorefront` and updates theme metadata. It does not create or update StorefrontJSScript records.
+- Install and manual script repair still call the script lifecycle. The supported `listStorefront { id name }` response is sufficient for script ownership but produces only provider-unavailable theme evidence.
+- Admin dashboard open calls `POST /api/admin/storefront-theme/sync`, which reads `listStorefront` and records the current evidence status. It does not create or update StorefrontJSScript records.
 - Settings save schedules the same lightweight sync with Next.js `after()`, so widget setting writes are not blocked by ikas Admin API latency.
-- When a sync observes a different active `themeId` from the current stable state, it writes the new metadata as `pending_verification` and keeps the previous stable adapter in public settings.
-- QStash daily maintenance verifies pending themes after the delay window. If the same pending theme is still active, it promotes it to stable; if ikas reports the old theme again, pending is cleared. True 2-5 minute verification would need a separate QStash-backed delayed verification design; the storefront widget never performs this server-side check.
+- Stable/pending transition support remains backwards compatible, but current provider-unavailable observations cannot be treated as a verified active theme or unlock automatic placement.
+- QStash daily maintenance may refresh the evidence state, but it cannot recreate fields absent from the provider schema. It must not promote provider-unavailable evidence into verified theme identity.
 - The public storefront widget never calls ikas Admin APIs. Theme detection stays server-side to avoid exposing tokens, storefront latency, and rate-limit risk.
 
 ## Theme Integration Points Today
@@ -143,7 +144,7 @@ The Admin API `saveWebhooks` mutation accepts exactly 10 scopes:
 - MutationObserver in [src/widget/observer.js](src/widget/observer.js) to handle SPA-style navigation.
 - Defensive selectors in `themes/ozy/`.
 - A per-theme adapter checklist in [[Theme_Adapter_Playbook]], with Ozy as the current reference implementation.
-- Storefront Events remain the primary context source. `listStorefront.themes[].isMainTheme` can only help select an adapter; it does not replace runtime placement checks.
+- Storefront Events remain the primary context source. There is currently no supported Admin API active-theme field for adapter selection, and runtime placement checks remain mandatory.
 
 ## Notes
 - When a merchant reports "widget doesn't show", check in order: script injection, public settings/API calls, Storefront Events/product context, then placement/product-title.

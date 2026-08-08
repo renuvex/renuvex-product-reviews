@@ -266,6 +266,7 @@ function stableOzyThemeState() {
       themeAdapterKey: 'ozy',
       adapterSource: 'auto',
       adapterMatchedBy: 'theme_id',
+      evidenceStatus: 'verified',
       detectedAt: now,
     },
     pending: null,

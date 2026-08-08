@@ -126,7 +126,16 @@ This section records a direct answer from an ikas developer about storefront scr
 
 Direct ikas developer feedback: there is no dedicated active-theme detector. However, calling `listStorefront` and selecting the theme where `themes[].isMainTheme` is `true` can be used to identify the published theme/storefront context. Treat this as an Admin/API-side signal for adapter selection, not as a storefront runtime DOM or mount-point contract.
 
-Schema verification on 2026-05-23 confirmed `isMainTheme` belongs to the nested `StorefrontTheme` type, not directly to `Storefront`. The current generated query requests `mainStorefrontThemeId` and `themes { id name themeId themeVersionId isMainTheme deleted }`. The app resolves this into `StoreSettings.storefrontTheme` and exposes only non-sensitive runtime adapter metadata through `/api/public/settings`.
+Schema verification on 2026-05-23 confirmed `isMainTheme` belonged to the nested `StorefrontTheme` type, not directly to `Storefront`.
+
+### Active theme contract change - 2026-08-09
+
+Live v1/v2 introspection and repository codegen no longer expose `themes` or
+`mainStorefrontThemeId` on `Storefront`. The generated query now uses only `id/name`
+for supported storefront script management. Renuvex treats the missing theme signal
+as provider-unavailable evidence: legacy metadata cannot unlock automatic placement,
+while explicit review mounts continue through the generic adapter. Re-enabling active
+theme allowlisting requires a newly verified provider contract.
 
 ### Lifecycle / mount follow-up - 2026-06-06
 
@@ -174,7 +183,7 @@ cookie-management scripts without a separate measured reason.
 - **Do not build theme adapters as the primary mechanism, and do not hack around missing anchors.** The correct, ikas-sanctioned source of page/product context is Storefront Events — not DOM class heuristics. Theme-class selectors should be treated as a temporary fallback only, not the architecture.
 - There is currently no official DOM mount point. Until ikas Studio `data-*` attributes ship and reach enough stores, mounting still requires the app's own anchor/placeholder logic, but page and product identity must come from Storefront Events rather than DOM scraping.
 - Theme adapters are the placement fallback layer. The per-theme selector checklist and Ozy spec live in [[Theme_Adapter_Playbook]].
-- Active theme adapter selection uses `listStorefront.themes[].isMainTheme` plus `mainStorefrontThemeId` fallback. This does not remove the need for generic placement heuristics or manual/support fallback.
+- Active theme adapter selection is currently disabled because the live schema no longer exposes the required fields. Generic explicit mounts remain available; automatic placement stays fail-closed.
 - Plan for a future migration to ikas `data-*` attributes once they are broadly available; design the loader so the context source can be swapped without rewriting widget modules.
 - For `isHighPriority` / `order`: this review app does not manage cookies/consent, so it does not need to preempt Facebook/Google scripts. ikas confirmed `isHighPriority` is for relative app-script ordering, not a general first-discovery optimization.
 - Do not add resource-hint assumptions to the injected loader. ikas currently does not support app-provided head-level hints, and hints added after the loader is discovered cannot solve first discovery timing.
