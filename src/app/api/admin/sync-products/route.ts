@@ -30,7 +30,12 @@ export async function POST(request: NextRequest) {
       fence: principal,
       trigger: 'manual',
     });
-    await dispatchProductReconciliationRun(run.id);
+    if (!(await dispatchProductReconciliationRun(run.id))) {
+      return NextResponse.json(
+        { error: 'product_reconciliation_dispatch_failed' },
+        { status: 503 },
+      );
+    }
 
     return NextResponse.json({
       data: {

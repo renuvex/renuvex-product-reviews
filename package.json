@@ -25,6 +25,7 @@
     "worker:widget:types": "pnpm worker:widget:prepare-assets && wrangler types workers/widget-delivery/worker-configuration.d.ts --config wrangler.widget.jsonc --env-file=.tmp/widget-worker.env --include-runtime=false",
     "worker:widget:deploy:dry-run": "pnpm worker:widget:prepare-assets && wrangler deploy --config wrangler.widget.jsonc --env-file=.tmp/widget-worker.env --dry-run",
     "worker:widget:deploy": "pnpm worker:widget:prepare-assets && wrangler deploy --config wrangler.widget.jsonc --env-file=.tmp/widget-worker.env",
+    "worker:widget:contract": "pnpm exec vitest run --config=vitest.config.ts tests/unit/widget-worker.test.ts && pnpm worker:widget:types && pnpm worker:widget:deploy:dry-run",
     "aws:widget:prepare-assets": "node scripts/prepare-widget-aws-canary-assets.mjs",
     "aws:widget:validate-template": "node scripts/validate-widget-aws-canary-template.mjs",
     "aws:lint-templates:eu-central-1": "cfn-lint -f pretty -r eu-central-1 -t infra/aws/widget-cdn-canary.cloudformation.json infra/aws/review-images.cloudformation.json infra/aws/review-images-runtime-iam.cloudformation.json infra/aws/media-access-logs-bucket.cloudformation.json infra/aws/review-email-deployment-access.cloudformation.json infra/aws/review-email-foundation.cloudformation.json infra/aws/review-email-erasure-journal.cloudformation.json infra/aws/review-email-erasure-journal-iam.cloudformation.json",
