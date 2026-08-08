@@ -80,4 +80,18 @@ describe('admin product sync route', () => {
     });
     expect(mocks.dispatch).toHaveBeenCalledWith('11111111-1111-4111-8111-111111111111');
   });
+
+  it('does not claim acceptance when QStash publish fails', async () => {
+    mocks.dispatch.mockResolvedValue(false);
+
+    const response = await POST(new Request('https://app.renuvex.app/api/admin/sync-products', {
+      method: 'POST',
+      headers: { host: 'app.renuvex.app' },
+    }) as never);
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: 'product_reconciliation_dispatch_failed' });
+    expect(mocks.startRun).toHaveBeenCalledOnce();
+    expect(mocks.report).not.toHaveBeenCalled();
+  });
 });
