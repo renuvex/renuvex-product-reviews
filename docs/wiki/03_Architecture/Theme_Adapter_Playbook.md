@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-25
-updated: 2026-06-01
-last_verified: 2026-06-01
+updated: 2026-08-09
+last_verified: 2026-08-09
 confidence: high
 tags:
   - widget
@@ -51,7 +51,10 @@ ikas does not provide a reliable public DOM slot contract today. Direct ikas fee
 - Theme name: Ozy.
 - Stable ikas theme id: `57225e07-aa38-4d38-9688-f6730ee16143`.
 - Adapter key: `ozy`.
-- Active theme match: `theme_id` through `listStorefront.themes[].isMainTheme`.
+- Active theme match: currently unavailable. The live ikas v1/v2 `Storefront`
+  schema did not expose `themes` or `mainStorefrontThemeId` on 2026-08-09, so
+  automatic placement remains fail-closed even for Ozy until a supported signal
+  returns.
 - PDP title selectors: `.product-name-main h1.product-name`, `.product-name-main h1`, `h1.product-name`.
 - Listing title selector: `.product-name`.
 - Listing allowlist containers: `.category-products-main`, `.products-slider-main`, `.infinite-scroll-component`, `[class*="product-list"]`, `.single-product-container-main`, `.product-block-container`.
@@ -61,13 +64,15 @@ ikas does not provide a reliable public DOM slot contract today. Direct ikas fee
 - Known risks: broad `[class*="product-list"]`, old storefront markup can still contain `#ikas-reviews-anchor`, and new merchant sections may reuse product-like classes outside real product cards.
 
 ## New Theme Checklist
+- Do not add or enable an automatic adapter mapping until the active-theme field
+  is present in the live generated schema and documented or confirmed by ikas.
 - Record theme name, stable `themeId`, `themeVersionId`, adapter key, and `adapterMatchedBy`.
-- Add the `themeId -> adapterKey` mapping in `storefront-theme.ts` (`THEME_ADAPTER_BY_THEME_ID`). After ADR_0022 this single entry also unlocks `autoPlacementEnabled` for the theme — no widget redeploy needed for the flag to flip on the next `lastCheckedAt` refresh.
+- After ikas restores a verified active-theme contract, add the `themeId -> adapterKey` mapping in `storefront-theme.ts` (`THEME_ADAPTER_BY_THEME_ID`). A mapping alone must not unlock `autoPlacementEnabled`; current provider evidence must also be `verified`.
 - Add `themes/<key>/theme.js` selector constants and `themes/<key>/adapter.js`.
 - Register the adapter in `current-adapter.js` and widen accepted adapter keys (the `setThemeAdapterKey` collapse to `'generic' | 'ozy'` must widen too).
 - Verify PDP title, listing cards, product sliders, home product sections, category grid, search results, blog product blocks, quick-view modal, header, footer, filters, hero/banner sections, and single-product blocks.
 - Document tested URLs, false positives, false negatives, spacing quirks, and known risks on this page or a theme-specific note.
-- After deploy, confirm `runtime.autoPlacementEnabled === true` for a real merchant on the new theme (read `/api/public/settings` directly or check `StoreSettings.storefrontTheme.stable.adapterMatchedBy === 'theme_id'`).
+- After deploy, confirm `runtime.autoPlacementEnabled === true` for a real merchant on the new theme and verify both `evidenceStatus === 'verified'` and `adapterMatchedBy === 'theme_id'`. Until the provider contract returns, the expected value is `false`.
 
 ## Ozy Hardening Policy
 Do not tighten Ozy selectors just because they look broad. Change selectors only after a fixture or live smoke test proves a false positive or false negative. The current safe order is documentation, fixture/live verification, then targeted selector changes.

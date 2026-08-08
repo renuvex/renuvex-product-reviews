@@ -355,7 +355,7 @@ code run together, so a migration must not break the old code.
   measured orphan rows. Follow
   [[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]].
 - `StoreSettings.storefrontScripts` is a JSON map `{ [storefrontId]: ikasScriptId }` used as an idempotency cache. Remote ikas script listing is the source of truth when available, so re-installs adopt/update existing scripts instead of creating duplicates. See [[Auth_And_Installation_Flow]].
-- `StoreSettings.storefrontTheme` stores non-sensitive active storefront/theme sync state resolved from `listStorefront.themes[].isMainTheme`. Current app-layer shape is `{ syncStatus, stable, pending, lastCheckedAt, verificationDueAt, verifiedAt }`; public settings expose only the stable `runtime.themeAdapterKey/source` to select Ozy vs generic adapter.
+- `StoreSettings.storefrontTheme` stores non-sensitive storefront/theme evidence. Current app-layer shape is `{ syncStatus, stable, pending, lastCheckedAt, verificationDueAt, verifiedAt }`, and metadata includes `evidenceStatus`. Since the 2026-08-09 ikas schema no longer exposes active-theme fields, new observations are `provider_unavailable` and legacy rows are `legacy_unverifiable`; public automatic placement remains fail-closed while explicit review mounts use the generic adapter.
 - `AuthToken` has `merchantId` (column) AND `authorizedAppId` (PK). Both are needed: `authorizedAppId` is unique per install, `merchantId` is shared across installs. The callback `deleteMany({ where: { merchantId } })` uses this to clean reinstalls.
 
 ## Related Source Files

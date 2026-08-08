@@ -288,7 +288,7 @@ Per-merchant config. One row per merchant, created on OAuth callback.
 
 The `storefrontScripts` map is an idempotency cache for re-installs and re-syncs. When v1 `listStorefrontJSScript` is available, the remote ikas script record is treated as source of truth and the map can be adopted/refreshed.
 
-The `storefrontTheme` JSON is resolved from Admin API `listStorefront.themes[].isMainTheme` plus `mainStorefrontThemeId` fallback. Current shape is v2 state: `{ syncStatus, stable, pending, lastCheckedAt, verificationDueAt, verifiedAt }`. Public settings expose only the stable `runtime.themeAdapterKey/source`, not the full theme metadata. Legacy flat metadata is still accepted by the runtime parser.
+The `storefrontTheme` JSON retains the v2 state shape `{ syncStatus, stable, pending, lastCheckedAt, verificationDueAt, verifiedAt }`, with an app-layer `evidenceStatus` on metadata. The live ikas v1/v2 schema stopped exposing `themes` and `mainStorefrontThemeId` by 2026-08-09. New observations therefore use `provider_unavailable`; legacy JSON remains parseable but is coerced to `legacy_unverifiable`. Neither state can unlock automatic placement. Public settings expose only runtime adapter gates, not the full metadata.
 
 ### `WidgetSettings`
 Per-widget JSON config.

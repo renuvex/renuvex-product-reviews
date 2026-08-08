@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-08-08
-last_verified: 2026-08-08
+updated: 2026-08-09
+last_verified: 2026-08-09
 confidence: high
 tags:
   - hot-context
@@ -93,7 +93,9 @@ source_files:
 - Supabase RLS/default grants remain live-verified through all 62 migrations:
   every public table has RLS, grant/default-ACL drift is zero, and the unused
   hosted Data API is disabled.
-- Theme adapters depend on `listStorefront.themes[].isMainTheme`; no ikas theme webhook exists.
+- The 2026-08-09 ikas v1/v2 `Storefront` schema removed the theme fields.
+  Script management uses `id/name`; automatic placement is fail-closed, legacy
+  evidence is unverifiable, and explicit review mounts remain available.
 - Deferred gaps: unsupported-theme warning UI, authenticated dashboard smoke, Sentry post-deploy health.
 - Review-email V5/V3.2 backend is deployed but disabled. Activation still needs
   a managed Supabase backup plus verified restore window, journal gates, SES
