@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-06-09
-updated: 2026-08-03
-last_verified: 2026-08-03
+updated: 2026-08-08
+last_verified: 2026-08-08
 confidence: high
 tags:
   - runbook
@@ -19,6 +19,7 @@ related:
   - "[[ADR_0030_Cleanup_Hardening]]"
   - "[[ADR_0035_QStash_Scheduler_For_Maintenance]]"
   - "[[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]]"
+  - "[[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]]"
   - "[[Database_Map]]"
   - "[[Async_Media_Pipeline]]"
   - "[[Review_Video_Manual_Repair_Runbook]]"
@@ -34,6 +35,9 @@ source_files:
   - "src/lib/ikas-installation-lifecycle.ts"
   - "src/lib/product-reconciliation.ts"
   - "src/lib/product-reconciliation-dispatcher.ts"
+  - "src/app/api/admin/sync-products/route.ts"
+  - "src/app/api/internal/product-reconciliation/route.ts"
+  - "workers/widget-delivery/src/index.ts"
   - "src/app/api/internal/product-reconciliation/route.ts"
   - "scripts/verify-product-lifecycle.ts"
   - "src/app/api/admin/daily-maintenance/route.ts"
@@ -65,7 +69,10 @@ failure playbooks. Current source of truth: QStash schedules trigger
 source-of-truth. Real cleanup deletes are guarded by `MediaCleanupRun`,
 `OrphanImageQuarantine`, idempotent provider jobs, and breaker rules. Never run
 manual cleanup, force flags, provider deletes, schedule mutation, or deploy
-commands without explicit scope, risk, rollback, and approval.
+commands without explicit scope, risk, rollback, and approval. Product
+reconciliation's backend/DB is accepted for the current pre-launch footprint
+only. The live slug Worker cutover, manual dispatch truthfulness, and the
+current discovery/write path remain open; none is a 5,000-store capacity proof.
 
 Operational reference for the scheduled background jobs and how their failures surface.
 
@@ -106,11 +113,61 @@ pnpm verify:product-lifecycle --expect=expanded
 pnpm verify:product-lifecycle --expect=ready
 ```
 
-`expanded` is the post-migration schema/RLS/default-deny gate. `ready` is a
-later live rollout gate requiring a fresh completed run per active installation
-and zero missing/unknown/stale active evidence. Do not start Release B consumer
-enforcement, resolve identity conflicts by SQL, or treat source-only code as
-live evidence. See [[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]].
+`expanded` is the post-migration schema/RLS/default-deny gate. `ready` requires
+a fresh completed run per active installation and zero missing/unknown/stale
+active evidence. Both modes passed on 2026-08-03 after one bounded QStash run
+for the active installation. This proves current convergence, not large-scale
+capacity or Release B deployment.
+
+The same read-only audit found that global installation discovery still loops
+through every active installation in one maintenance invocation, evidence
+writes execute once per product, terminal daily runs have no retention policy,
+and store erasure does not include `ProductSnapshot` or
+`ProductReconciliationRun`. Do not resolve those gaps with direct SQL, manual
+row deletion, a longer function timeout, or unbounded retries. Close lifecycle-
+table erasure and bounded run retention before Release B rollout. Cursor global
+discovery and reduce write amplification before any 5,000-store claim. See
+[[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]] and
+[[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]].
+
+### Product reconciliation operational limitations
+
+- `POST /api/admin/sync-products` currently awaits but does not inspect the
+  dispatcher's boolean result. Until `A0-DISPATCH` is fixed and deployed, a
+  `202` proves only that a DB-owned run exists; it does not prove QStash accepted
+  the message. Verify QStash delivery and run completion separately.
+- `busy` or future-`nextRetryAt` claims return without publishing a delayed
+  continuation. Retryable processing failures set `nextRetryAt` and return an
+  error, but an early QStash redelivery may then become `deferred` and stop.
+  Daily maintenance is the current recovery path. Do not hide this by extending
+  function timeout or manually editing `nextRetryAt`; implement `B-RETRY` so the
+  persisted retry time schedules a delayed continuation.
+- The scan validates each page and rejects duplicate IDs within that page. It
+  does not yet prove a stable provider snapshot or reject duplicates/drift
+  across different pages. Do not enable Release B absence-based consumer denial
+  until `B-SCAN` and `B-EVIDENCE` close.
+- `identity_conflict` is deliberately sticky, but there is no current alert or
+  audited resolution workflow. Never resolve it by SQL. Follow
+  `B-CONFLICT-OPS` in the canonical audit matrix.
+
+### Slug Worker rollout acceptance
+
+The backend route and merged Worker source are `no-store`, but on 2026-08-08
+the live Worker still returned `MISS` followed by `HIT`, with a serving
+deployment from before Release A. Deployment is a separate approved mutation.
+After that mutation:
+
+1. Confirm the serving deployment is the approved Worker source/version.
+2. Send two consecutive safe `ratings-by-slug` GET requests.
+3. Require `Cache-Control: no-store` on both and reject any
+   `CF-Cache-Status: HIT` or `X-Renuvex-Edge-Cache: HIT`.
+4. Wait the old widget runtime's five-minute session-cache window, then repeat
+   the storefront slug-only acceptance.
+5. Record timestamp, commit, Worker deployment id, and sanitized headers. Do not
+   record store/product identifiers or credentials.
+
+This acceptance closes only `A0-EDGE`; it does not close lifecycle-table
+erasure, Release B, or scale gates.
 
 Review-email erasure uses one store advisory-lock order:
 `IkasStoreInstallation` first, then the exact `StoreDataErasureRun` row. OAuth
@@ -301,6 +358,8 @@ Response: `status` (ok|tripped), `scanned`, `currentOrphans`, `quarantinedNew`, 
 - [[Backend_API_Map]]
 - [[ADR_0029_Review_Media_Metadata]]
 - [[ADR_0030_Cleanup_Hardening]]
+- [[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]]
+- [[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]]
 - [[Database_Map]]
 - [[Review_Video_Canary_Runbook]]
 - [[Review_Video_Manual_Repair_Runbook]]

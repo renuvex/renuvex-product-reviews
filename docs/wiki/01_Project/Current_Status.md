@@ -3,8 +3,8 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-03
-last_verified: 2026-08-03
+updated: 2026-08-08
+last_verified: 2026-08-08
 confidence: high
 source_files: []
 tags:
@@ -16,6 +16,7 @@ related:
   - "[[Open_Questions]]"
   - "[[Yotpo_Style_Widget_Modular_Architecture]]"
   - "[[Yotpo_Protein_Ocean_Widget_Research]]"
+  - "[[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]]"
 ---
 
 # Current Status - Renuvex Product Reviews
@@ -29,7 +30,7 @@ delivery, QStash maintenance scheduling, and public read-cache paths are live.
 Remaining public-launch blockers are mainly security hardening, operational
 observability, authenticated dashboard smoke, and product polish.
 The review-request email V5 plus Multi-Product Batch/Envelope V3.2 packages are
-deployed as a disabled backend and schema; all 60 Production migrations are
+deployed as a disabled backend and schema; all 62 Production migrations are
 applied, customer/request/job/attempt lifecycle rows remain zero, and
 `REVIEW_EMAIL_ENABLED` remains absent. Report-mode maintenance has produced
 only successful, error-free `ReviewEmailPurgeRun` audit rows.
@@ -93,21 +94,22 @@ Active development on the production test store. Core review, image, Mux video, 
 - Widget-side uncaught errors forwarded to Sentry via a 637-byte (gzip) in-widget reporter and a rate-limited public endpoint (`/api/public/widget-error`). No SDK shipped to the widget bundle; storefront customer privacy and Core Web Vitals preserved. See [[ADR_0010_Widget_Error_Forwarding]].
 
 ## In Progress / Active Follow-Ups
-- Product lifecycle Release A is implemented in source on an additive 62nd
-  migration: snapshots become evidence/tombstones, product webhook payloads are
-  wakeups only, install/manual/daily synchronization uses bounded
-  installation-fenced reconciliation, and slug-only ratings fail closed without
-  direct `Review.slug` fallback. This is not deployed or live-verified yet.
-  Release B consumer/media/email/admin enforcement remains blocked until the
-  deployed schema passes `--expect=expanded`, reconciliation converges, and the
-  read-only `verify:product-lifecycle --expect=ready` gate passes. See
-  [[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]].
+- Product lifecycle Release A's database/backend is merged and deployed on the
+  additive 62nd migration. `--expect=expanded` and `--expect=ready` passed after
+  one bounded QStash reconciliation run for the active installation. The live
+  Worker cutover is not closed: a 2026-08-08 read-only probe still returned
+  `MISS` then `HIT` for `ratings-by-slug`, while current source requires
+  `no-store`. Manual sync also returns `202` without checking whether QStash
+  publish succeeded. Release B consumer/media/email/admin enforcement remains
+  unimplemented. See
+  [[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]] and
+  [[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]].
 - Preview compatibility cleanup: after the first production deployment proves
   normal editor traffic uses only canonical static preview paths, confirm the
   legacy `/preview?widget=&scene=` redirect has no current app callers and
   remove that bounded compatibility route in a separate cleanup.
 - Supabase Data API/RLS/default-grants closure is complete. Production has all
-  60 migrations applied, zero public tables without RLS, zero effective Data
+  62 migrations applied, zero public tables without RLS, zero effective Data
   API-role/default-ACL drift, and the unused hosted Data API is disabled. Keep
   `pnpm verify:supabase-data-api-surface` as a read-only release/audit gate.
 - Operational smoke gates: authenticated dashboard smoke and Sentry post-deploy health checks should be run after meaningful admin/runtime deploys.
@@ -146,6 +148,15 @@ Active development on the production test store. Core review, image, Mux video, 
   `active_verified` snapshot before reading by product id. Missing, stale,
   unknown, or conflicting evidence returns no slug-only rating; direct historical
   `Review.slug` fallback has been removed in Release A source.
+- Product lifecycle closure is staged. Immediate gates are the approved Worker
+  no-store rollout, truthful manual-sync dispatch status, and a required Worker
+  dry-run CI gate. Release B additionally requires lifecycle-table erasure,
+  bounded run retention, provider-absence/scan-integrity policy, timely delayed
+  retries, conflict operations, and all consumer/media/email/admin gates. The
+  2026-08-03 audit also measured 31 unreferenced unknown snapshots, a globally
+  unbounded installation discovery loop, and one evidence write per product.
+  Do not direct-SQL-delete rows or claim 5,000/100,000-store readiness. See
+  [[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]].
 
 ## Important Decisions
 - [[ADR_0001_Project_Stack]] — Next.js 16 App Router + Prisma + Postgres (Supabase)
@@ -159,23 +170,42 @@ Active development on the production test store. Core review, image, Mux video, 
 - [[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]] - product absence is a tombstone, reappearing ids conflict, and bounded reconciliation plus live readiness gates consumer enforcement.
 
 ## Next Recommended Steps
-1. Pass Release A CI, deploy the additive migration/backend, verify
-   `--expect=expanded`, let bounded reconciliation converge, and require
-   `--expect=ready` before preparing Release B.
-2. Run authenticated dashboard smoke and Sentry post-deploy health after the next meaningful deploy.
-3. Add a periodic Mux asset reconciliation dry-run/report if video ops needs automated orphan evidence.
-4. Validate structured-data SEO on a public PDP with approved reviews.
-5. Keep the deployed V3.2 backend feature-disabled while the AWS
+1. Close Product Lifecycle A0 in source and live operation: make manual sync
+   dispatch truthful, add the Worker dry-run CI gate, then separately deploy the
+   merged Worker/runtime and prove two consecutive slug reads remain `no-store`
+   with no edge hit after the old five-minute runtime cache window.
+2. Close Product Lifecycle A1: add lifecycle tables to generation-fenced store
+   erasure and implement an explicitly justified bounded terminal-run retention
+   policy.
+3. Before Release B, close the `B-*` evidence, scan, retry, conflict-operations,
+   and consumer-enforcement gates in the canonical audit matrix.
+4. Before a 5,000-store capacity claim, cursor global installation discovery,
+   replace measured per-product daily write amplification, add QStash
+   backpressure, and verify provider quotas plus representative load tests.
+5. Run authenticated dashboard smoke and Sentry post-deploy health after the next meaningful deploy.
+6. Add a periodic Mux asset reconciliation dry-run/report if video ops needs automated orphan evidence.
+7. Validate structured-data SEO on a public PDP with approved reviews.
+8. Keep the deployed V3.2 backend feature-disabled while the AWS
    dispatcher/sender, SES/DNS/env, merchant UI, journal, and live-acceptance
    packages proceed through separate gates.
-6. Decide and document Q&A widget scope before adding fields to schema (see [[Open_Questions]]).
-7. Add CSV import/export for reviews.
-8. Build a minimal analytics view in admin (counts, average rating trend).
+9. Decide and document Q&A widget scope before adding fields to schema (see [[Open_Questions]]).
+10. Add CSV import/export for reviews.
+11. Build a minimal analytics view in admin (counts, average rating trend).
 
 ## Last Updated
-2026-08-03
+2026-08-08
 
 ## Change Log
+- 2026-08-08: Corrected Product Lifecycle rollout status after the independent
+  audit and live edge recheck. Backend/DB readiness remains proven for one
+  active installation, but Worker no-store cutover, truthful manual dispatch,
+  lifecycle erasure/retention, Release B evidence/consumer gates, and separate
+  5,000+ store capacity work remain open.
+- 2026-08-03: Recorded Release A Production readiness and the separate
+  lifecycle scale/retention audit. Current footprint is ready; lifecycle-table
+  erasure, terminal-run retention, globally bounded discovery, write
+  amplification, quotas, and load testing remain explicit gates before Release
+  B rollout or large-scale claims.
 - 2026-07-20: PR #8 deployed the disabled review-email backend and all 59
   migrations. PR #9 (`7e89a6dd`) deployed the flag-first fix-forward through
   Vercel deployment `dpl_5KHmYepsDxhVbKoHMN9JPRA2g82s`; all six disabled

@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-08-03
-updated: 2026-08-03
-last_verified: 2026-08-03
+updated: 2026-08-08
+last_verified: 2026-08-08
 confidence: high
 tags:
   - adr
@@ -18,6 +18,7 @@ related:
   - "[[ADR_0035_QStash_Scheduler_For_Maintenance]]"
   - "[[Database_Map]]"
   - "[[Maintenance_Runbook]]"
+  - "[[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]]"
 source_files:
   - "prisma/models/product-lifecycle.prisma"
   - "prisma/migrations/20260803120000_add_product_lifecycle_evidence/migration.sql"
@@ -38,18 +39,30 @@ Use this ADR for ikas product deletion, recreation, slug fallback, product
 snapshot synchronization, and future review ownership decisions. The canonical
 identity remains `(storeId, productId)`. A slug, name, SKU, URL, image, or
 provider timestamp is not ownership evidence. Product absence becomes a
-tombstone, not a hard delete. A tombstoned id that later reappears becomes an
-operator-visible identity conflict and is never reactivated automatically.
+tombstone, not a hard delete. A tombstoned id that later reappears becomes a
+sticky identity conflict and is never reactivated automatically. The current
+verifier exposes only aggregate conflict counts; alerting and an audited
+operator-resolution path remain a Release B gate.
 
-Release A is implemented in source but is not live merely because this ADR or
-the migration exists. Release B consumer enforcement must not be deployed until
-the live read-only verifier passes `--expect=ready`.
+Release A's database/backend is merged, deployed, and ready for the current
+active installation. End-to-end storefront rollout remains open because the
+live Worker still caches `ratings-by-slug`; current source already bypasses
+that cache but has not been deployed. Release B consumer enforcement is not
+implemented or deployed. Readiness proves current convergence, not 5,000- or
+100,000-store capacity. Follow the canonical closure matrix in
+[[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]].
 
 ## Status
 
-Accepted. Release A source implementation is pending CI, merge, deployment,
-reconciliation convergence, and live verification. Release B is intentionally
-not part of Release A and remains blocked by the ready gate.
+Accepted architecture; rollout closure remains conditional. Release A's
+database/backend was merged and deployed at commit
+`6e6414989b45dd443058e252948585a34f30ed2e`; the additive 62nd migration,
+`--expect=expanded`, bounded reconciliation, and `--expect=ready` all passed on
+2026-08-03 for one active installation. A 2026-08-08 read-only edge check still
+observed a Worker `MISS` followed by `HIT` for `ratings-by-slug`, and the newest
+serving Worker deployment predates the merge. Release B is intentionally
+separate and remains unimplemented. The open gates do not invalidate the
+evidence model; they prevent claiming full live cutover or scale readiness.
 
 ## Context
 
@@ -115,10 +128,51 @@ resolves only when exactly one non-tombstone snapshot is fresh
 `active_verified`, with no unknown, stale-active, or conflict candidate. Direct
 `Review.slug` fallback and newest-snapshot-wins behavior are removed.
 
-The endpoint and Cloudflare pass-through are `no-store`. The widget stores only
-exact-id rating results in its five-minute session cache. Worker and widget
-deployment remain separate approved mutations; source changes do not alter the
-currently deployed runtime.
+The backend endpoint and merged Cloudflare Worker source are `no-store`. The
+widget source stores only exact-id rating results in its five-minute session
+cache. Worker and widget deployment remain separate approved mutations; on
+2026-08-08 the serving Worker still returned cacheable responses and a second
+request hit edge cache. Therefore the source contract is not yet the live edge
+contract.
+
+### Scale and retention boundary
+
+Tombstones are retained product-identity evidence, not a replacement copy of
+`Review`. They cover current availability, products with zero reviews, safe
+slug resolution, deletion, and sticky identity conflicts. Static storage is
+not the current cost driver.
+
+The 2026-08-03 read-only audit found four limits outside the original Release A
+acceptance gate:
+
+- store erasure does not yet delete `ProductSnapshot` or
+  `ProductReconciliationRun`; 31 unreferenced unknown rows remained for a store
+  with no installation;
+- completed daily reconciliation runs have no bounded retention policy;
+- active-installation discovery pages through every store in one maintenance
+  invocation even though each individual continuation is bounded;
+- active verification executes one row write per product and changes indexed
+  evidence fields.
+
+These findings do not invalidate canonical identity or tombstones. They make the
+current orchestration/write path NO-GO for a 5,000- or 100,000-store capacity
+claim. See [[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]] for the
+measured footprint, projections, and closure matrix.
+
+The independent audit also made the rollout sequence explicit:
+
+- deploy and prove the current Worker no-store behavior;
+- make manual sync return `202` only after QStash publish succeeds;
+- put Worker dry-run and unit checks in a required Worker-change CI gate;
+- add lifecycle-table erasure and bounded terminal-run retention;
+- before Release B, close provider-absence consistency, whole-scan integrity,
+  delayed retry, conflict operations, and every consumer/media/email/admin
+  lifecycle gate;
+- before 5,000 stores, persist global discovery progress, add backpressure,
+  reduce measured write amplification, and load-test under provider quotas.
+
+These are closure gates, not permission to add a new scheduler, cache, database,
+or provider without separate evidence.
 
 ## Two-release gate
 
@@ -134,6 +188,12 @@ product lacks a snapshot, and no active-installation snapshot remains unknown
 or stale. `unavailable_verified` and `identity_conflict` are safe fail-closed
 outcomes and do not block the ready gate.
 
+The 2026-08-03 Production run passed both verifier modes for the current active
+installation. That gate permits the architecture to proceed; it does not prove
+the live Worker cutover, authorize Release B deployment, or establish
+large-scale capacity. Every prerequisite in the canonical closure matrix must
+close at its stated stage.
+
 ## Consequences
 
 - Product deletion no longer deletes historical review ownership evidence.
@@ -143,6 +203,12 @@ outcomes and do not block the ready gate.
 - Reappearing ids require a future explicit evidence/operator process.
 - Release A adds one migration and QStash work, but no new scheduler, vendor, or
   environment variable.
+- The current small footprint is accepted, but daily run retention and
+  per-product updates must not be treated as an unbounded production design.
+- No direct SQL cleanup is authorized for lifecycle rows discovered outside an
+  installation; recovery follows the source-owned erasure workflow.
+- A successful source/DB verifier cannot substitute for live edge headers,
+  QStash delivery evidence, conflict operations, or scale measurements.
 
 ## Rollback
 
@@ -156,3 +222,8 @@ deployment.
 - [Ikas webhook scopes](https://builders.ikas.com/docs/app-development/ikas-sdk/webhooks)
 - [Shopify webhook reconciliation guidance](https://shopify.dev/docs/apps/build/webhooks)
 - [Google product review feed identifiers](https://developers.google.com/product-review-feeds/schema/)
+- [PostgreSQL HOT update requirements](https://www.postgresql.org/docs/current/storage-hot.html)
+- [Supabase database size](https://supabase.com/docs/guides/platform/database-size)
+- [Cloudflare Worker deployments](https://developers.cloudflare.com/workers/wrangler/commands/workers/#deployments)
+- [Upstash QStash flow control](https://upstash.com/docs/qstash/features/flowcontrol)
+- [[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]]

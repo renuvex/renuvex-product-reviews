@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-08-03
-last_verified: 2026-08-03
+updated: 2026-08-09
+last_verified: 2026-08-09
 confidence: high
 tags:
   - hot-context
@@ -23,6 +23,7 @@ related:
   - "[[ADR_0035_QStash_Scheduler_For_Maintenance]]"
   - "[[ADR_0036_Review_Request_Email_Architecture]]"
   - "[[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]]"
+  - "[[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]]"
   - "[[Theme_Adapter_Playbook]]"
   - "[[Test_Strategy]]"
 source_files:
@@ -61,9 +62,9 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
-- 2026-08-03: Product lifecycle Release A is source-only: tombstones, bounded
-  reconciliation and safe slug resolution are implemented. Release B remains
-  blocked by deploy-time expanded and readiness verification.
+- 2026-08-08: Product lifecycle backend/DB passed migration 62, bounded
+  reconciliation, and readiness for the active installation. Live Worker
+  no-store cutover is open (`MISS` then `HIT`); Release B is unimplemented.
 - 2026-07-28: Store erasure retries are installation-fenced; the stale live run
   closed without deleting current review/media data. See [[Maintenance_Runbook]].
 - 2026-07-28: Strict JWT admin auth requires the exact active installation/token
@@ -89,12 +90,10 @@ source_files:
 - Storefront is Turkish-first; future EN/DE needs real i18n, not only merchant copy.
 - Keep post-deploy smoke after runtime widget changes.
 - Worker V2 read origin: `widget.renuvex.app`; write/upload/video/lazy-sync origin: `app.renuvex.app`.
-- Supabase RLS/default-grants closure was live-verified for the then-deployed
-  migration set: every public table had RLS, the verifier reported zero
-  grant/default-ACL drift, and the unused hosted Data API was disabled. Release
-  A's new lifecycle table must independently pass the same expanded-schema gate
-  after deployment; source validation is not live evidence.
-- The 2026-08-09 live ikas v1/v2 `Storefront` schema removed the theme fields.
+- Supabase RLS/default grants remain live-verified through all 62 migrations:
+  every public table has RLS, grant/default-ACL drift is zero, and the unused
+  hosted Data API is disabled.
+- The 2026-08-09 ikas v1/v2 `Storefront` schema removed the theme fields.
   Script management uses `id/name`; automatic placement is fail-closed, legacy
   evidence is unverifiable, and explicit review mounts remain available.
 - Deferred gaps: unsupported-theme warning UI, authenticated dashboard smoke, Sentry post-deploy health.
@@ -103,12 +102,16 @@ source_files:
   sender/DNS/sandbox evidence, product/legal gates, and live acceptance. Signed
   app-deleted delivery and safe stale-run closure are proven; journal
   activation is not.
-- Product lifecycle Release A still needs CI, additive migration/backend deploy,
-  `verify:product-lifecycle --expect=expanded`, bounded reconciliation convergence,
-  and `--expect=ready`. Public/media/email/admin consumer enforcement in Release
-  B must not deploy before that readiness gate passes.
+- Product lifecycle backend/DB is ready only for the current footprint. A0
+  requires Worker no-store, truthful manual dispatch, and Worker CI. Release B
+  also requires erasure/retention, evidence/scan integrity, delayed retry,
+  conflict operations, and consumer gates. Scale requires bounded discovery,
+  measured write reduction, flow control, quotas, and load tests. Never
+  direct-SQL-clean orphan rows or claim 5,000/100,000-store capacity. See
+  [[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]].
 
 ## Read Next
 - [[Current_Status]]
 - [[Test_Strategy]]
 - [[ADR_0036_Review_Request_Email_Architecture]]
+- [[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]]

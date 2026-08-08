@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-30
-last_verified: 2026-07-30
+updated: 2026-08-08
+last_verified: 2026-08-08
 confidence: high
 tags:
   - index
@@ -175,6 +175,7 @@ source_files: []
 - [[Phase_2_Widget_Module_Split_Plan]]
 - [[Phase_3_Widget_Lifecycle_Hardening]]
 - [[Widget_Architecture_Audit]]
+- [[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]]
 - [[Future_Feature_Ideas]]
 
 ## Templates
@@ -192,4 +193,4 @@ source_files: []
 
 ---
 
-**Last Updated:** 2026-07-20 (review-email V5 plus Multi-Product Batch / Envelope V3.2 schema/backend deployed with all 59 migrations while globally disabled; AWS sender, review-domain DNS, activation, and outbound email remain separately gated)
+**Last Updated:** 2026-08-08 (Product lifecycle backend/DB is ready for the current active installation; live Worker no-store cutover, manual dispatch truthfulness, Release B gates, and separate 5,000+ store capacity gates remain open.)

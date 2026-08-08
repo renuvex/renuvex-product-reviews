@@ -3,8 +3,8 @@ type: database
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-03
-last_verified: 2026-08-03
+updated: 2026-08-08
+last_verified: 2026-08-08
 confidence: high
 tags:
   - database
@@ -19,6 +19,8 @@ related:
   - "[[ADR_0026_Product_Review_Summary_Read_Model]]"
   - "[[ADR_0028_Review_Cursor_Pagination]]"
   - "[[ADR_0030_Cleanup_Hardening]]"
+  - "[[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]]"
+  - "[[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]]"
 source_files:
   - "prisma/schema.prisma"
   - "prisma/models/auth-installation.prisma"
@@ -58,7 +60,9 @@ the migration files that introduced the touched model. `prisma/schema.prisma`
 is the generator/datasource entrypoint. Current high-risk areas are review
 media, AWS image pending/variant fields, Mux media jobs, summary read models,
 two-phase orphan cleanup, and `ScheduledJobRunLock` scheduler idempotency.
-Production migrations must remain expand/contract safe.
+Production migrations must remain expand/contract safe. Product lifecycle rows
+are current evidence, but their store-erasure and terminal-run retention closure
+is still open.
 
 ## Summary
 PostgreSQL via Prisma. Datamodel source of truth:
@@ -331,7 +335,9 @@ Indexes:
 
 Maintained by exact product-webhook reads and bounded install/manual/daily
 reconciliation. Missing products are never hard-deleted. See
-[[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]].
+[[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]]. `unavailableAt` is the
+existing first-unavailable retention anchor; do not add a duplicate
+`missingSince`/`deletedAt` field without a distinct proven requirement.
 
 ### `ProductReconciliationRun`
 
@@ -344,7 +350,10 @@ completion timestamps.
 State and phase values are protected by DB CHECK constraints. RLS is enabled and
 the hosted Data API roles retain no direct table privileges. Daily runs are
 unique per store/generation/trigger/slot. Reinstall atomically closes all older
-nonterminal runs as `stale_ignored`.
+nonterminal runs as `stale_ignored`. Terminal runs currently have no bounded
+retention policy, and current store erasure does not delete this table or
+`ProductSnapshot`; see
+[[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]].
 
 ### `PendingReviewImage`
 Provider-agnostic registry of uploads not yet attached to a `Review`. The model name is legacy, but current review-image source writes AWS S3 upload intents. See [[ADR_0012_Pending_Upload_Registry]] and [[ADR_0034_AWS_Review_Image_Migration]].
@@ -451,6 +460,13 @@ History documented in [[Database_Map]]. Notable themes: index churn (added → c
 - [[Widget_Customization]]
 
 ## Change Log
+- 2026-08-08: Clarified that Product Lifecycle Release A database/backend
+  readiness is proven for the active installation while Worker and operational
+  rollout gates remain separate.
+- 2026-08-03: Recorded Product Lifecycle Release A database readiness and the
+  verified retention boundary: `unavailableAt` is the existing transition
+  anchor, while lifecycle-table store erasure and terminal-run retention remain
+  open.
 - 2026-07-04: Updated provider defaults to `aws_s3` after AWS-only cutover and legacy DB alignment. Current source writes AWS image provider ids and AWS variant manifests.
 - 2026-06-09: Added `MediaCleanupRun` (cleanup audit log) and `OrphanImageQuarantine` (two-phase orphan-deletion state) models; `cleanup-images` now marks-then-sweeps orphans behind a circuit-breaker. Additive single-deploy migration. See [[ADR_0030_Cleanup_Hardening]].
 - 2026-06-08: Added image metadata columns to `ReviewMedia` and `PendingReviewImage`; upload/register now stages verified upload-response metadata and review submit carries it into committed media rows. Related: [[ADR_0029_Review_Media_Metadata]].

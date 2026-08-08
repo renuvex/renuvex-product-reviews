@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-20
-last_verified: 2026-07-20
+updated: 2026-08-08
+last_verified: 2026-08-08
 tags:
   - adr
   - decisions
@@ -55,7 +55,7 @@ related:
 | [[ADR_0034_AWS_Review_Image_Migration]] | AWS-only review image contract. New image uploads use S3/CloudFront, finite generated variants, `https://media.renuvex.app/reviews/<assetId>/<variant>.<format>` public URLs, signed private admin preview, DB-backed public reads, and breaker-guarded AWS object-family cleanup. | Accepted |
 | [[ADR_0035_QStash_Scheduler_For_Maintenance]] | Maintenance scheduling moves to a staged QStash contract: a signed internal scheduler endpoint, explicit task bodies, DB slot locks for idempotency, and Vercel Cron removal only after QStash schedule acceptance. | Accepted |
 | [[ADR_0036_Review_Request_Email_Architecture]] | Deployed-but-disabled review-request architecture with current ikas customer subscription authorization, immutable delivered-line evidence, stable package-line grouping, additive V5 lifecycle/DSR/retention, and Multi-Product Batch/Envelope V3.2. AWS sender, sandbox, review-domain DNS, IYS/privacy/legal acceptance, and activation remain separately gated. | Accepted |
-| [[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]] | `(storeId, productId)` ownership is protected by explicit provider evidence, tombstones, bounded QStash reconciliation, fail-closed slug resolution, and a live ready gate before consumer enforcement. | Accepted - Release A source pending rollout; Release B blocked |
+| [[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]] | `(storeId, productId)` ownership is protected by explicit provider evidence, tombstones, bounded QStash reconciliation, fail-closed slug resolution, and a live ready gate before consumer enforcement. | Accepted - backend/DB ready for current installation; Worker/A0, A1, Release B, and scale gates open |
 
 ## Superseded / Deprecated
 
@@ -76,6 +76,12 @@ related:
 - [[Open_Questions]]
 
 ## Change Log
+- 2026-08-08: Corrected ADR_0037 rollout status after live edge verification:
+  backend/DB readiness is proven for the active installation, while the serving
+  Worker, operational closure, Release B, and large-scale gates remain open.
+- 2026-08-03: Release A passed Production expanded/ready verification. Linked
+  the measured scale/retention audit and recorded the A.1 erasure/run-retention
+  gate plus separate 5,000-store orchestration/write gates.
 - 2026-08-03: Added [[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]]. Release A is source-only until CI, deployment, reconciliation, and live verifier acceptance; Release B remains blocked by `--expect=ready`.
 - 2026-07-20: Recorded the disabled Production schema/backend rollout for
   [[ADR_0036_Review_Request_Email_Architecture]]; AWS sender, sandbox, review
