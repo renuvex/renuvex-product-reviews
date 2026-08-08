@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-28
-updated: 2026-08-03
-last_verified: 2026-08-03
+updated: 2026-08-08
+last_verified: 2026-08-08
 confidence: high
 tags:
   - testing
@@ -180,6 +180,15 @@ Cloudflare Worker widget delivery has a separate local gate because it validates
 | `pnpm worker:widget:deploy:dry-run` | Validates the Worker script, Static Assets binding, and Wrangler config without deploying or changing Cloudflare state. |
 
 Unit coverage for this layer lives in `tests/unit/widget-origin.test.ts` and `tests/unit/widget-worker.test.ts`. It pins split-origin parsing, asset cache headers, CORS, `/__health`, and `/api/*` fail-closed behavior.
+
+As of 2026-08-08, `worker:widget:deploy:dry-run` exists as a local command but
+is not invoked by `.github/workflows/widget-smoke.yml`. Worker unit tests and a
+local dry-run therefore do not prove that every future Worker PR was gated or
+that the tested source is serving Production. Product Lifecycle gate `A0-CI`
+must make the unit/asset/type/dry-run chain required for Worker-source/config
+changes. `A0-EDGE` remains a separate post-deploy header test: two consecutive
+slug reads must stay `no-store` with no Cloudflare or Renuvex edge hit. See
+[[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]].
 
 ## Layers
 

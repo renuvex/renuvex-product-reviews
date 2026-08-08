@@ -3,8 +3,8 @@ type: api
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-03
-last_verified: 2026-08-03
+updated: 2026-08-08
+last_verified: 2026-08-08
 confidence: high
 tags:
   - api
@@ -131,7 +131,7 @@ Main API route groups:
 | PUT `/api/admin/settings` `{ widgetId, settings }` | same | Authenticates, validates a plain JSON body, resolves the widget capability fail-closed, validates/sanitizes settings, then fences and upserts. Unknown IDs return `400`; planned or non-configurable widgets return `409` before any write or theme-sync side effect. |
 | POST `/api/admin/inject-scripts` | [route.ts](src/app/api/admin/inject-scripts/route.ts) | Non-destructively create/update this app's loader script on each storefront; recreates only for known missing/deleted script ids |
 | POST `/api/admin/storefront-theme/sync` | [route.ts](src/app/api/admin/storefront-theme/sync/route.ts) | Lightweight active theme sync from ikas `listStorefront`; no script create/update |
-| POST `/api/admin/sync-products` | [route.ts](src/app/api/admin/sync-products/route.ts) | Register product webhooks, create or reuse one installation-fenced bounded reconciliation run, dispatch its opaque id, and return `202`. It no longer performs an unbounded catalog scan in the request. |
+| POST `/api/admin/sync-products` | [route.ts](src/app/api/admin/sync-products/route.ts) | Register product webhooks and create/reuse one installation-fenced bounded reconciliation run. Current source attempts to dispatch its opaque id but ignores a `false` dispatcher result and still returns `202`; until `A0-DISPATCH` closes, `202` is run-creation evidence, not QStash acceptance evidence. It no longer performs an unbounded catalog scan in the request. |
 | GET `/api/admin/daily-maintenance` (Bearer CRON) | [route.ts](src/app/api/admin/daily-maintenance/route.ts) | Manual/admin maintenance route for batch storefront theme verification, pending upload cleanup, storefront script reconciliation, video lifecycle work, provider job redispatch, and bounded product-reconciliation discovery/redispatch. Scheduled daily execution is owned by the QStash-signed `/api/internal/scheduled-jobs` receiver. |
 | GET `/api/admin/reconcile-storefront-scripts` (Bearer CRON) | [route.ts](src/app/api/admin/reconcile-storefront-scripts/route.ts) | Explicit non-destructive storefront script reconciliation for existing merchants |
 | GET `/api/admin/cleanup-pending-uploads` (Bearer CRON) | [route.ts](src/app/api/admin/cleanup-pending-uploads/route.ts) | Explicit PendingReviewImage cleanup using the same helper as daily maintenance |
@@ -176,7 +176,7 @@ installation version fence in the final transaction; losing that race returns
 | POST `/api/public/review-center/items/{itemId}/skip` | [route.ts](src/app/api/public/review-center/items/[itemId]/skip/route.ts) | Idempotently resolves one product without reviewing it, cancels its pending media through the outbox, and completes the batch only when every product is resolved. |
 | GET/POST `/api/public/review-center/unsubscribe?token=` | [route.ts](src/app/api/public/review-center/unsubscribe/route.ts) | Host-isolated confirmation and idempotent store/category recipient unsubscribe. POST serializes against send commit, creates durable suppression, and cancels pending physical email while leaving product review rights separate. |
 | GET `/api/public/ratings?storeId&productIds=a,b,c` | [route.ts](src/app/api/public/ratings/route.ts) | Bulk avg+count per canonical ikas product id from `ProductReviewSummary` (primary listing/search badge path; see [[ADR_0015_Canonical_Product_Identity]] and [[ADR_0026_Product_Review_Summary_Read_Model]]); shares a 300/min/IP read rate limit with `ratings-by-slug` |
-| GET `/api/public/ratings-by-slug?storeId&slugs=a,b,c` | [route.ts](src/app/api/public/ratings-by-slug/route.ts) | DOM-only fail-closed hint: resolve a slug only through exactly one fresh `active_verified` snapshot with no unknown/stale/conflict candidate, then read `ProductReviewSummary` by product id. It never queries `Review.slug`, always returns `no-store`, and shares the rating-read limit. |
+| GET `/api/public/ratings-by-slug?storeId&slugs=a,b,c` | [route.ts](src/app/api/public/ratings-by-slug/route.ts) | DOM-only fail-closed hint: resolve a slug only through exactly one fresh `active_verified` snapshot with no unknown/stale/conflict candidate, then read `ProductReviewSummary` by product id. It never queries `Review.slug`; the backend and merged Worker source return `no-store`. The 2026-08-08 live Worker still cached this path (`MISS` then `HIT`), so source and serving edge remain different until `A0-EDGE` is deployed and accepted. |
 | GET `/api/public/settings?publicApiKey=<merchantId>` | [route.ts](src/app/api/public/settings/route.ts) | Pure cacheable widget config read (per widgetId) plus public runtime flags including additive `runtime.themeSyncDue`. Does not read auth tokens, call ikas, or schedule theme sync. Cloud name **not** in response — it is build-time injected into the widget bundle (see [[ADR_0008_Cloud_Name_Build_Time_Only]]). |
 | POST `/api/public/storefront-theme/lazy-sync` body `{ publicApiKey }` | [route.ts](src/app/api/public/storefront-theme/lazy-sync/route.ts) | Best-effort storefront theme freshness trigger. Rate-limits first, returns `204` when the stored theme state is fresh, and schedules `syncStorefrontThemeForToken(..., 'lazy_storefront')` via `after()` only when stale. This route is write/control-plane and is not Worker-cached. |
 | POST `/api/public/upload/sign` body `{ storeId, productId?, fileName, contentType, bytes, checksumAlgorithm:"SHA256", checksumSha256 }` | [route.ts](src/app/api/public/upload/sign/route.ts) | Creates an AWS `PendingReviewImage` upload intent and returns an S3 presigned POST contract. Release A persists an exact product id when the current widget supplies it while temporarily accepting the old runtime without it; Release B will make it mandatory behind the lifecycle gate. |
@@ -290,6 +290,9 @@ Detail in [[Security_And_Rate_Limits]].
 - [[Legacy_Review_Media_Reconciliation]]
 
 ## Change Log
+- 2026-08-08: Corrected product sync and slug-read live boundaries. Manual
+  `202` does not yet prove QStash publish success, and the merged Worker
+  `no-store` source is not yet the serving edge behavior.
 - 2026-07-03: AWS-only review-image source teardown removed legacy upload/register branches, metadata backfill, provider cleanup scripts, dependency, and widget trust. Public image upload now uses AWS S3 presigned POST + register, reads use provider-neutral AWS public variant descriptors, and cleanup uses AWS object-family evidence.
 - 2026-06-20: Added `/api/public/upload/video/metrics` and returned `chunkAttempts` from video initiate so Mux direct-upload transfer/retry timing can be measured separately from processing/webhook lifecycle.
 - 2026-06-15: Added the uncached public video capability endpoint, quota-aware access reasons, structured initiate errors, and read-only admin video usage metadata. Cached public settings remain unchanged; atomic initiate reservation is still authoritative.
