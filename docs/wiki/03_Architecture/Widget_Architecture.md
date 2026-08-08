@@ -109,7 +109,12 @@ behavior wins over this page.
 ## Summary
 A classic ikas-compatible storefront entry (`public/widget.js`) loaded by every storefront page, which imports an ESM runtime and lazy chunks from `public/widget-runtime/*`. It detects context (product page, listing/search page, preview iframe), fetches per-merchant settings, and renders summaries, listings, badges, the review submission modal, and the photo review detail lightbox. The runtime is intentionally framework-free.
 
-As of 2026-05-23, public settings also return `runtime.themeAdapterKey/source`. The backend resolves this from ikas Admin API `listStorefront.themes[].isMainTheme` during script reconciliation and stores the non-sensitive result in `StoreSettings.storefrontTheme`. Ozy remains the verified adapter; unknown active themes use a conservative generic adapter.
+Public settings return `runtime.themeAdapterKey/source` plus placement gates. The
+historical 2026-05-23 Admin API contract allowed active-theme resolution, but the
+live v1/v2 schema no longer exposed those fields on 2026-08-09. The backend now
+records provider-unavailable evidence, refuses to let legacy metadata unlock
+automatic placement, and uses the conservative generic adapter for explicit review
+mounts. Script installation still uses supported storefront identifiers.
 
 As of the 2026-05-17 Phase 2 implementation work, local build output is split:
 `public/widget.js` is a small classic loader, `public/widget-runtime/runtime.js`

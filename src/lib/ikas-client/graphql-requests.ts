@@ -24,15 +24,6 @@ export const LIST_STOREFRONT = gql`
     listStorefront {
       id
       name
-      mainStorefrontThemeId
-      themes {
-        id
-        name
-        themeId
-        themeVersionId
-        isMainTheme
-        deleted
-      }
     }
   }
 `;

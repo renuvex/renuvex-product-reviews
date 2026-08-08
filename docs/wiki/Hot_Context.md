@@ -94,7 +94,9 @@ source_files:
   grant/default-ACL drift, and the unused hosted Data API was disabled. Release
   A's new lifecycle table must independently pass the same expanded-schema gate
   after deployment; source validation is not live evidence.
-- Theme adapters depend on `listStorefront.themes[].isMainTheme`; no ikas theme webhook exists.
+- The 2026-08-09 live ikas v1/v2 `Storefront` schema removed the theme fields.
+  Script management uses `id/name`; automatic placement is fail-closed, legacy
+  evidence is unverifiable, and explicit review mounts remain available.
 - Deferred gaps: unsupported-theme warning UI, authenticated dashboard smoke, Sentry post-deploy health.
 - Review-email V5/V3.2 backend is deployed but disabled. Activation still needs
   a managed Supabase backup plus verified restore window, journal gates, SES

@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-27
-updated: 2026-07-01
-last_verified: 2026-07-01
+updated: 2026-08-09
+last_verified: 2026-08-09
 confidence: high
 tags:
   - adr
@@ -42,6 +42,14 @@ source_files:
 
 ## Status
 Accepted (2026-05-27).
+
+Operational amendment (2026-08-09): the live ikas v1/v2 `Storefront` schema no
+longer exposes the theme fields used by the original allowlist evidence. The
+historical measurements below remain an audit record, but they are not current
+provider evidence. Renuvex now marks old metadata `legacy_unverifiable`, records
+new observations as `provider_unavailable`, disables automatic placement, and
+preserves only the explicit shadow-isolated review mount. The original allowlist
+can be reactivated only after the provider contract is verified again.
 
 ## Context
 [[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]] closed the **rendering isolation** axis: review-section / lightbox / form-wizard CSS no longer bleeds from arbitrary merchant themes. It explicitly left **placement** open — the supported/unsupported-theme allowlist tracked in [[Open_Questions]] and [[Theme_Adapter_Playbook]]. Today the storefront widget still attempts auto-placement on every theme via the `generic` adapter when `themeAdapterKey === 'generic'`; the public runtime carries only `themeAdapterKey` and `themeAdapterSource`, with no visibility/placement gate.

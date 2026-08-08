@@ -21,6 +21,7 @@ function metadata(overrides: Partial<StorefrontThemeMetadata> = {}): StorefrontT
     themeAdapterKey: 'ozy',
     adapterSource: 'auto',
     adapterMatchedBy: 'theme_id',
+    evidenceStatus: 'verified',
     detectedAt: '2026-05-25T03:23:14.569Z',
     ...overrides,
   };
@@ -63,11 +64,13 @@ describe('storefront theme state parsing', () => {
   });
 
   it('promotes legacy metadata shape into stable schema v2 state', () => {
-    const state = parseStorefrontThemeState(metadata({ detectedAt: '2026-05-20T00:00:00.000Z' }));
+    const { evidenceStatus: _, ...legacyMetadata } = metadata({ detectedAt: '2026-05-20T00:00:00.000Z' });
+    const state = parseStorefrontThemeState(legacyMetadata);
 
     expect(state?.schemaVersion).toBe(2);
     expect(state?.syncStatus).toBe('stable');
     expect(state?.stable?.themeAdapterKey).toBe('ozy');
+    expect(state?.stable?.evidenceStatus).toBe('legacy_unverifiable');
     expect(state?.lastChangedAt).toBe('2026-05-20T00:00:00.000Z');
   });
 
@@ -108,6 +111,7 @@ describe('public theme runtime gates', () => {
         themeAdapterKey: 'generic',
         adapterSource: 'generic_unknown',
         adapterMatchedBy: 'none',
+        evidenceStatus: 'verified',
       }),
       pending: null,
       lastCheckedAt: '2026-05-25T19:29:47.143Z',
@@ -118,6 +122,17 @@ describe('public theme runtime gates', () => {
     })).toEqual({
       themeAdapterKey: 'generic',
       themeAdapterSource: 'generic_unknown',
+      autoPlacementEnabled: false,
+      reviewsMountEnabled: true,
+    });
+  });
+
+  it('fails closed for historical metadata without current provider evidence', () => {
+    const { evidenceStatus: _, ...legacyMetadata } = metadata();
+
+    expect(buildPublicThemeRuntime(legacyMetadata)).toEqual({
+      themeAdapterKey: 'ozy',
+      themeAdapterSource: 'auto',
       autoPlacementEnabled: false,
       reviewsMountEnabled: true,
     });
@@ -179,6 +194,29 @@ describe('storefront theme state transitions', () => {
     expect(resolved.activeThemeName).toBe('Custom merchant name');
     expect(resolved.themeAdapterKey).toBe('ozy');
     expect(resolved.adapterMatchedBy).toBe('theme_id');
+    expect(resolved.evidenceStatus).toBe('verified');
+  });
+
+  it('keeps script-capable storefronts fail-closed when theme evidence is unavailable', () => {
+    const resolved = resolveStorefrontThemeMetadata([
+      { id: 'storefront-1', name: 'dev-mertcopper' },
+    ], '2026-08-09T00:00:00.000Z');
+
+    expect(resolved).toMatchObject({
+      activeStorefrontId: 'storefront-1',
+      activeStorefrontName: 'dev-mertcopper',
+      activeThemeId: null,
+      themeAdapterKey: 'generic',
+      adapterSource: 'generic_unknown',
+      adapterMatchedBy: 'none',
+      evidenceStatus: 'provider_unavailable',
+    });
+    expect(buildPublicThemeRuntime(resolved)).toEqual({
+      themeAdapterKey: 'generic',
+      themeAdapterSource: 'generic_unknown',
+      autoPlacementEnabled: false,
+      reviewsMountEnabled: true,
+    });
   });
 
   it('keeps cloned Ozy themes on the Ozy adapter while tracking the new storefront theme instance', () => {

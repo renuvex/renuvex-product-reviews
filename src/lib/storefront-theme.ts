@@ -1,6 +1,7 @@
 export type ThemeAdapterKey = 'ozy' | 'generic';
 export type ThemeAdapterSource = 'auto' | 'generic_unknown' | 'legacy_fallback';
 export type ThemeAdapterMatchedBy = 'theme_id' | 'theme_name_fallback' | 'legacy_fallback' | 'none';
+export type ThemeEvidenceStatus = 'verified' | 'provider_unavailable' | 'legacy_unverifiable';
 export type StorefrontThemeSyncReason = 'install' | 'manual' | 'dashboard_open' | 'settings_save' | 'cron' | 'verification' | 'lazy_storefront';
 export type StorefrontThemeSyncStatus = 'stable' | 'pending_verification';
 
@@ -15,6 +16,7 @@ export type StorefrontThemeMetadata = {
   themeAdapterKey: ThemeAdapterKey;
   adapterSource: ThemeAdapterSource;
   adapterMatchedBy: ThemeAdapterMatchedBy;
+  evidenceStatus: ThemeEvidenceStatus;
   detectedAt: string;
 };
 
@@ -107,7 +109,7 @@ function resolveThemeAdapter(
   activeThemeName: string | null,
 ): { themeAdapterKey: ThemeAdapterKey; adapterSource: ThemeAdapterSource; adapterMatchedBy: ThemeAdapterMatchedBy } {
   if (!hasActiveTheme) {
-    return { themeAdapterKey: 'ozy', adapterSource: 'legacy_fallback', adapterMatchedBy: 'legacy_fallback' };
+    return { themeAdapterKey: 'generic', adapterSource: 'generic_unknown', adapterMatchedBy: 'none' };
   }
 
   if (activeThemeId && THEME_ADAPTER_BY_THEME_ID[activeThemeId]) {
@@ -145,7 +147,7 @@ function findActiveTheme(storefronts: StorefrontLike[]): ActiveThemeMatch | null
 
 export function resolveStorefrontThemeMetadata(storefronts: StorefrontLike[], detectedAt = new Date().toISOString()): StorefrontThemeMetadata {
   const activeMatch = findActiveTheme(storefronts);
-  const storefront = activeMatch?.storefront;
+  const storefront = activeMatch?.storefront ?? storefronts[0];
   const theme = activeMatch?.theme;
   const activeStorefrontName = cleanString(storefront?.name);
   const activeThemeName = cleanString(theme?.name);
@@ -164,6 +166,7 @@ export function resolveStorefrontThemeMetadata(storefronts: StorefrontLike[], de
     themeAdapterKey: adapter.themeAdapterKey,
     adapterSource: adapter.adapterSource,
     adapterMatchedBy: adapter.adapterMatchedBy,
+    evidenceStatus: hasActiveTheme ? 'verified' : 'provider_unavailable',
     detectedAt,
   };
 }
@@ -186,6 +189,10 @@ function isStorefrontThemeMetadata(value: unknown): value is StorefrontThemeMeta
   return isThemeAdapterKey(candidate.themeAdapterKey) && isThemeAdapterSource(candidate.adapterSource);
 }
 
+function isThemeEvidenceStatus(value: unknown): value is ThemeEvidenceStatus {
+  return value === 'verified' || value === 'provider_unavailable' || value === 'legacy_unverifiable';
+}
+
 function coerceStorefrontThemeMetadata(value: unknown): StorefrontThemeMetadata | null {
   if (!isStorefrontThemeMetadata(value)) return null;
   return {
@@ -199,6 +206,7 @@ function coerceStorefrontThemeMetadata(value: unknown): StorefrontThemeMetadata 
     themeAdapterKey: value.themeAdapterKey,
     adapterSource: value.adapterSource,
     adapterMatchedBy: isThemeAdapterMatchedBy(value.adapterMatchedBy) ? value.adapterMatchedBy : 'none',
+    evidenceStatus: isThemeEvidenceStatus(value.evidenceStatus) ? value.evidenceStatus : 'legacy_unverifiable',
     detectedAt: cleanString(value.detectedAt) || new Date(0).toISOString(),
   };
 }
@@ -264,6 +272,7 @@ function metadataIdentity(metadata: StorefrontThemeMetadata | null) {
     metadata.themeAdapterKey,
     metadata.adapterSource,
     metadata.adapterMatchedBy,
+    metadata.evidenceStatus,
   ]
     .map((value) => value || '')
     .join('|');
@@ -391,7 +400,9 @@ export function buildPublicThemeRuntime(value: unknown): PublicThemeRuntime {
   // their adapter-selection role but never unlock placement (merchant-editable
   // theme names cannot grant placement privileges).
   const autoPlacementEnabled =
-    metadata.adapterMatchedBy === 'theme_id' && themeAdapterKey !== 'generic';
+    metadata.evidenceStatus === 'verified' &&
+    metadata.adapterMatchedBy === 'theme_id' &&
+    themeAdapterKey !== 'generic';
   // Review section is opt-in via explicit DOM mount AND shadow-isolated, so
   // it is structurally safe on any theme. The flag stays true as long as we
   // have any active-theme metadata; the FALLBACK_RUNTIME (no metadata) path
