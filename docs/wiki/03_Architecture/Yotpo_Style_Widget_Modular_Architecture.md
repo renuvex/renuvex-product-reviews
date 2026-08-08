@@ -309,10 +309,10 @@ re-measurement against the `177763`-byte pre-split baseline.
 
 ## Open Questions
 
-> 2026-05-16/23 ikas developer feedback partly answers the theme/anchor questions: ikas has **no official stable ids or `data-*` attributes today** for page areas, and **Storefront Events is the supported source of page/product context**. For active theme detection, there is no browser-runtime detector, but Admin API `listStorefront` with nested `themes[].isMainTheme: true` can identify the published theme/storefront context. See [[Ikas_Storefront_Script_Capabilities]] and [[Ikas_Theme_Limitations]].
+> Historical 2026-05-16/23 ikas feedback partly answered the theme/anchor questions: ikas has **no official stable ids or `data-*` attributes today** for page areas, and **Storefront Events is the supported source of page/product context**. The nested active-theme fields observed then were absent from the live v1/v2 schema on 2026-08-09, so they are no longer a current detection contract. See [[Ikas_Storefront_Script_Capabilities]] and [[Ikas_Theme_Limitations]].
 
 - Resolved direction: do not treat theme adapters as the primary mechanism — use Storefront Events for context, keep theme-class selectors as a temporary fallback only.
-- Active theme adapter selection now uses backend `listStorefront.themes[].isMainTheme` plus `mainStorefrontThemeId` fallback; runtime placement still needs heuristics/placeholders because this is not a DOM mount-point contract.
+- Active theme adapter selection is currently fail-closed because the live schema no longer exposes the required fields; runtime placement still needs heuristics/placeholders and explicit mounts.
 - Should public config include a `themeAdapter` setting managed from admin?
 - Should product identity be normalized on first review submission, on storefront render, or through a background sync?
 - How should verified review invitations be sent: webhook-driven order sync, scheduled order scan, or manual merchant action?

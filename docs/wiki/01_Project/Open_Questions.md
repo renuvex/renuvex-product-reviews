@@ -58,15 +58,19 @@ The 2026-05-15 Protein Ocean/Yotpo research supports a one-loader/many-widget-mo
 Reference: [[Yotpo_Style_Widget_Modular_Architecture]]
 
 ## Theme adapter coverage - partially resolved, ongoing per-theme work
-The old "Ozy hard-coded" audit risk is superseded. Current code resolves the active
-theme server-side with `listStorefront.themes[].isMainTheme`, persists stable/pending
-state in `StoreSettings.storefrontTheme`, and exposes only public
-`runtime.themeAdapterKey/source` to the widget. `themes/current-adapter.js` then selects
-`ozy` or `generic`.
+The old "Ozy hard-coded" audit risk remains structurally addressed by the adapter
+boundary, but active-theme evidence is currently unavailable. On 2026-08-09 both
+live ikas v1 and v2 schemas exposed only `id/name` for the fields Renuvex uses on
+`Storefront`; `themes` and `mainStorefrontThemeId` were absent. Current code marks
+new observations as `provider_unavailable`, treats previously stored observations as
+`legacy_unverifiable`, and keeps automatic placement fail-closed. The explicit,
+shadow-isolated review mount remains available through the generic adapter.
 
-Still open: each supported non-Ozy theme needs a stable `themeId` mapping, adapter files,
-selector spec, and smoke test. ikas still does not expose official public DOM slots, and
-planned ikas Studio `data-*` attributes are not broad enough to rely on today.
+Still open: ikas needs to publish a supported active-theme signal before automatic
+adapter allowlisting can be re-enabled. Each subsequently supported theme also needs
+a stable identifier mapping, adapter files, selector spec, and smoke test. ikas still
+does not expose official public DOM slots, and planned ikas Studio `data-*` attributes
+are not broad enough to rely on today.
 
 Detail: [[Theme_Adapter_Playbook]], [[Ikas_Theme_Limitations]],
 [[Ikas_Storefront_Script_Capabilities]].
@@ -74,9 +78,10 @@ Detail: [[Theme_Adapter_Playbook]], [[Ikas_Theme_Limitations]],
 ## Unknown-theme widget visibility policy — RESOLVED 2026-05-27
 **Resolved by [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]].** The two-layer policy
 shipped exactly as proposed: `autoPlacementEnabled` gates PDP / listing / modal badges
-on `adapterMatchedBy === 'theme_id'` AND non-generic adapter; `reviewsMountEnabled`
-acts as a backend kill-switch for the explicit-mount review section (true whenever
-active-theme metadata exists). Both flags are emitted by `buildPublicThemeRuntime`,
+on `evidenceStatus === 'verified'`, `adapterMatchedBy === 'theme_id'`, and a
+non-generic adapter; the current provider-unavailable state therefore keeps it off.
+`reviewsMountEnabled` acts as a backend kill-switch for the explicit-mount review
+section. Both flags are emitted by `buildPublicThemeRuntime`,
 consumed by the widget through `themes/current-adapter.js`, and gating points live in
 `rating-badge.js`, `listing-badges/inject.js`, and `render.js findReviewsMount`. The
 admin warning UI for unsupported themes is **deferred** as a follow-up — the runtime
