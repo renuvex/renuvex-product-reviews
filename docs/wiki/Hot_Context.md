@@ -63,12 +63,12 @@ source_files:
 
 ## Recent Important Changes
 - 2026-08-09: Product-lifecycle closure PR #30 and all 64 migrations are
-  deployed. Two-slot absence, bounded sweeps, changed-only snapshots, transient
-  observations, 42-day retention, lifecycle erasure, and QStash flow control
-  are live. PostgreSQL 16/17 and the local 5,000 x 500 benchmark pass.
-  Production `expanded` and RLS/default-grants checks pass; `ready` awaits fresh
-  coverage for one active installation. Worker, convergence, managed scale,
-  conflict operations, and Release B remain gated.
+  deployed. Worker `A0-EDGE` acceptance now returns repeated
+  `no-store/DYNAMIC/BYPASS`, and the manual QStash run completed 33/33 products
+  with no retries, conflicts, unavailable rows, or unchanged snapshot writes.
+  Production `expanded`, RLS/default-grants, and `ready` checks pass. Managed
+  scale/provider quotas, live retry/retention/erasure evidence, conflict
+  operations, delete/recreate smoke, and Release B remain gated.
 - 2026-07-28: Store erasure retries are installation-fenced; the stale live run
   closed without deleting current review/media data. See [[Maintenance_Runbook]].
 - 2026-07-28: Strict JWT admin auth requires the exact active installation/token
@@ -100,13 +100,12 @@ source_files:
   sender/DNS/sandbox evidence, product/legal gates, and live acceptance. Signed
   app-deleted delivery and safe stale-run closure are proven; journal
   activation is not.
-- Product lifecycle closure source now includes truthful dispatch, bounded
-  discovery, changed-only snapshots, evidence/scan/retry hardening, lifecycle
-  erasure, retention, and initial flow control. It has local/disposable evidence
-  only. Never direct-SQL-clean lifecycle rows or call it live: PR CI, production
-  migrations, Worker no-store, QStash convergence/readiness, managed 5K/provider
-  quotas, conflict operations, dev-store smoke, and Release B are still open.
-  No 100,000-store capacity claim exists. See
+- Product lifecycle closure now has PR CI, Production migrations, live Worker
+  no-store acceptance, one successful dev-store QStash dispatch/completion, and
+  a passing Production ready gate. Never direct-SQL-clean lifecycle rows.
+  Managed 5K/provider quotas, sustained retry/backlog and retention/erasure
+  evidence, conflict operations, delete/recreate smoke, and Release B are still
+  open. No 100,000-store capacity claim exists. See
   [[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]].
 
 ## Read Next

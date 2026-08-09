@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-02
-last_verified: 2026-08-02
+updated: 2026-08-09
+last_verified: 2026-08-09
 confidence: high
 tags:
   - performance
@@ -168,9 +168,12 @@ proxy for only these GET endpoints:
 - `/api/public/ratings-by-slug`
 - `/api/public/reviews`
 
-The read proxy keeps browser-facing `Cache-Control: public, max-age=0,
-must-revalidate`, stores eligible 200 JSON responses at the Worker edge for 60
-seconds, and marks diagnostics with `X-Renuvex-Edge-Cache: HIT | MISS | BYPASS`.
+The read proxy keeps browser-facing cacheable responses at `Cache-Control:
+public, max-age=0, must-revalidate`, stores eligible 200 JSON responses at the
+Worker edge for 60 seconds, and marks diagnostics with
+`X-Renuvex-Edge-Cache: HIT | MISS | BYPASS`. `ratings-by-slug` is the explicit
+exception: it always returns `Cache-Control: no-store` with
+`X-Renuvex-Edge-Cache: BYPASS` and is never inserted into the edge cache.
 It does not cache non-200 responses, `Set-Cookie` responses, unknown query
 parameters, or overly long URLs. `/api/public/settings` is eligible only because
 theme sync is separated from the read path: the response is a pure read with
@@ -257,6 +260,10 @@ See [[Database_Schema]] for index coverage. Notable hot paths:
 - [[ADR_0027_Review_Media_Read_Model]]
 
 ## Change Log
+- 2026-08-09: Live Worker version
+  `0bc1674d-331e-4953-a192-7f72c32d0fc4` closed the slug fallback cache gap.
+  Immediate and five-minute rechecks returned repeated
+  `no-store/DYNAMIC/BYPASS` with no edge `HIT`.
 - 2026-07-02: Verified `GET /api/public/settings` is live on the Cloudflare Worker read-cache path with `MISS -> HIT`; settings joins ratings/ratings-by-slug/reviews as an allowlisted public read while lazy-sync and write/upload/video routes remain on `app.renuvex.app`.
 - 2026-07-01: Split storefront settings read from theme lazy sync. `GET /api/public/settings` is now a pure cacheable read with additive `runtime.themeSyncDue`; `POST /api/public/storefront-theme/lazy-sync` owns the rate-limited Vercel-side `after()` sync path. Worker V2 source can cache settings reads while lazy sync and all write/upload/video routes stay on `app.renuvex.app`.
 - 2026-06-29: Review widget first render no longer waits for the media-gallery read. Main review data renders first; the media gallery is scheduled afterward and hydrates through an append-only section update, so the summary, filters, write button, review list, and current focus are not rebuilt when the delayed media read returns.

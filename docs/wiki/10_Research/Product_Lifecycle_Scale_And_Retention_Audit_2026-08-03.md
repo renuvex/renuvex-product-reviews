@@ -47,9 +47,10 @@ are deliberately separated from managed-scale and convergence claims. The
 closure implementation replaces the
 measured unbounded discovery/write path with persistent sweeps, changed-only
 snapshot writes, transient observations, bounded retention, and lifecycle
-erasure. It is merged and deployed, but the live Cloudflare Worker still
-caches `ratings-by-slug`, Release B is unimplemented, and representative managed
-PostgreSQL plus live provider/QStash capacity evidence is still open.
+erasure. It is merged and deployed. The 2026-08-09 Worker no-store and manual
+QStash dispatch/readiness gates are live-accepted. Release B is unimplemented,
+and representative managed PostgreSQL plus provider/QStash capacity evidence is
+still open.
 
 This page separates measured Production evidence from arithmetic projections.
 It does not authorize SQL cleanup, provider mutation, Release B deployment, or
@@ -66,8 +67,8 @@ a scale claim.
 - Production `--expect=expanded` result: valid with zero missing columns,
   constraints, or indexes, ready RLS, and zero Data API privileges. The full
   Data API/default-grants audit also reports zero drift.
-- Initial post-deploy `--expect=ready` result: false because the one active
-  installation has no fresh current-generation coverage. Missing referenced
+- Initial post-deploy `--expect=ready` result was false because the one active
+  installation had no fresh current-generation coverage. Missing referenced
   snapshots, unknown/stale snapshots, orphan/mismatched/terminal observations,
   invalid coverage, conflicts, and stuck run/sweep counts are all zero.
 - Database measurements below were taken in explicit read-only PostgreSQL
@@ -79,12 +80,19 @@ a scale claim.
   consecutive `widget.renuvex.app/api/public/ratings-by-slug` requests, with
   `Cache-Control: public, max-age=0, must-revalidate`. Wrangler reported the
   newest serving deployment as 2026-07-04, before the Release A merge. Current
-  Worker source uses `forceNoStore`; source and live edge are therefore not yet
-  equivalent.
-- The approved Vercel deploy and two additive Production migrations are the only
-  live mutations in the closure checkpoint. No Production Worker deploy, QStash
-  publish, or provider mutation was performed by the benchmark or evidence
-  capture.
+  Worker source uses `forceNoStore`; this is the retained pre-cutover baseline.
+- On 2026-08-09 the separately approved Worker deployment
+  `0bc1674d-331e-4953-a192-7f72c32d0fc4` returned two immediate and two
+  five-minute storefront-derived probes as `200`, `Cache-Control: no-store`,
+  `CF-Cache-Status: DYNAMIC`, and `X-Renuvex-Edge-Cache: BYPASS`. No edge `HIT`
+  occurred; `widget.js` and the build manifest also returned `200`.
+- A separately approved authenticated `POST /api/admin/sync-products` returned
+  `202` and two registered product webhooks. The QStash run completed in the
+  same minute with 33 scanned and 33 verified active products, zero retries,
+  unavailable/conflict/reconstructed rows, and zero snapshot writes. Coverage
+  recorded 33 products and Production `--expect=ready` passed with every
+  aggregate drift/stuck count at zero. No store id, product id, run id, slug,
+  token, or PII is recorded here.
 
 ## Architecture Verdict
 
@@ -186,10 +194,11 @@ returning.
 
 Therefore:
 
-- current backend/DB footprint: conditional GO; end-to-end Release A remains
-  open until all `A0-*` gates close;
+- current backend/DB footprint: GO for the single active installation evidence;
+  `A0-EDGE`, `A0-DISPATCH`, and `A0-CI` are closed;
 - Release B rollout: NO-GO until all `A0-*`, `A1-*`, and `B-*` gates close;
-- 5,000-store production claim: NO-GO on the current orchestration/write path;
+- 5,000-store production claim: NO-GO until representative managed DB,
+  provider-quota, backlog, and sustained operation evidence closes;
 - 100,000-store production claim: NO-GO without a new measured capacity model,
   provider quota contract, backpressure, and representative load tests.
 
@@ -280,9 +289,9 @@ this table instead of inventing a second sequence.
 
 | Gate | Source/local status | Still required before live GO |
 |---|---|---|
-| `A0-EDGE` | Worker source remains `no-store`; live behavior unchanged | Approved Worker deploy, two no-hit header checks, five-minute old-runtime window, storefront recheck |
-| `A0-DISPATCH` | Implemented and unit-tested | Live dev-store QStash delivery and completed run |
-| `A0-CI` | Existing Worker unit/assets/types/dry-run contract confirmed as a dedicated job | Successful PR CI on the closure commit |
+| `A0-EDGE` | Closed live: Worker `0bc1674d-331e-4953-a192-7f72c32d0fc4`; immediate and five-minute checks were repeated `no-store/DYNAMIC/BYPASS` | Keep the same acceptance for future Worker changes |
+| `A0-DISPATCH` | Closed live: authenticated `202`, two webhooks, completed 33/33 QStash run, Production ready verifier passed | Keep dispatch failure/recovery and ready verifier as rollout gates |
+| `A0-CI` | Closed on PR #30: required unit/assets/types/dry-run Worker job passed | Keep the job required for Worker-source/config changes |
 | `A1-ERASURE` | Implemented with bounded generation-fenced phases and integration tests | Production migration/deploy and lifecycle erasure acceptance |
 | `A1-RUN-RETENTION` | Implemented as 42 days with latest-success protections | Production maintenance evidence |
 | `B-EVIDENCE` | Implemented two-slot/24-hour absence policy | Live convergence and dev-store delete/recreate smoke |
@@ -296,8 +305,8 @@ this table instead of inventing a second sequence.
 
 ### Gate ordering
 
-1. Close `A0-EDGE`, `A0-DISPATCH`, and `A0-CI` before calling Release A
-   end-to-end complete.
+1. `A0-EDGE`, `A0-DISPATCH`, and `A0-CI` closed on 2026-08-09. Preserve their
+   acceptance evidence on later Worker/reconciliation changes.
 2. Close `A1-ERASURE` and `A1-RUN-RETENTION` before Release B rollout.
 3. Close every `B-*` item before enabling consumer enforcement. Source-only
    implementation is not deployment evidence.

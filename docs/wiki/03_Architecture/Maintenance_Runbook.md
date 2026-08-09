@@ -170,10 +170,15 @@ Never replace these paths with direct SQL cleanup.
 
 ### Slug Worker rollout acceptance
 
-The backend route and merged Worker source are `no-store`, but on 2026-08-08
-the live Worker still returned `MISS` followed by `HIT`, with a serving
-deployment from before Release A. Deployment is a separate approved mutation.
-After that mutation:
+The backend route and Worker source are `no-store`. A 2026-08-08 check found the
+older serving Worker still returned `MISS` followed by `HIT`. The separately
+approved deployment completed on 2026-08-09 as Worker version
+`0bc1674d-331e-4953-a192-7f72c32d0fc4`. Immediate and five-minute storefront
+rechecks both returned `200`, `Cache-Control: no-store`,
+`CF-Cache-Status: DYNAMIC`, and `X-Renuvex-Edge-Cache: BYPASS` twice. No store or
+product identifier was recorded.
+
+For later Worker changes, repeat this acceptance:
 
 1. Confirm the serving deployment is the approved Worker source/version.
 2. Send two consecutive safe `ratings-by-slug` GET requests.
@@ -184,8 +189,8 @@ After that mutation:
 5. Record timestamp, commit, Worker deployment id, and sanitized headers. Do not
    record store/product identifiers or credentials.
 
-This acceptance closes only `A0-EDGE`; it does not close lifecycle-table
-erasure, Release B, or scale gates.
+The 2026-08-09 acceptance closed `A0-EDGE`; it did not close lifecycle-table
+erasure, Release B, or managed-scale gates.
 
 Review-email erasure uses one store advisory-lock order:
 `IkasStoreInstallation` first, then the exact `StoreDataErasureRun` row. OAuth

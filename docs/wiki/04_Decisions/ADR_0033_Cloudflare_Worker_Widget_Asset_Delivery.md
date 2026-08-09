@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-06-28
-updated: 2026-08-08
-last_verified: 2026-08-08
+updated: 2026-08-09
+last_verified: 2026-08-09
 confidence: high
 tags:
   - adr
@@ -149,11 +149,12 @@ V2 public-read proxy cache contract:
 
 Cacheable read TTL is 60 seconds. Browser-facing cacheable responses remain `public, max-age=0, must-revalidate`. `ratings-by-slug` instead returns `Cache-Control: no-store` with `X-Renuvex-Edge-Cache: BYPASS`. All proxied reads retain the diagnostic header.
 
-This table is the current source contract, not proof of the serving version. A
-2026-08-08 read-only check found that the live Worker still served the older
-cacheable slug behavior (`MISS` then `HIT`) and that its newest deployment
-predated ADR_0037 Release A. The source contract becomes live only after the
-separately approved `A0-EDGE` deployment and two-request no-store acceptance in
+This table is also the live serving contract as of 2026-08-09. Worker version
+`0bc1674d-331e-4953-a192-7f72c32d0fc4` replaced the 2026-08-08 cacheable slug
+baseline. Two immediate requests and two requests after the five-minute old
+runtime window all returned `Cache-Control: no-store`,
+`CF-Cache-Status: DYNAMIC`, and `X-Renuvex-Edge-Cache: BYPASS`; no request
+returned an edge `HIT`. See
 [[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]].
 
 ## Rollout

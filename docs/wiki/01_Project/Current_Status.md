@@ -94,23 +94,27 @@ Active development on the production test store. Core review, image, Mux video, 
 - Widget-side uncaught errors forwarded to Sentry via a 637-byte (gzip) in-widget reporter and a rate-limited public endpoint (`/api/public/widget-error`). No SDK shipped to the widget bundle; storefront customer privacy and Core Web Vitals preserved. See [[ADR_0010_Widget_Error_Forwarding]].
 
 ## In Progress / Active Follow-Ups
-- Product lifecycle Release A's database/backend is merged and deployed on the
-  additive 62nd migration. `--expect=expanded` and `--expect=ready` passed after
-  one bounded QStash reconciliation run for the active installation. The live
-  Worker cutover is not closed: a 2026-08-08 read-only probe still returned
-  `MISS` then `HIT` for `ratings-by-slug`, while current source requires
-  `no-store`.
-- PR #30 merged the lifecycle closure at commit
+- Product lifecycle Release A and the closure backend are merged and deployed.
+  PR #30 merged the closure at commit
   `37ed06d5182fe6c66b3cf162ac46604bca49b9ce`. Production deployment
   `dpl_DL7H2XEMnnvZVD6qg8rzbhhrotoH` applied all 64 migrations, and the
   aggregate-only expanded verifier passed with zero missing columns,
-  constraints, or indexes plus ready RLS/default-deny grants. The initial ready
-  baseline is intentionally false only because the one active installation has
-  no current-generation catalog coverage yet; snapshot, observation, conflict,
-  and stuck-work drift counts are zero. Disposable PostgreSQL 16/17 contracts
-  and the local 5,000-installation x 500-product benchmark pass, but managed
-  PostgreSQL, provider quotas, QStash convergence, Worker acceptance, and
-  Release B remain open.
+  constraints, or indexes plus ready RLS/default-deny grants.
+- `A0-EDGE` and `A0-DISPATCH` closed on 2026-08-09. Worker deployment
+  `0bc1674d-331e-4953-a192-7f72c32d0fc4` moved `ratings-by-slug` from the
+  historical `MISS -> HIT` behavior to repeated `Cache-Control: no-store`,
+  `CF-Cache-Status: DYNAMIC`, and `X-Renuvex-Edge-Cache: BYPASS`, including the
+  five-minute storefront recheck. An authenticated manual product sync returned
+  `202`, verified two product webhook registrations, and completed one QStash
+  run with 33 scanned/verified active products, zero retries, conflicts,
+  unavailable products, or snapshot rewrites. Production
+  `verify:product-lifecycle --expect=ready` is now valid with every drift/stuck
+  count at zero.
+- Disposable PostgreSQL 16/17 contracts and the local 5,000-installation x
+  500-product benchmark pass. Representative managed PostgreSQL/provider quota
+  evidence, live retry/backlog and erasure/retention acceptance, controlled
+  identity-conflict operations, delete/recreate smoke, and Release B remain
+  open.
   See
   [[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]] and
   [[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]].

@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-30
-last_verified: 2026-07-20
+updated: 2026-08-09
+last_verified: 2026-08-09
 confidence: high
 tags:
   - deployment
@@ -102,7 +102,7 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 
 ## Cloudflare Worker widget delivery
 - Live architecture: `widget.renuvex.app` serves storefront static widget assets through Cloudflare Worker Static Assets; `app.renuvex.app` remains the Vercel backend/API/upload/Mux/QStash origin.
-- Worker V2 public-read proxying is live for `GET /api/public/settings`, `GET /api/public/ratings`, `GET /api/public/ratings-by-slug`, and `GET /api/public/reviews`. Settings is cacheable because the read route is pure and theme sync moved to `POST /api/public/storefront-theme/lazy-sync`. Every write/upload/video/lazy-sync route stays on `app.renuvex.app`.
+- Worker V2 public-read proxying is live for `GET /api/public/settings`, `GET /api/public/ratings`, `GET /api/public/ratings-by-slug`, and `GET /api/public/reviews`. Settings, exact-id ratings, and reviews are cacheable under their allowlists; `ratings-by-slug` is a `no-store` pass-through and never enters the edge cache. Theme sync stays on `POST /api/public/storefront-theme/lazy-sync`. Every write/upload/video/lazy-sync route stays on `app.renuvex.app`.
 - Live Worker: `renuvex-widget-assets`.
 - Worker custom domain: `widget.renuvex.app -> renuvex-widget-assets`.
 - Cloudflare-created DNS record: read-only proxied `AAAA 100::` for `widget.renuvex.app`.
