@@ -1,5 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+type SyncSingleProductArgs = Parameters<
+  (typeof import('@/lib/product-snapshots'))['syncSingleProductForStore']
+>;
+type HasRequiredInstallationFence = SyncSingleProductArgs extends [unknown, string, string, infer Fence]
+  ? undefined extends Fence ? false : true
+  : false;
+const syncSingleProductRequiresInstallationFence: HasRequiredInstallationFence = true;
+
 const mocks = vi.hoisted(() => ({
   transaction: vi.fn(),
   requireFence: vi.fn(),
@@ -33,6 +41,7 @@ describe('exact product snapshot verification', () => {
     mocks.findMany.mockResolvedValue([]);
     mocks.executeRaw.mockResolvedValue(1);
     mocks.createMany.mockResolvedValue({ count: 1 });
+    mocks.requireFence.mockResolvedValue({ status: 'active' });
   });
 
   it('does not mutate evidence when the provider request fails', async () => {
@@ -87,6 +96,9 @@ describe('exact product snapshot verification', () => {
       providerCreatedAt: new Date('2026-01-01T00:00:00.000Z'),
       ikasUpdatedAt: new Date('2026-08-01T00:00:00.000Z'),
       lastVerifiedAt: new Date('2026-08-01T00:00:00.000Z'),
+      exactEvidenceAuthorizedAppId: null,
+      exactEvidenceGeneration: null,
+      exactEvidenceStateVersion: null,
       unavailableAt: null,
       conflictDetectedAt: null,
       absenceFirstObservedAt: null,
@@ -132,6 +144,9 @@ describe('exact product snapshot verification', () => {
       providerCreatedAt: new Date('2026-01-01T00:00:00.000Z'),
       ikasUpdatedAt: verifiedAt,
       lastVerifiedAt: verifiedAt,
+      exactEvidenceAuthorizedAppId: 'app-1',
+      exactEvidenceGeneration: 1,
+      exactEvidenceStateVersion: 2,
       unavailableAt: null,
       conflictDetectedAt: null,
       absenceFirstObservedAt: null,
@@ -159,11 +174,58 @@ describe('exact product snapshot verification', () => {
       now: new Date('2026-08-03T00:00:00.000Z'),
       reconciliationTrigger: 'daily',
       scheduleSlot: '2026-08-03',
-      freshnessMode: 'coverage',
+      provenance: { kind: 'catalog_coverage' },
     });
 
     expect(result).toMatchObject({ active_verified: 1, changedSnapshots: 0, createdSnapshots: 0 });
     expect(mocks.executeRaw).not.toHaveBeenCalled();
     expect(mocks.createMany).not.toHaveBeenCalled();
+  });
+
+  it('requires installation provenance in the point-exact API type', () => {
+    expect(syncSingleProductRequiresInstallationFence).toBe(true);
+  });
+
+  it('requires the point-exact installation fence before reading or writing snapshots', async () => {
+    mocks.requireFence.mockRejectedValueOnce(new Error('ikas_installation_inactive'));
+    const { applyExactProductEvidence } = await import('@/lib/product-snapshots');
+
+    await expect(applyExactProductEvidence(tx as never, 'store-1', 'product-1', null, {
+      source: 'webhook_exact',
+      provenance: {
+        kind: 'point_exact',
+        installationFence: { authorizedAppId: 'app-old', generation: 1, stateVersion: 1 },
+      },
+    })).rejects.toThrow('ikas_installation_inactive');
+
+    expect(mocks.findMany).not.toHaveBeenCalled();
+    expect(mocks.executeRaw).not.toHaveBeenCalled();
+    expect(mocks.createMany).not.toHaveBeenCalled();
+  });
+
+  it('persists the exact installation tuple with a new point-exact snapshot', async () => {
+    const { applyExactProductEvidence } = await import('@/lib/product-snapshots');
+    const installationFence = { authorizedAppId: 'app-1', generation: 3, stateVersion: 7 };
+
+    await applyExactProductEvidence(tx as never, 'store-1', 'product-1', {
+      id: 'product-1',
+      name: 'Premium Shorts',
+      slug: 'premium-shorts',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-08-03T00:00:00.000Z'),
+      deleted: false,
+    }, {
+      source: 'webhook_exact',
+      provenance: { kind: 'point_exact', installationFence },
+    });
+
+    expect(mocks.requireFence).toHaveBeenCalledWith(tx, 'store-1', installationFence);
+    expect(mocks.createMany).toHaveBeenCalledWith({
+      data: [expect.objectContaining({
+        exactEvidenceAuthorizedAppId: 'app-1',
+        exactEvidenceGeneration: 3,
+        exactEvidenceStateVersion: 7,
+      })],
+    });
   });
 });

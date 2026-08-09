@@ -121,6 +121,14 @@ evidence, duplicate ids, API failure, or a partial scan cannot mark a product
 unavailable. Reinstall closes older-generation runs as `stale_ignored` and
 removes their observations.
 
+Point-exact webhook freshness is separate: the exact read must carry the
+current authorized-app/generation/state-version fence into the final
+transaction, and those three provenance fields are persisted together with
+`lastVerifiedAt`. Catalog work never creates that tuple or advances an existing
+point-exact timestamp. Coverage is accepted only when linked to the matching
+completed run; run `startedAt` is the conservative evidence time, while equal
+coverage `completedAt` and run `finishedAt` values prove availability.
+
 Daily exact-empty evidence is deliberately delayed: two distinct daily
 schedule slots at least 24 hours apart are required. Explicit provider
 `deleted=true` is immediate. Install/manual empty results and provider errors do
@@ -139,6 +147,17 @@ Production backend passed both modes for one active installation on 2026-08-09
 after manual QStash convergence. This does not prove the scheduled retention
 phases have executed under the closure deployment or authorize a journal-backed
 live uninstall.
+
+The exact-provenance branch adds the 65th additive migration. Local PostgreSQL
+16/17 acceptance passes, but the earlier live ready result is not acceptance of
+the revised contract. After deployment, wait for natural scheduled coverage and
+record only aggregate verifier output. The first completed current-generation
+run has no continuity sample and remains `BEKLİYOR`. Acceptance requires at
+least two samples, latest `coverageContinuityGapSeconds <= 129600` (36 hours),
+and a separate normal-cycle duration of at most 10 hours. The operational target
+is continuity at most 34 hours, leaving two hours before the fail-closed
+freshness boundary. Historical maximum/violation counts are diagnostic and do
+not permanently override a currently valid ready result.
 
 Terminal runs and sweeps are retained for 42 days. Cleanup processes at most
 100 rows per phase and protects the latest successful run for each active exact

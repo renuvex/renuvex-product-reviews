@@ -5,6 +5,9 @@ const EXPECTED_COLUMNS = {
     'lifecycleState',
     'providerCreatedAt',
     'lastVerifiedAt',
+    'exactEvidenceAuthorizedAppId',
+    'exactEvidenceGeneration',
+    'exactEvidenceStateVersion',
     'unavailableAt',
     'conflictDetectedAt',
     'lastEvidenceSource',
@@ -91,6 +94,7 @@ const LIFECYCLE_TABLES = Object.keys(EXPECTED_COLUMNS);
 const EXPECTED_CONSTRAINTS = [
   'ProductSnapshot_lifecycleState_check',
   'ProductSnapshot_absence_evidence_check',
+  'ProductSnapshot_exact_evidence_provenance_check',
   'ProductReconciliationRun_trigger_check',
   'ProductReconciliationRun_status_check',
   'ProductReconciliationRun_phase_check',
@@ -137,6 +141,10 @@ function parseExpectation(): Expectation {
 
 function toNumber(value: bigint | number): number {
   return typeof value === 'bigint' ? Number(value) : value;
+}
+
+function toNullableNumber(value: bigint | number | null): number | null {
+  return value === null ? null : toNumber(value);
 }
 
 async function main() {
@@ -234,6 +242,10 @@ async function main() {
         mismatchedObservations: bigint;
         terminalObservations: bigint;
         invalidCurrentCoverage: bigint;
+        coverageContinuitySamples: bigint;
+        coverageContinuityViolations: bigint;
+        latestCoverageContinuityGapSeconds: bigint | null;
+        maxCoverageContinuityGapSeconds: bigint | null;
         stuckRuns: bigint;
         stuckSweeps: bigint;
       }>>`
@@ -243,7 +255,10 @@ async function main() {
           WHERE "status" = 'active'
         ),
         current_coverage AS (
-          SELECT coverage.*
+          SELECT
+            coverage.*,
+            run."startedAt" AS "evidenceAt",
+            run."finishedAt" AS "availableAt"
           FROM "ProductCatalogCoverage" coverage
           INNER JOIN active_installations installation
             ON installation."storeId" = coverage."storeId"
@@ -257,6 +272,44 @@ async function main() {
            AND run."installationGeneration" = coverage."installationGeneration"
            AND run."installationStateVersion" = coverage."installationStateVersion"
            AND run."status" = 'completed'
+           AND run."startedAt" IS NOT NULL
+           AND run."finishedAt" IS NOT NULL
+           AND run."finishedAt" >= run."startedAt"
+           AND coverage."completedAt" = run."finishedAt"
+        ),
+        current_completed_runs AS (
+          SELECT
+            run."storeId",
+            run."id",
+            run."startedAt",
+            run."finishedAt",
+            lag(run."startedAt") OVER (
+              PARTITION BY run."storeId"
+              ORDER BY run."finishedAt" ASC, run."id" ASC
+            ) AS "previousEvidenceAt",
+            row_number() OVER (
+              PARTITION BY run."storeId"
+              ORDER BY run."finishedAt" DESC, run."id" DESC
+            ) AS "latestRank"
+          FROM "ProductReconciliationRun" run
+          INNER JOIN active_installations installation
+            ON installation."storeId" = run."storeId"
+           AND installation."authorizedAppId" = run."authorizedAppId"
+           AND installation."generation" = run."installationGeneration"
+           AND installation."stateVersion" = run."installationStateVersion"
+          WHERE run."status" = 'completed'
+            AND run."startedAt" IS NOT NULL
+            AND run."finishedAt" IS NOT NULL
+            AND run."finishedAt" >= run."startedAt"
+        ),
+        coverage_continuity AS (
+          SELECT
+            "storeId",
+            "latestRank",
+            floor(extract(epoch FROM ("finishedAt" - "previousEvidenceAt")))::bigint AS "gapSeconds",
+            ("finishedAt" - "previousEvidenceAt") > interval '36 hours' AS "violatesFreshness"
+          FROM current_completed_runs
+          WHERE "previousEvidenceAt" IS NOT NULL
         ),
         referenced_products AS (
           SELECT review."storeId", review."productId"
@@ -288,7 +341,7 @@ async function main() {
             WHERE NOT EXISTS (
               SELECT 1 FROM current_coverage coverage
               WHERE coverage."storeId" = installation."storeId"
-                AND coverage."completedAt" >= ${freshnessCutoff}
+                AND coverage."evidenceAt" >= ${freshnessCutoff}
             )
           ) AS "installationsWithoutFreshCoverage",
           (
@@ -310,8 +363,17 @@ async function main() {
             LEFT JOIN current_coverage coverage ON coverage."storeId" = snapshot."storeId"
             WHERE snapshot."lifecycleState" = 'active_verified'
               AND GREATEST(
-                COALESCE(snapshot."lastVerifiedAt", '-infinity'::timestamp),
-                COALESCE(coverage."completedAt", '-infinity'::timestamp)
+                COALESCE(
+                  CASE
+                    WHEN snapshot."exactEvidenceAuthorizedAppId" = installation."authorizedAppId"
+                     AND snapshot."exactEvidenceGeneration" = installation."generation"
+                     AND snapshot."exactEvidenceStateVersion" = installation."stateVersion"
+                    THEN snapshot."lastVerifiedAt"
+                    ELSE NULL
+                  END,
+                  '-infinity'::timestamp
+                ),
+                COALESCE(coverage."evidenceAt", '-infinity'::timestamp)
               ) < ${freshnessCutoff}
           ) AS "staleActiveSnapshots",
           (
@@ -358,7 +420,21 @@ async function main() {
                OR run."authorizedAppId" <> coverage."authorizedAppId"
                OR run."installationGeneration" <> coverage."installationGeneration"
                OR run."installationStateVersion" <> coverage."installationStateVersion"
+               OR run."startedAt" IS NULL
+               OR run."finishedAt" IS NULL
+               OR run."finishedAt" < run."startedAt"
+               OR coverage."completedAt" <> run."finishedAt"
           ) AS "invalidCurrentCoverage",
+          (SELECT count(*) FROM coverage_continuity) AS "coverageContinuitySamples",
+          (
+            SELECT count(*) FROM coverage_continuity
+            WHERE "violatesFreshness"
+          ) AS "coverageContinuityViolations",
+          (
+            SELECT max("gapSeconds") FROM coverage_continuity
+            WHERE "latestRank" = 1
+          ) AS "latestCoverageContinuityGapSeconds",
+          (SELECT max("gapSeconds") FROM coverage_continuity) AS "maxCoverageContinuityGapSeconds",
           (
             SELECT count(*)
             FROM "ProductReconciliationRun" run
@@ -395,6 +471,10 @@ async function main() {
         mismatchedObservationCount: toNumber(counts.mismatchedObservations),
         terminalObservationCount: toNumber(counts.terminalObservations),
         invalidCurrentCoverageCount: toNumber(counts.invalidCurrentCoverage),
+        coverageContinuitySampleCount: toNumber(counts.coverageContinuitySamples),
+        coverageContinuityViolationCount: toNumber(counts.coverageContinuityViolations),
+        latestCoverageContinuityGapSeconds: toNullableNumber(counts.latestCoverageContinuityGapSeconds),
+        maxCoverageContinuityGapSeconds: toNullableNumber(counts.maxCoverageContinuityGapSeconds),
         stuckRunCount: toNumber(counts.stuckRuns),
         stuckSweepCount: toNumber(counts.stuckSweeps),
       };

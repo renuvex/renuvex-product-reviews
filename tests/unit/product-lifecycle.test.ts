@@ -2,12 +2,36 @@ import { describe, expect, it } from 'vitest';
 import {
   decideProductLifecycleWrite,
   isFreshActiveProduct,
+  resolveCurrentCatalogCoverageStartedAt,
+  resolveEffectiveProductEvidenceAt,
   resolveSafeSlugProductIds,
   type CurrentProductEvidence,
   type NormalizedProductEvidence,
 } from '@/lib/product-lifecycle';
 
 const NOW = new Date('2026-08-03T12:00:00.000Z');
+const INSTALLATION = { authorizedAppId: 'app-1', generation: 3, stateVersion: 7 };
+
+function freshnessSnapshot(input: Partial<{
+  slug: string | null;
+  productId: string;
+  lifecycleState: string;
+  lastVerifiedAt: Date | null;
+  exactEvidenceAuthorizedAppId: string | null;
+  exactEvidenceGeneration: number | null;
+  exactEvidenceStateVersion: number | null;
+}> = {}) {
+  return {
+    slug: 'product',
+    productId: 'product-1',
+    lifecycleState: 'active_verified',
+    lastVerifiedAt: NOW,
+    exactEvidenceAuthorizedAppId: INSTALLATION.authorizedAppId,
+    exactEvidenceGeneration: INSTALLATION.generation,
+    exactEvidenceStateVersion: INSTALLATION.stateVersion,
+    ...input,
+  };
+}
 
 function evidence(input: Partial<NormalizedProductEvidence> = {}): NormalizedProductEvidence {
   return {
@@ -196,9 +220,13 @@ describe('product lifecycle evidence transitions', () => {
 describe('safe slug resolution', () => {
   it('resolves one fresh active id and ignores historical unavailable tombstones', () => {
     expect(resolveSafeSlugProductIds([
-      { slug: 'same-slug', productId: 'old-product', lifecycleState: 'unavailable_verified', lastVerifiedAt: NOW },
-      { slug: 'same-slug', productId: 'new-product', lifecycleState: 'active_verified', lastVerifiedAt: NOW },
-    ], NOW)).toEqual({ 'same-slug': 'new-product' });
+      freshnessSnapshot({
+        slug: 'same-slug',
+        productId: 'old-product',
+        lifecycleState: 'unavailable_verified',
+      }),
+      freshnessSnapshot({ slug: 'same-slug', productId: 'new-product' }),
+    ], INSTALLATION, NOW)).toEqual({ 'same-slug': 'new-product' });
   });
 
   it.each([
@@ -207,31 +235,69 @@ describe('safe slug resolution', () => {
     ['active_verified', new Date(NOW.getTime() - 36 * 60 * 60 * 1000 - 1)],
   ])('fails closed when the same slug also has %s evidence', (lifecycleState, lastVerifiedAt) => {
     expect(resolveSafeSlugProductIds([
-      { slug: 'shared', productId: 'product-1', lifecycleState: 'active_verified', lastVerifiedAt: NOW },
-      { slug: 'shared', productId: 'product-2', lifecycleState, lastVerifiedAt },
-    ], NOW)).toEqual({});
+      freshnessSnapshot({ slug: 'shared', productId: 'product-1' }),
+      freshnessSnapshot({ slug: 'shared', productId: 'product-2', lifecycleState, lastVerifiedAt }),
+    ], INSTALLATION, NOW)).toEqual({});
   });
 
   it('uses the documented 36-hour freshness boundary', () => {
-    expect(isFreshActiveProduct({
-      lifecycleState: 'active_verified',
+    expect(isFreshActiveProduct(freshnessSnapshot({
       lastVerifiedAt: new Date(NOW.getTime() - 36 * 60 * 60 * 1000),
-    }, NOW)).toBe(true);
-    expect(isFreshActiveProduct({ lifecycleState: 'unknown', lastVerifiedAt: NOW }, NOW)).toBe(false);
+    }), INSTALLATION, NOW)).toBe(true);
+    expect(isFreshActiveProduct(
+      freshnessSnapshot({ lifecycleState: 'unknown' }),
+      INSTALLATION,
+      NOW,
+    )).toBe(false);
   });
 
   it('uses current catalog coverage without rewriting unchanged active snapshots', () => {
     const staleSnapshot = new Date(NOW.getTime() - 48 * 60 * 60 * 1000);
 
-    expect(isFreshActiveProduct({
-      lifecycleState: 'active_verified',
-      lastVerifiedAt: staleSnapshot,
-    }, NOW, NOW)).toBe(true);
-    expect(resolveSafeSlugProductIds([{
-      slug: 'covered-product',
-      productId: 'product-1',
-      lifecycleState: 'active_verified',
-      lastVerifiedAt: staleSnapshot,
-    }], NOW, NOW)).toEqual({ 'covered-product': 'product-1' });
+    expect(isFreshActiveProduct(
+      freshnessSnapshot({ lastVerifiedAt: staleSnapshot }),
+      INSTALLATION,
+      NOW,
+      NOW,
+    )).toBe(true);
+    expect(resolveSafeSlugProductIds([
+      freshnessSnapshot({ slug: 'covered-product', lastVerifiedAt: staleSnapshot }),
+    ], INSTALLATION, NOW, NOW)).toEqual({ 'covered-product': 'product-1' });
+  });
+
+  it('ignores point-exact evidence from a previous installation', () => {
+    const snapshot = freshnessSnapshot({
+      exactEvidenceGeneration: INSTALLATION.generation - 1,
+    });
+
+    expect(resolveEffectiveProductEvidenceAt(snapshot, INSTALLATION, null)).toBeNull();
+    expect(isFreshActiveProduct(snapshot, INSTALLATION, NOW)).toBe(false);
+  });
+
+  it('accepts only tuple-linked completed coverage and uses its startedAt', () => {
+    const startedAt = new Date('2026-08-03T03:00:00.000Z');
+    const finishedAt = new Date('2026-08-03T04:00:00.000Z');
+    const coverage = {
+      storeId: 'store-1',
+      authorizedAppId: INSTALLATION.authorizedAppId,
+      installationGeneration: INSTALLATION.generation,
+      installationStateVersion: INSTALLATION.stateVersion,
+      completedAt: finishedAt,
+      reconciliationRun: {
+        storeId: 'store-1',
+        authorizedAppId: INSTALLATION.authorizedAppId,
+        installationGeneration: INSTALLATION.generation,
+        installationStateVersion: INSTALLATION.stateVersion,
+        status: 'completed',
+        startedAt,
+        finishedAt,
+      },
+    };
+
+    expect(resolveCurrentCatalogCoverageStartedAt('store-1', INSTALLATION, coverage)).toEqual(startedAt);
+    expect(resolveCurrentCatalogCoverageStartedAt('store-1', INSTALLATION, {
+      ...coverage,
+      completedAt: new Date(finishedAt.getTime() + 1),
+    })).toBeNull();
   });
 });

@@ -22,6 +22,7 @@ related:
 source_files:
   - "prisma/models/product-lifecycle.prisma"
   - "prisma/migrations/20260803120000_add_product_lifecycle_evidence/migration.sql"
+  - "prisma/migrations/20260809140000_add_product_exact_evidence_provenance/migration.sql"
   - "src/lib/product-lifecycle.ts"
   - "src/lib/product-snapshots.ts"
   - "src/lib/product-reconciliation.ts"
@@ -46,6 +47,12 @@ tombstone, not a hard delete. A tombstoned id that later reappears becomes a
 sticky identity conflict and is never reactivated automatically. The current
 verifier exposes only aggregate conflict counts; alerting and an audited
 operator-resolution path remain a Release B gate.
+
+Point-exact freshness belongs to one active installation tuple
+(`authorizedAppId`, `generation`, `stateVersion`). Catalog freshness belongs to
+a current-generation coverage row linked to a completed reconciliation run and
+uses that run's conservative `startedAt` evidence time. Legacy tuple-less
+snapshot timestamps are not point-exact freshness.
 
 The original Release A database/backend is merged and deployed for the current
 test installation. PR #30 merged the 2026-08-09 closure source and Production
@@ -84,6 +91,14 @@ PostgreSQL, provider quotas, sustained retry/backlog, lifecycle
 erasure/retention acceptance, conflict operations, and Release B remain open.
 These boundaries still prevent a full Tam GO claim.
 
+The exact-provenance closure adds the 65th source migration on its feature
+branch. Disposable PostgreSQL 16 and 17 apply all 65 migrations with empty
+schema diffs and passing RLS/default-grant, readiness-query, and integration
+checks. It is not Production evidence until the PR merges, the additive
+migration deploys, and natural current-generation coverage is observed under
+the revised verifier contract. The earlier Production `ready=true` result used
+the pre-provenance freshness semantics and is not that acceptance.
+
 ## Context
 
 Reviews already use `(storeId, productId)`, but the previous completeness layer
@@ -108,7 +123,9 @@ The only review ownership key is `(storeId, productId)`. `ProductSnapshot`
 records one of four evidence states:
 
 - `unknown`: current provider identity has not been proven;
-- `active_verified`: an exact provider result confirmed the id and is fresh;
+- `active_verified`: provider evidence confirmed the id; consumer freshness is
+  established by current-installation point-exact provenance or current full
+  catalog coverage;
 - `unavailable_verified`: explicit provider `deleted=true`, or two daily
   exact-empty observations in distinct schedule slots at least 24 hours apart,
   confirmed unavailability;
@@ -128,7 +145,10 @@ product id with the same slug starts with zero reviews.
 Signed product webhooks are wakeups. Their payload may identify a product id,
 but cannot create or reactivate product evidence. The backend performs an exact
 `listProduct(id.eq)` read and writes evidence only after the active installation
-generation is rechecked in the final transaction.
+generation is rechecked in the final transaction. Point-exact writes persist
+the exact installation tuple together with `lastVerifiedAt`; the helper cannot
+be called through `syncSingleProductForStore()` without a fence, and the final
+transaction rejects a stale fence before reading or writing snapshots.
 
 Daily maintenance creates or resumes a DB-backed global discovery sweep. Each
 sweep continuation discovers at most 50 active installations and persists its
@@ -182,8 +202,11 @@ canonical identity or deleting tombstones:
   installations per invocation;
 - per-run observations are a temporary nonterminal working set and are removed
   atomically on completion, stale closure, or exhaustion;
-- unchanged active products receive no `ProductSnapshot` update; freshness is
-  represented by current-generation `ProductCatalogCoverage`;
+- unchanged active products receive no `ProductSnapshot` update; catalog
+  freshness is represented by current-generation `ProductCatalogCoverage`
+  linked to a completed run. `run.startedAt` is the evidence time, while the
+  equal `coverage.completedAt` / `run.finishedAt` values record when that
+  evidence became available;
 - QStash flow control starts at one message per second and parallelism four;
   deduplication includes the durable progress and lease/retry epoch so a crashed
   claim can schedule a distinct post-lease recovery message.
@@ -209,6 +232,17 @@ Release A expands evidence and reconciliation while existing consumers remain
 backward compatible. `verify:product-lifecycle --expect=expanded` validates the
 additive schema, constraints, indexes, RLS, and Data API default-deny surface.
 
+The ready verifier accepts point-exact time only when all three provenance
+fields match the current installation. Coverage is accepted only when its
+installation tuple and linked completed run match, timestamps are complete and
+ordered, and coverage completion equals run finish. Store-wide coverage age is
+measured from `run.startedAt`, not completion. It also reports sanitized
+coverage-continuity gaps as `next finishedAt - previous startedAt`; a gap over
+36 hours is a correctness violation for rollout review but historical gaps do
+not permanently make the current ready state false. Natural rollout acceptance
+requires at least two current-generation samples, latest gap at most 36 hours,
+and a separate normal-cycle target of at most 10 hours.
+
 Release B will gate public review/rating reads and writes, media initiation and
 registration, review-email requests, review-center submission, and admin
 availability labels through the shared lifecycle resolver. It may be prepared
@@ -230,9 +264,10 @@ prerequisite in the canonical closure matrix must close at its stated stage.
 - Provider uncertainty hides slug-only badges instead of guessing.
 - Missed product webhooks converge through bounded reconciliation.
 - Reappearing ids require a future explicit evidence/operator process.
-- The original Release A added one migration; the closure source adds two
-  additive migrations and reuses QStash without a new scheduler, vendor, or
-  environment variable.
+- The original Release A added one migration; the scale/retention closure adds
+  two more, and exact provenance adds one nullable-column/check migration. All
+  are additive and reuse QStash without a new scheduler, vendor, or environment
+  variable.
 - Cursor sweeps, changed-only persistence, transient observations, and bounded
   retention replace the measured unbounded discovery/write path.
 - No direct SQL cleanup is authorized for lifecycle rows discovered outside an
@@ -243,7 +278,7 @@ prerequisite in the canonical closure matrix must close at its stated stage.
 
 ## Rollback
 
-Rollback is code-only. Additive columns, run rows, and tombstones remain.
+Rollback is code-only. Additive columns, exact-provenance values, run rows, and tombstones remain.
 Neither rollback nor operator recovery deletes reviews or resolves conflicts by
 direct SQL. Worker/widget rollback is independent from the application
 deployment.

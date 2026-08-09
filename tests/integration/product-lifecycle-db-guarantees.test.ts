@@ -74,7 +74,11 @@ integrationDescribe('product lifecycle evidence guarantees (PostgreSQL)', () => 
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedAt: now,
       deleted: false,
-    }, { source: 'integration_active', now }));
+    }, {
+      source: 'integration_active',
+      now,
+      provenance: { kind: 'catalog_coverage' },
+    }));
     await prisma.$transaction((tx) => applyExactProductEvidence(
       tx,
       STORE_ID,
@@ -85,6 +89,7 @@ integrationDescribe('product lifecycle evidence guarantees (PostgreSQL)', () => 
         now: new Date('2026-08-03T04:00:00.000Z'),
         reconciliationTrigger: 'daily',
         scheduleSlot: '2026-08-03',
+        provenance: { kind: 'catalog_coverage' },
       },
     ));
     await prisma.$transaction((tx) => applyExactProductEvidence(
@@ -97,6 +102,7 @@ integrationDescribe('product lifecycle evidence guarantees (PostgreSQL)', () => 
         now: new Date('2026-08-04T04:00:00.000Z'),
         reconciliationTrigger: 'daily',
         scheduleSlot: '2026-08-04',
+        provenance: { kind: 'catalog_coverage' },
       },
     ));
     await prisma.$transaction((tx) => applyExactProductEvidence(tx, STORE_ID, 'product-old', {
@@ -106,7 +112,11 @@ integrationDescribe('product lifecycle evidence guarantees (PostgreSQL)', () => 
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedAt: new Date('2026-08-04T05:00:00.000Z'),
       deleted: false,
-    }, { source: 'integration_reappeared', now: new Date('2026-08-04T05:00:00.000Z') }));
+    }, {
+      source: 'integration_reappeared',
+      now: new Date('2026-08-04T05:00:00.000Z'),
+      provenance: { kind: 'catalog_coverage' },
+    }));
 
     await expect(prisma.productSnapshot.findUniqueOrThrow({
       where: { storeId_productId: { storeId: STORE_ID, productId: 'product-old' } },
@@ -133,7 +143,11 @@ integrationDescribe('product lifecycle evidence guarantees (PostgreSQL)', () => 
       createdAt: new Date('2026-08-03T00:00:00.000Z'),
       updatedAt: new Date('2026-08-03T00:00:00.000Z'),
       deleted: false,
-    }, { source: 'integration_new_product', now: new Date('2026-08-03T00:00:00.000Z') }));
+    }, {
+      source: 'integration_new_product',
+      now: new Date('2026-08-03T00:00:00.000Z'),
+      provenance: { kind: 'catalog_coverage' },
+    }));
 
     await expect(prisma.review.count({ where: { storeId: STORE_ID, productId: 'product-new' } }))
       .resolves.toBe(0);
@@ -185,6 +199,15 @@ integrationDescribe('product lifecycle evidence guarantees (PostgreSQL)', () => 
 
   it('does not rewrite an unchanged active snapshot when coverage carries freshness', async () => {
     const firstEvidenceAt = new Date('2026-08-03T03:00:00.000Z');
+    const installation = await activateIkasStoreInstallation(
+      token('app-stable') as never,
+      new Date('2026-08-03T02:00:00.000Z'),
+    );
+    const installationFence = {
+      authorizedAppId: installation.authorizedAppId,
+      generation: installation.generation,
+      stateVersion: installation.stateVersion,
+    };
     const product = {
       id: 'product-stable',
       name: 'Stable product',
@@ -198,31 +221,109 @@ integrationDescribe('product lifecycle evidence guarantees (PostgreSQL)', () => 
       STORE_ID,
       product.id,
       product,
-      { source: 'integration_scan', now: firstEvidenceAt, freshnessMode: 'coverage' },
+      {
+        source: 'integration_exact',
+        now: firstEvidenceAt,
+        provenance: { kind: 'point_exact', installationFence },
+      },
     ));
     const before = await prisma.productSnapshot.findUniqueOrThrow({
       where: { storeId_productId: { storeId: STORE_ID, productId: product.id } },
     });
 
+    const changedProduct = { ...product, name: 'Stable product renamed' };
+    const changedResult = await prisma.$transaction((tx) => applyExactProductEvidence(
+      tx,
+      STORE_ID,
+      product.id,
+      changedProduct,
+      {
+        source: 'integration_scan',
+        now: new Date('2026-08-04T03:00:00.000Z'),
+        provenance: { kind: 'catalog_coverage' },
+      },
+    ));
+    const afterSemanticChange = await prisma.productSnapshot.findUniqueOrThrow({
+      where: { storeId_productId: { storeId: STORE_ID, productId: product.id } },
+    });
     const result = await prisma.$transaction((tx) => applyExactProductEvidence(
       tx,
       STORE_ID,
       product.id,
-      product,
+      changedProduct,
       {
         source: 'integration_scan',
-        now: new Date('2026-08-04T03:00:00.000Z'),
-        freshnessMode: 'coverage',
+        now: new Date('2026-08-04T04:00:00.000Z'),
+        provenance: { kind: 'catalog_coverage' },
       },
     ));
     const after = await prisma.productSnapshot.findUniqueOrThrow({
       where: { storeId_productId: { storeId: STORE_ID, productId: product.id } },
     });
 
+    expect(changedResult.changedSnapshots).toBe(1);
+    expect(afterSemanticChange).toMatchObject({
+      name: 'Stable product renamed',
+      exactEvidenceAuthorizedAppId: installationFence.authorizedAppId,
+      exactEvidenceGeneration: installationFence.generation,
+      exactEvidenceStateVersion: installationFence.stateVersion,
+    });
+    expect(afterSemanticChange.lastVerifiedAt?.getTime()).toBe(firstEvidenceAt.getTime());
     expect(result.changedSnapshots).toBe(0);
     expect(result.createdSnapshots).toBe(0);
-    expect(after.updatedAt.getTime()).toBe(before.updatedAt.getTime());
+    expect(after.updatedAt.getTime()).toBe(afterSemanticChange.updatedAt.getTime());
     expect(after.lastVerifiedAt?.getTime()).toBe(before.lastVerifiedAt?.getTime());
+  });
+
+  it('rejects point-exact evidence from a replaced installation generation', async () => {
+    const oldInstallation = await activateIkasStoreInstallation(
+      token('app-exact-old') as never,
+      new Date('2026-08-03T01:00:00.000Z'),
+    );
+    const oldFence = {
+      authorizedAppId: oldInstallation.authorizedAppId,
+      generation: oldInstallation.generation,
+      stateVersion: oldInstallation.stateVersion,
+    };
+    await activateIkasStoreInstallation(
+      token('app-exact-new') as never,
+      new Date('2026-08-03T02:00:00.000Z'),
+    );
+
+    await expect(prisma.$transaction((tx) => applyExactProductEvidence(
+      tx,
+      STORE_ID,
+      'product-stale-exact',
+      {
+        id: 'product-stale-exact',
+        name: 'Stale provider result',
+        slug: 'stale-provider-result',
+        deleted: false,
+      },
+      {
+        source: 'integration_stale_exact',
+        now: new Date('2026-08-03T03:00:00.000Z'),
+        provenance: { kind: 'point_exact', installationFence: oldFence },
+      },
+    ))).rejects.toMatchObject({ code: 'ikas_installation_inactive' });
+
+    await expect(prisma.productSnapshot.count({
+      where: { storeId: STORE_ID, productId: 'product-stale-exact' },
+    })).resolves.toBe(0);
+  });
+
+  it('rejects partially populated exact evidence provenance tuples', async () => {
+    await expect(prisma.productSnapshot.create({
+      data: {
+        storeId: STORE_ID,
+        productId: 'product-partial-provenance',
+        exactEvidenceAuthorizedAppId: 'app-partial',
+      },
+    })).rejects.toThrow();
+
+    await expect(prisma.productSnapshot.count({
+      where: { storeId: STORE_ID, productId: 'product-partial-provenance' },
+    })).resolves.toBe(0);
   });
 
   it('enforces a single global nonterminal reconciliation sweep', async () => {

@@ -222,7 +222,10 @@ describe('product reconciliation runner', () => {
     expect(result.continuation).toMatchObject({ reason: 'progress' });
     expect(mocks.applyEvidence).toHaveBeenCalledWith(expect.anything(), 'store-1', [
       expect.objectContaining({ productId: 'product-1' }),
-    ], expect.objectContaining({ source: 'reconciliation_scan', freshnessMode: 'coverage' }));
+    ], expect.objectContaining({
+      source: 'reconciliation_scan',
+      provenance: { kind: 'catalog_coverage' },
+    }));
     expect(mocks.executeRaw).not.toHaveBeenCalled();
     expect(mocks.run.phase).toBe('scan');
     expect(mocks.run.nextPage).toBe(2);
@@ -315,7 +318,7 @@ describe('product reconciliation runner', () => {
       source: 'reconciliation_exact',
       reconciliationTrigger: 'daily',
       scheduleSlot: '2026-08-03',
-      freshnessMode: 'coverage',
+      provenance: { kind: 'catalog_coverage' },
     }));
 
     mocks.candidates = [];
