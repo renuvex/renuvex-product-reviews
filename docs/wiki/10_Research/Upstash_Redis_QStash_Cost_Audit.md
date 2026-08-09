@@ -3,8 +3,8 @@ type: research
 project: renuvex-product-reviews
 status: active
 created: 2026-06-30
-updated: 2026-06-30
-last_verified: 2026-06-30
+updated: 2026-08-09
+last_verified: 2026-08-09
 confidence: high
 tags:
   - upstash
@@ -139,7 +139,7 @@ Redis-backed endpoints:
 | Endpoint / route | Redis purpose | Request class |
 |---|---|---|
 | `GET /api/public/ratings` | public read rate limit | selected Worker V2 read cache path |
-| `GET /api/public/ratings-by-slug` | public read rate limit | selected Worker V2 read cache path |
+| `GET /api/public/ratings-by-slug` | public read rate limit | allowlisted Worker pass-through with `no-store`; not an edge-cache path since the 2026-08-09 lifecycle cutover |
 | `POST /api/public/reviews` | review submit rate limit | backend/write |
 | `POST /api/public/upload/sign` | Cloudinary image upload signing rate limit | backend/write |
 | `POST /api/public/upload/register` | pending image registry rate limit | backend/write |

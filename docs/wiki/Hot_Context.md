@@ -62,13 +62,13 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
-- 2026-08-09: The product-lifecycle closure branch adds two-slot absence
-  evidence, bounded global sweeps, changed-only snapshot writes, transient scan
-  observations, 42-day terminal run/sweep retention, lifecycle erasure, and
-  initial QStash flow control. Disposable PostgreSQL 16/17 and a local 5,000 x
-  500 benchmark pass. This is not merged or deployed; Worker, production
-  migration/convergence, managed scale, conflict operations, and Release B are
-  still gated.
+- 2026-08-09: Product-lifecycle closure PR #30 and all 64 migrations are
+  deployed. Worker `A0-EDGE` acceptance now returns repeated
+  `no-store/DYNAMIC/BYPASS`, and the manual QStash run completed 33/33 products
+  with no retries, conflicts, unavailable rows, or unchanged snapshot writes.
+  Production `expanded`, RLS/default-grants, and `ready` checks pass. Managed
+  scale/provider quotas, live retry/retention/erasure evidence, conflict
+  operations, delete/recreate smoke, and Release B remain gated.
 - 2026-07-28: Store erasure retries are installation-fenced; the stale live run
   closed without deleting current review/media data. See [[Maintenance_Runbook]].
 - 2026-07-28: Strict JWT admin auth requires the exact active installation/token
@@ -88,7 +88,7 @@ source_files:
 - Storefront is Turkish-first; future EN/DE needs real i18n, not only merchant copy.
 - Keep post-deploy smoke after runtime widget changes.
 - Worker V2 read origin: `widget.renuvex.app`; write/upload/video/lazy-sync origin: `app.renuvex.app`.
-- Supabase RLS/default grants remain live-verified through all 62 migrations:
+- Supabase RLS/default grants remain live-verified through all 64 migrations:
   every public table has RLS, grant/default-ACL drift is zero, and the unused
   hosted Data API is disabled.
 - The 2026-08-09 ikas v1/v2 `Storefront` schema removed the theme fields.
@@ -100,13 +100,12 @@ source_files:
   sender/DNS/sandbox evidence, product/legal gates, and live acceptance. Signed
   app-deleted delivery and safe stale-run closure are proven; journal
   activation is not.
-- Product lifecycle closure source now includes truthful dispatch, bounded
-  discovery, changed-only snapshots, evidence/scan/retry hardening, lifecycle
-  erasure, retention, and initial flow control. It has local/disposable evidence
-  only. Never direct-SQL-clean lifecycle rows or call it live: PR CI, production
-  migrations, Worker no-store, QStash convergence/readiness, managed 5K/provider
-  quotas, conflict operations, dev-store smoke, and Release B are still open.
-  No 100,000-store capacity claim exists. See
+- Product lifecycle closure now has PR CI, Production migrations, live Worker
+  no-store acceptance, one successful dev-store QStash dispatch/completion, and
+  a passing Production ready gate. Never direct-SQL-clean lifecycle rows.
+  Managed 5K/provider quotas, sustained retry/backlog and retention/erasure
+  evidence, conflict operations, delete/recreate smoke, and Release B are still
+  open. No 100,000-store capacity claim exists. See
   [[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]].
 
 ## Read Next

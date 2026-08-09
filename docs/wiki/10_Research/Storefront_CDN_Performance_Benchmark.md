@@ -3,8 +3,8 @@ type: research
 project: renuvex-product-reviews
 status: active
 created: 2026-06-28
-updated: 2026-07-04
-last_verified: 2026-07-04
+updated: 2026-08-09
+last_verified: 2026-08-09
 confidence: high
 tags:
   - widget
@@ -52,7 +52,10 @@ the AWS CloudFront/S3 benchmark question.
 The current Cloudflare Worker V2 delivery is functionally correct:
 
 - `widget.renuvex.app` serves widget static assets from Cloudflare Worker Static Assets.
-- `GET /api/public/ratings`, `GET /api/public/ratings-by-slug`, and `GET /api/public/reviews` can use the Worker read-through cache.
+- `GET /api/public/ratings` and `GET /api/public/reviews` can use the Worker
+  read-through cache. `GET /api/public/ratings-by-slug` is now an allowlisted
+  `no-store` pass-through and never enters the edge cache; this correctness
+  exception was live-accepted on 2026-08-09.
 - `app.renuvex.app` remains the Vercel backend/write/upload/settings/Mux/QStash origin.
 
 The performance question is separate: from the measured Turkey client path,

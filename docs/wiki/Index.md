@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-08
-last_verified: 2026-08-08
+updated: 2026-08-09
+last_verified: 2026-08-09
 confidence: high
 tags:
   - index
@@ -193,4 +193,4 @@ source_files: []
 
 ---
 
-**Last Updated:** 2026-08-08 (Product lifecycle backend/DB is ready for the current active installation; live Worker no-store cutover, manual dispatch truthfulness, Release B gates, and separate 5,000+ store capacity gates remain open.)
+**Last Updated:** 2026-08-09 (Product lifecycle Worker no-store and manual QStash dispatch/readiness gates are live-accepted; Release B, managed-scale/provider quota, conflict operations, and sustained operational gates remain open.)

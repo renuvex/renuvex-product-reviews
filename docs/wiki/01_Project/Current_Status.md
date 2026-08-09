@@ -94,22 +94,27 @@ Active development on the production test store. Core review, image, Mux video, 
 - Widget-side uncaught errors forwarded to Sentry via a 637-byte (gzip) in-widget reporter and a rate-limited public endpoint (`/api/public/widget-error`). No SDK shipped to the widget bundle; storefront customer privacy and Core Web Vitals preserved. See [[ADR_0010_Widget_Error_Forwarding]].
 
 ## In Progress / Active Follow-Ups
-- Product lifecycle Release A's database/backend is merged and deployed on the
-  additive 62nd migration. `--expect=expanded` and `--expect=ready` passed after
-  one bounded QStash reconciliation run for the active installation. The live
-  Worker cutover is not closed: a 2026-08-08 read-only probe still returned
-  `MISS` then `HIT` for `ratings-by-slug`, while current source requires
-  `no-store`.
-- The 2026-08-09 lifecycle closure feature branch expands the source set to 64
-  additive migrations and implements truthful manual dispatch, two-slot absence
-  evidence, cross-page duplicate rejection, delayed retries, a persistent
-  50-installation global sweep, changed-only snapshots with catalog coverage,
-  generation-fenced lifecycle erasure, and 42-day terminal run/sweep retention.
-  Disposable PostgreSQL 16/17 contracts pass. A local PostgreSQL 17 benchmark
-  passed 5,000 installations x 500 products with zero unchanged snapshot
-  updates and 5.584 hours of stable-catalog message arithmetic at 1 message per
-  second. This branch is not yet merged/deployed; managed PostgreSQL, provider
-  quotas, production convergence, Worker acceptance, and Release B remain open.
+- Product lifecycle Release A and the closure backend are merged and deployed.
+  PR #30 merged the closure at commit
+  `37ed06d5182fe6c66b3cf162ac46604bca49b9ce`. Production deployment
+  `dpl_DL7H2XEMnnvZVD6qg8rzbhhrotoH` applied all 64 migrations, and the
+  aggregate-only expanded verifier passed with zero missing columns,
+  constraints, or indexes plus ready RLS/default-deny grants.
+- `A0-EDGE` and `A0-DISPATCH` closed on 2026-08-09. Worker deployment
+  `0bc1674d-331e-4953-a192-7f72c32d0fc4` moved `ratings-by-slug` from the
+  historical `MISS -> HIT` behavior to repeated `Cache-Control: no-store`,
+  `CF-Cache-Status: DYNAMIC`, and `X-Renuvex-Edge-Cache: BYPASS`, including the
+  five-minute storefront recheck. An authenticated manual product sync returned
+  `202`, verified two product webhook registrations, and completed one QStash
+  run with 33 scanned/verified active products, zero retries, conflicts,
+  unavailable products, or snapshot rewrites. Production
+  `verify:product-lifecycle --expect=ready` is now valid with every drift/stuck
+  count at zero.
+- Disposable PostgreSQL 16/17 contracts and the local 5,000-installation x
+  500-product benchmark pass. Representative managed PostgreSQL/provider quota
+  evidence, live retry/backlog and erasure/retention acceptance, controlled
+  identity-conflict operations, delete/recreate smoke, and Release B remain
+  open.
   See
   [[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]] and
   [[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]].
@@ -118,7 +123,7 @@ Active development on the production test store. Core review, image, Mux video, 
   legacy `/preview?widget=&scene=` redirect has no current app callers and
   remove that bounded compatibility route in a separate cleanup.
 - Supabase Data API/RLS/default-grants closure is complete. Production has all
-  62 migrations applied, zero public tables without RLS, zero effective Data
+  64 migrations applied, zero public tables without RLS, zero effective Data
   API-role/default-ACL drift, and the unused hosted Data API is disabled. Keep
   `pnpm verify:supabase-data-api-surface` as a read-only release/audit gate.
 - Operational smoke gates: authenticated dashboard smoke and Sentry post-deploy health checks should be run after meaningful admin/runtime deploys.
@@ -157,12 +162,12 @@ Active development on the production test store. Core review, image, Mux video, 
   `active_verified` snapshot before reading by product id. Missing, stale,
   unknown, or conflicting evidence returns no slug-only rating; direct historical
   `Review.slug` fallback has been removed in Release A source.
-- Product lifecycle closure is staged. The feature branch closes the source and
-  disposable-DB form of truthful dispatch, lifecycle erasure, terminal
-  retention, absence/scan/retry, bounded discovery, changed-only persistence,
-  and initial QStash flow control. Still open are PR/CI merge, production
-  migration and `--expect=expanded`, live Worker no-store acceptance, QStash
-  convergence and `--expect=ready`, managed PostgreSQL/provider quota evidence,
+- Product lifecycle core is merged, deployed, and expanded-schema verified.
+  Truthful dispatch, lifecycle erasure, terminal retention,
+  absence/scan/retry, bounded discovery, changed-only persistence, and initial
+  QStash flow control are in Production. Still open are live Worker no-store
+  acceptance, QStash convergence and `--expect=ready`, managed
+  PostgreSQL/provider quota evidence,
   conflict alert/operator workflow, dev-store delete/same-slug/reinstall smoke,
   and every Release B consumer/media/email/admin gate. Do not direct-SQL-delete
   lifecycle rows or claim 5,000 managed/100,000-store readiness. See
@@ -180,21 +185,18 @@ Active development on the production test store. Core review, image, Mux video, 
 - [[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]] - product absence is a tombstone, reappearing ids conflict, and bounded reconciliation plus live readiness gates consumer enforcement.
 
 ## Next Recommended Steps
-1. Merge the lifecycle closure branch only after all PR CI gates pass. Then use
-   separately approved deployment gates for the 63rd/64th migrations and run
-   production `verify:product-lifecycle --expect=expanded`.
-2. Separately deploy the approved Worker/runtime and prove two consecutive slug
+1. Separately deploy the approved Worker/runtime and prove two consecutive slug
    reads remain `no-store` with no edge hit; wait the old five-minute runtime
    cache window and repeat storefront acceptance.
-3. Let only QStash drive production convergence, then require aggregate-only
+2. Let only QStash drive production convergence, then require aggregate-only
    `--expect=ready`; do not SQL-backfill lifecycle evidence.
-4. Run the representative managed PostgreSQL 5,000 x 500 benchmark and collect
+3. Run the representative managed PostgreSQL 5,000 x 500 benchmark and collect
    provider quota, 429/5xx, backlog, WAL, vacuum, and autovacuum evidence before
    granting the managed 5K Scale GO.
-5. Add conflict alerting and a controlled operator runbook, then implement
+4. Add conflict alerting and a controlled operator runbook, then implement
    Release B consumers in a separate PR after readiness and dev-store
    delete/same-slug/reinstall acceptance.
-6. Run authenticated dashboard smoke and Sentry post-deploy health after the next meaningful deploy.
+5. Run authenticated dashboard smoke and Sentry post-deploy health after the next meaningful deploy.
 7. Add a periodic Mux asset reconciliation dry-run/report if video ops needs automated orphan evidence.
 8. Validate structured-data SEO on a public PDP with approved reviews.
 9. Keep the deployed V3.2 backend feature-disabled while the AWS
@@ -208,6 +210,13 @@ Active development on the production test store. Core review, image, Mux video, 
 2026-08-09
 
 ## Change Log
+- 2026-08-09: PR #30 merged lifecycle closure commit `37ed06d5`. Vercel
+  Production deployment `dpl_DL7H2XEMnnvZVD6qg8rzbhhrotoH` applied the 63rd
+  and 64th additive migrations. `--expect=expanded` and the full
+  RLS/default-grants audit passed. The pre-convergence ready baseline is false
+  only for one active installation without fresh catalog coverage; no lifecycle
+  data drift or stuck work was reported. Worker deployment and QStash
+  convergence remain separate gates.
 - 2026-08-09: Recorded the source/local lifecycle closure implementation and its
   64-migration, PostgreSQL 16/17, erasure/retention, bounded sweep,
   changed-only-write, and local 5,000 x 500 evidence. Production deployment,

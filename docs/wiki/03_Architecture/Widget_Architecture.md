@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-02
-last_verified: 2026-08-02
+updated: 2026-08-09
+last_verified: 2026-08-09
 confidence: high
 tags:
   - widget
@@ -332,7 +332,7 @@ merchant theme DOM; real storefront smoke remains a separate acceptance layer.
 
 ## Caching strategy
 - `PRODUCT_VIEW` does not invalidate review browser cache directly. Review cache keys and the 60 second TTL contract are owned by `reviews-api.js`; `storefront-context.js` must not write non-matching base keys or add broad prefix invalidation without a separate cache-contract change.
-- The Cloudflare Worker delivery path mirrors the widget static cache contract. V2 permits only selected cacheable public reads (`settings`, `ratings`, `ratings-by-slug`, `reviews`) through an allowlisted read-through cache. `/api/public/settings` is cacheable only because it is a pure read and lazy theme sync moved to `POST /api/public/storefront-theme/lazy-sync`. Upload, submit, video, widget-error, lazy-sync, admin, webhook, Mux, image-provider, and QStash paths must stay on `API_BASE`.
+- The Cloudflare Worker delivery path mirrors the widget static cache contract. V2 permits only selected cacheable public reads (`settings`, `ratings`, `reviews`) through an allowlisted read-through cache. `ratings-by-slug` remains allowlisted only as a `no-store` pass-through and is never inserted into the edge cache. `/api/public/settings` is cacheable only because it is a pure read and lazy theme sync moved to `POST /api/public/storefront-theme/lazy-sync`. Upload, submit, video, widget-error, lazy-sync, admin, webhook, Mux, image-provider, and QStash paths must stay on `API_BASE`.
 - `/api/public/settings` and `/api/public/reviews` set `Cache-Control: s-maxage=60, stale-while-revalidate=300` (Vercel CDN).
 - Public badge, structured-data, and review summary distribution reads use the backend `ProductReviewSummary` read model. Widget response fields stay the same, but new high-read widget surfaces should prefer explicit aggregate/read-model endpoints over repeated raw `Review.groupBy()` scans. See [[ADR_0026_Product_Review_Summary_Read_Model]].
 - Widget side: `sessionStorage` (with in-memory fallback) cache in `core/cache.js` — survives same-tab navigation; settings stay fresh for 5 minutes and can be reused stale for up to 24 hours during transient settings fetch failures.

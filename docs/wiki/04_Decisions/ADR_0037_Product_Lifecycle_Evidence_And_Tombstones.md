@@ -48,14 +48,15 @@ verifier exposes only aggregate conflict counts; alerting and an audited
 operator-resolution path remain a Release B gate.
 
 The original Release A database/backend is merged and deployed for the current
-test installation. The 2026-08-09 closure source adds two-step absence
+test installation. PR #30 merged the 2026-08-09 closure source and Production
+now includes two-step absence
 evidence, bounded global discovery, changed-only snapshot persistence,
-generation-fenced erasure, and 42-day terminal run/sweep retention. That newer
-source is not yet merged or deployed. End-to-end storefront rollout also
-remains open because the live Worker still caches `ratings-by-slug`. Release B
-consumer enforcement is not implemented or deployed. Local scale evidence is
-not production or provider-capacity evidence. Follow the canonical closure
-matrix in [[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]].
+generation-fenced erasure, and 42-day terminal run/sweep retention. The
+2026-08-09 Worker no-store and manual QStash dispatch/readiness acceptances close
+the `A0-EDGE` and `A0-DISPATCH` operational gates. Release B consumer
+enforcement is not implemented or deployed. Local scale evidence is not
+production or provider-capacity evidence. Follow the canonical closure matrix
+in [[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]].
 
 ## Status
 
@@ -63,18 +64,25 @@ Accepted architecture; rollout closure remains conditional. The original
 Release A database/backend was merged and deployed at commit
 `6e6414989b45dd443058e252948585a34f30ed2e`; the additive 62nd migration,
 `--expect=expanded`, bounded reconciliation, and `--expect=ready` all passed on
-2026-08-03 for one active installation. A 2026-08-08 read-only edge check still
-observed a Worker `MISS` followed by `HIT` for `ratings-by-slug`, and the newest
-serving Worker deployment predates the merge.
+2026-08-03 for one active installation. A 2026-08-08 read-only edge check found
+the old Worker still returned `MISS` followed by `HIT` for
+`ratings-by-slug`; this is retained as the pre-cutover baseline.
 
-The 2026-08-09 closure implementation is on a feature branch and expands the
-source migration set to 64. It passed disposable PostgreSQL 16/17 migration,
-schema-diff, RLS/default-grant, verifier, and integration checks. A local
-PostgreSQL 17 benchmark also passed the 5,000-installation by 500-product model,
-but representative managed PostgreSQL, live QStash/provider quotas, production
-`--expect=expanded`, and production convergence remain unproven. Release B is
-intentionally separate and remains unimplemented. These boundaries prevent a
-full live or Tam GO claim.
+PR #30 merged the closure implementation at
+`37ed06d5182fe6c66b3cf162ac46604bca49b9ce`. Vercel Production deployment
+`dpl_DL7H2XEMnnvZVD6qg8rzbhhrotoH` applied migrations 63 and 64. Production
+`--expect=expanded` and the RLS/default-grant audit pass. The initial
+`--expect=ready` baseline was false only because the one active installation had
+no fresh current-generation coverage. On 2026-08-09 Worker version
+`0bc1674d-331e-4953-a192-7f72c32d0fc4` passed immediate and five-minute
+`no-store/DYNAMIC/BYPASS` acceptance. An authenticated manual sync returned
+`202`; its QStash run completed 33/33 products with zero retries, conflicts,
+unavailable rows, or snapshot updates, and Production `--expect=ready` became
+valid with every drift/stuck count at zero. The local PostgreSQL 17 benchmark
+passed the 5,000-installation by 500-product model, but representative managed
+PostgreSQL, provider quotas, sustained retry/backlog, lifecycle
+erasure/retention acceptance, conflict operations, and Release B remain open.
+These boundaries still prevent a full Tam GO claim.
 
 ## Context
 
@@ -145,12 +153,12 @@ resolves only when exactly one non-tombstone snapshot is fresh
 `active_verified`, with no unknown, stale-active, or conflict candidate. Direct
 `Review.slug` fallback and newest-snapshot-wins behavior are removed.
 
-The backend endpoint and merged Cloudflare Worker source are `no-store`. The
-widget source stores only exact-id rating results in its five-minute session
-cache. Worker and widget deployment remain separate approved mutations; on
-2026-08-08 the serving Worker still returned cacheable responses and a second
-request hit edge cache. Therefore the source contract is not yet the live edge
-contract.
+The backend endpoint and Cloudflare Worker are `no-store`. The widget source
+stores only exact-id rating results in its five-minute session cache. On
+2026-08-09 Worker version `0bc1674d-331e-4953-a192-7f72c32d0fc4` returned
+repeated `no-store/DYNAMIC/BYPASS` responses immediately and after the old
+five-minute runtime window; no edge `HIT` occurred. Source and live edge
+contracts are now equal for this path.
 
 ### Scale and retention boundary
 
@@ -209,11 +217,11 @@ product lacks a snapshot, and no active-installation snapshot remains unknown
 or stale. `unavailable_verified` and `identity_conflict` are safe fail-closed
 outcomes and do not block the ready gate.
 
-The 2026-08-03 Production run passed both verifier modes for the current active
-installation. That gate permits the architecture to proceed; it does not prove
-the live Worker cutover, authorize Release B deployment, or establish
-large-scale capacity. Every prerequisite in the canonical closure matrix must
-close at its stated stage.
+The 2026-08-09 Production manual QStash run and ready verifier confirm current
+coverage for the active installation, and the live Worker cutover is accepted.
+These gates permit Release B implementation planning; they do not authorize
+Release B deployment or establish managed large-scale capacity. Every remaining
+prerequisite in the canonical closure matrix must close at its stated stage.
 
 ## Consequences
 

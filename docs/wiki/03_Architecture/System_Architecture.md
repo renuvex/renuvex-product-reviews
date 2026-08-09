@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-29
-last_verified: 2026-07-29
+updated: 2026-08-09
+last_verified: 2026-08-09
 tags:
   - architecture
   - system
@@ -101,7 +101,7 @@ See [[Auth_And_Installation_Flow]] for full trace.
 
 ### Storefront listing badges
 1. Listing page (collection / search) loads. Widget observer detects product cards.
-2. Widget collects card slugs → `GET /api/public/ratings-by-slug?storeId&slugs=a,b,c` (cached at edge).
+2. Widget collects card slugs → `GET /api/public/ratings-by-slug?storeId&slugs=a,b,c` (fail-closed Worker pass-through with `no-store`; never edge-cached).
 3. Widget injects `★ rating · count` badge into each card.
 
 ### Admin moderation
