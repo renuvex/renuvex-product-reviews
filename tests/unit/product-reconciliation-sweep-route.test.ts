@@ -15,27 +15,30 @@ vi.mock('@/lib/media/config', () => ({
   getQStashMediaConfig: vi.fn(() => ({ currentSigningKey: 'current', nextSigningKey: 'next' })),
   MediaConfigError: class MediaConfigError extends Error {},
 }));
+vi.mock('@/lib/product-reconciliation-sweep', () => ({
+  processProductReconciliationSweep: mocks.process,
+}));
+vi.mock('@/lib/product-reconciliation-dispatcher', () => ({
+  dispatchProductReconciliationSweep: mocks.dispatch,
+}));
 vi.mock('@/lib/product-reconciliation', () => ({
-  processProductReconciliationRun: mocks.process,
   ProductReconciliationError: class ProductReconciliationError extends Error {
     constructor(public readonly code: string, public readonly retryable = true) { super(code); }
   },
 }));
-vi.mock('@/lib/product-reconciliation-dispatcher', () => ({
-  dispatchProductReconciliationRun: mocks.dispatch,
-}));
 vi.mock('@/lib/server-failures', () => ({ reportServerFailure: mocks.report }));
 
-import { POST } from '@/app/api/internal/product-reconciliation/route';
+import { POST } from '@/app/api/internal/product-reconciliation-sweep/route';
 
-const RUN_ID = '11111111-1111-4111-8111-111111111111';
-const URL = 'https://app.renuvex.app/api/internal/product-reconciliation';
+const SWEEP_ID = '22222222-2222-4222-8222-222222222222';
+const URL = 'https://app.renuvex.app/api/internal/product-reconciliation-sweep';
 const continuation = {
-  run: {
-    id: RUN_ID,
-    phase: 'scan',
-    nextPage: 2,
-    candidateCursor: null,
+  sweep: {
+    id: SWEEP_ID,
+    phase: 'discover',
+    cursorStoreId: 'store-0050',
+    retainedRunCount: 0,
+    retainedSweepCount: 0,
     attempts: 0,
     leaseExpiresAt: null,
     nextRetryAt: null,
@@ -43,13 +46,13 @@ const continuation = {
   reason: 'progress',
 };
 
-describe('product reconciliation continuation route', () => {
+describe('product reconciliation sweep continuation route', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.verify.mockResolvedValue(true);
     mocks.process.mockResolvedValue({
-      runId: RUN_ID,
-      status: 'pending',
+      sweepId: SWEEP_ID,
+      status: 'completed',
       continuationRequired: false,
       continuation: null,
     });
@@ -59,17 +62,17 @@ describe('product reconciliation continuation route', () => {
   it('fails closed without a QStash signature', async () => {
     const response = await POST(new Request(URL, {
       method: 'POST',
-      body: JSON.stringify({ runId: RUN_ID }),
+      body: JSON.stringify({ sweepId: SWEEP_ID }),
     }));
 
     expect(response.status).toBe(401);
     expect(mocks.process).not.toHaveBeenCalled();
   });
 
-  it('accepts only the signed opaque run id and dispatches a requested continuation', async () => {
-    const body = JSON.stringify({ runId: RUN_ID });
+  it('accepts only an opaque sweep id and dispatches its continuation', async () => {
+    const body = JSON.stringify({ sweepId: SWEEP_ID });
     mocks.process.mockResolvedValue({
-      runId: RUN_ID,
+      sweepId: SWEEP_ID,
       status: 'pending',
       continuationRequired: true,
       continuation,
@@ -83,25 +86,13 @@ describe('product reconciliation continuation route', () => {
 
     expect(response.status).toBe(200);
     expect(mocks.verify).toHaveBeenCalledWith({ body, signature: 'signed', url: URL });
-    expect(mocks.process).toHaveBeenCalledWith(RUN_ID);
+    expect(mocks.process).toHaveBeenCalledWith(SWEEP_ID);
     expect(mocks.dispatch).toHaveBeenCalledWith(continuation);
   });
 
-  it('rejects extra payload fields before processing the run', async () => {
-    const response = await POST(new Request(URL, {
-      method: 'POST',
-      headers: { 'Upstash-Signature': 'signed' },
-      body: JSON.stringify({ runId: RUN_ID, storeId: 'must-not-cross-the-boundary' }),
-    }));
-
-    expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: 'invalid_run_id' });
-    expect(mocks.process).not.toHaveBeenCalled();
-  });
-
-  it('returns a retryable failure when continuation dispatch fails', async () => {
+  it('returns 503 without claiming continuation acceptance when publish fails', async () => {
     mocks.process.mockResolvedValue({
-      runId: RUN_ID,
+      sweepId: SWEEP_ID,
       status: 'pending',
       continuationRequired: true,
       continuation,
@@ -111,10 +102,10 @@ describe('product reconciliation continuation route', () => {
     const response = await POST(new Request(URL, {
       method: 'POST',
       headers: { 'Upstash-Signature': 'signed' },
-      body: JSON.stringify({ runId: RUN_ID }),
+      body: JSON.stringify({ sweepId: SWEEP_ID }),
     }));
 
     expect(response.status).toBe(503);
-    expect(await response.json()).toEqual({ error: 'product_reconciliation_dispatch_failed' });
+    await expect(response.json()).resolves.toEqual({ error: 'product_reconciliation_dispatch_failed' });
   });
 });

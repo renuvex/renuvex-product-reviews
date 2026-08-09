@@ -4,15 +4,15 @@ const mocks = vi.hoisted(() => ({
   transaction: vi.fn(),
   requireFence: vi.fn(),
   findMany: vi.fn(),
-  update: vi.fn(),
-  create: vi.fn(),
+  executeRaw: vi.fn(),
+  createMany: vi.fn(),
 }));
 
 const tx = {
+  $executeRaw: mocks.executeRaw,
   productSnapshot: {
     findMany: mocks.findMany,
-    update: mocks.update,
-    create: mocks.create,
+    createMany: mocks.createMany,
   },
 };
 
@@ -31,8 +31,8 @@ describe('exact product snapshot verification', () => {
     vi.clearAllMocks();
     mocks.transaction.mockImplementation((callback: (client: typeof tx) => unknown) => callback(tx));
     mocks.findMany.mockResolvedValue([]);
-    mocks.create.mockResolvedValue({ lifecycleState: 'unavailable_verified' });
-    mocks.update.mockResolvedValue({ lifecycleState: 'unavailable_verified' });
+    mocks.executeRaw.mockResolvedValue(1);
+    mocks.createMany.mockResolvedValue({ count: 1 });
   });
 
   it('does not mutate evidence when the provider request fails', async () => {
@@ -51,8 +51,8 @@ describe('exact product snapshot verification', () => {
     )).rejects.toThrow('Failed to verify ikas product snapshot');
 
     expect(mocks.transaction).not.toHaveBeenCalled();
-    expect(mocks.update).not.toHaveBeenCalled();
-    expect(mocks.create).not.toHaveBeenCalled();
+    expect(mocks.executeRaw).not.toHaveBeenCalled();
+    expect(mocks.createMany).not.toHaveBeenCalled();
   });
 
   it('does not treat an incomplete provider page as exact-empty evidence', async () => {
@@ -74,11 +74,11 @@ describe('exact product snapshot verification', () => {
     )).rejects.toThrow('Failed to verify ikas product snapshot');
 
     expect(mocks.transaction).not.toHaveBeenCalled();
-    expect(mocks.update).not.toHaveBeenCalled();
-    expect(mocks.create).not.toHaveBeenCalled();
+    expect(mocks.executeRaw).not.toHaveBeenCalled();
+    expect(mocks.createMany).not.toHaveBeenCalled();
   });
 
-  it('records an exact empty response as unavailable without hard deletion', async () => {
+  it('records webhook exact-empty evidence fail-closed without hard deletion', async () => {
     mocks.findMany.mockResolvedValue([{
       productId: 'product-1',
       lifecycleState: 'active_verified',
@@ -86,8 +86,16 @@ describe('exact product snapshot verification', () => {
       name: 'Premium Shorts',
       providerCreatedAt: new Date('2026-01-01T00:00:00.000Z'),
       ikasUpdatedAt: new Date('2026-08-01T00:00:00.000Z'),
+      lastVerifiedAt: new Date('2026-08-01T00:00:00.000Z'),
       unavailableAt: null,
       conflictDetectedAt: null,
+      absenceFirstObservedAt: null,
+      absenceLastObservedAt: null,
+      absenceObservationCount: 0,
+      absenceLastScheduleSlot: null,
+      lastEvidenceSource: 'reconciliation_scan',
+      lastSeenReconciliationRunId: null,
+      lastSyncedAt: new Date('2026-08-01T00:00:00.000Z'),
     }]);
     const listProductsForSync = vi.fn().mockResolvedValue({
       isSuccess: true,
@@ -109,10 +117,53 @@ describe('exact product snapshot verification', () => {
       pagination: { limit: 1, page: 1 },
     });
     expect(mocks.requireFence).toHaveBeenCalledOnce();
-    expect(mocks.update).toHaveBeenCalledWith(expect.objectContaining({
-      where: { storeId_productId: { storeId: 'store-1', productId: 'product-1' } },
-      data: expect.objectContaining({ lifecycleState: 'unavailable_verified' }),
-    }));
+    expect(mocks.executeRaw).toHaveBeenCalledOnce();
+    expect(mocks.createMany).not.toHaveBeenCalled();
     expect(tx.productSnapshot).not.toHaveProperty('deleteMany');
+  });
+
+  it('does not rewrite an unchanged active snapshot when coverage carries freshness', async () => {
+    const verifiedAt = new Date('2026-08-01T00:00:00.000Z');
+    mocks.findMany.mockResolvedValue([{
+      productId: 'product-1',
+      lifecycleState: 'active_verified',
+      slug: 'premium-shorts',
+      name: 'Premium Shorts',
+      providerCreatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      ikasUpdatedAt: verifiedAt,
+      lastVerifiedAt: verifiedAt,
+      unavailableAt: null,
+      conflictDetectedAt: null,
+      absenceFirstObservedAt: null,
+      absenceLastObservedAt: null,
+      absenceObservationCount: 0,
+      absenceLastScheduleSlot: null,
+      lastEvidenceSource: 'reconciliation_scan',
+      lastSeenReconciliationRunId: null,
+      lastSyncedAt: verifiedAt,
+    }]);
+    const { applyExactProductEvidenceBatch } = await import('@/lib/product-snapshots');
+
+    const result = await applyExactProductEvidenceBatch(tx as never, 'store-1', [{
+      productId: 'product-1',
+      product: {
+        id: 'product-1',
+        name: 'Premium Shorts',
+        slug: 'premium-shorts',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: verifiedAt,
+        deleted: false,
+      },
+    }], {
+      source: 'reconciliation_scan',
+      now: new Date('2026-08-03T00:00:00.000Z'),
+      reconciliationTrigger: 'daily',
+      scheduleSlot: '2026-08-03',
+      freshnessMode: 'coverage',
+    });
+
+    expect(result).toMatchObject({ active_verified: 1, changedSnapshots: 0, createdSnapshots: 0 });
+    expect(mocks.executeRaw).not.toHaveBeenCalled();
+    expect(mocks.createMany).not.toHaveBeenCalled();
   });
 });

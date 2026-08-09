@@ -480,9 +480,13 @@ describe('ikas OAuth route state contract', () => {
       fence: { authorizedAppId: 'authorized-app-1', generation: 1, stateVersion: 1 },
       trigger: 'install',
     });
-    expect(mocks.dispatchProductReconciliationRun).toHaveBeenCalledWith(
-      '11111111-1111-4111-8111-111111111111',
-    );
+    expect(mocks.dispatchProductReconciliationRun).toHaveBeenCalledWith({
+      run: {
+        id: '11111111-1111-4111-8111-111111111111',
+        status: 'pending',
+      },
+      reason: 'initial',
+    });
     expect(session).toMatchObject({
       oauthBrowserBinding: expect.stringMatching(/^[a-f0-9]{64}$/),
       merchantId: 'merchant-1',

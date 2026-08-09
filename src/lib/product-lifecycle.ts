@@ -8,6 +8,9 @@ export const PRODUCT_LIFECYCLE_STATES = [
 export type ProductLifecycleState = (typeof PRODUCT_LIFECYCLE_STATES)[number];
 
 export const PRODUCT_ACTIVE_EVIDENCE_MAX_AGE_MS = 36 * 60 * 60 * 1000;
+export const PRODUCT_ABSENCE_CONFIRMATION_MIN_AGE_MS = 24 * 60 * 60 * 1000;
+
+const DAILY_SCHEDULE_SLOT_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export type NormalizedProductEvidence = {
   productId: string;
@@ -24,8 +27,13 @@ export type CurrentProductEvidence = {
   name: string | null;
   providerCreatedAt: Date | null;
   ikasUpdatedAt: Date | null;
+  lastVerifiedAt: Date | null;
   unavailableAt: Date | null;
   conflictDetectedAt: Date | null;
+  absenceFirstObservedAt: Date | null;
+  absenceLastObservedAt: Date | null;
+  absenceObservationCount: number;
+  absenceLastScheduleSlot: string | null;
 };
 
 export type ProductLifecycleWrite = {
@@ -37,6 +45,10 @@ export type ProductLifecycleWrite = {
   lastVerifiedAt: Date;
   unavailableAt?: Date | null;
   conflictDetectedAt?: Date | null;
+  absenceFirstObservedAt: Date | null;
+  absenceLastObservedAt: Date | null;
+  absenceObservationCount: number;
+  absenceLastScheduleSlot: string | null;
   lastEvidenceSource: string;
   lastSeenReconciliationRunId?: string | null;
   lastSyncedAt: Date;
@@ -57,6 +69,53 @@ function shouldAcceptMetadata(
   return evidence.ikasUpdatedAt.getTime() >= current.ikasUpdatedAt.getTime();
 }
 
+export function isValidDailyScheduleSlot(value: string | null | undefined): value is string {
+  if (!value || !DAILY_SCHEDULE_SLOT_PATTERN.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}
+
+function currentAbsenceEvidence(current: CurrentProductEvidence | null) {
+  return {
+    absenceFirstObservedAt: current?.absenceFirstObservedAt ?? null,
+    absenceLastObservedAt: current?.absenceLastObservedAt ?? null,
+    absenceObservationCount: current?.absenceObservationCount ?? 0,
+    absenceLastScheduleSlot: current?.absenceLastScheduleSlot ?? null,
+  };
+}
+
+function clearedAbsenceEvidence() {
+  return {
+    absenceFirstObservedAt: null,
+    absenceLastObservedAt: null,
+    absenceObservationCount: 0,
+    absenceLastScheduleSlot: null,
+  };
+}
+
+function observeDailyAbsence(
+  current: CurrentProductEvidence | null,
+  scheduleSlot: string,
+  now: Date,
+) {
+  const previous = currentAbsenceEvidence(current);
+  if (!previous.absenceLastScheduleSlot) {
+    return {
+      absenceFirstObservedAt: now,
+      absenceLastObservedAt: now,
+      absenceObservationCount: 1,
+      absenceLastScheduleSlot: scheduleSlot,
+    };
+  }
+  if (scheduleSlot <= previous.absenceLastScheduleSlot) return previous;
+  return {
+    absenceFirstObservedAt: previous.absenceFirstObservedAt ?? now,
+    absenceLastObservedAt: now,
+    absenceObservationCount: previous.absenceObservationCount + 1,
+    absenceLastScheduleSlot: scheduleSlot,
+  };
+}
+
 export function decideProductLifecycleWrite(input: {
   current: CurrentProductEvidence | null;
   evidence: NormalizedProductEvidence | null;
@@ -64,6 +123,8 @@ export function decideProductLifecycleWrite(input: {
   source: string;
   now: Date;
   reconciliationRunId?: string;
+  reconciliationTrigger?: 'install' | 'daily' | 'manual';
+  scheduleSlot?: string | null;
 }): ProductLifecycleWrite {
   const { current, evidence, source, now, reconciliationRunId } = input;
   const state = currentState(current);
@@ -71,12 +132,57 @@ export function decideProductLifecycleWrite(input: {
     ? {}
     : { lastSeenReconciliationRunId: reconciliationRunId };
 
-  if (!evidence || evidence.deleted) {
+  if (!evidence) {
+    const absence = input.reconciliationTrigger === 'daily' && isValidDailyScheduleSlot(input.scheduleSlot)
+      ? observeDailyAbsence(current, input.scheduleSlot, now)
+      : currentAbsenceEvidence(current);
+    const absenceConfirmed = absence.absenceObservationCount >= 2 &&
+      absence.absenceFirstObservedAt !== null &&
+      now.getTime() - absence.absenceFirstObservedAt.getTime() >= PRODUCT_ABSENCE_CONFIRMATION_MIN_AGE_MS;
     if (state === 'identity_conflict') {
       return {
         lifecycleState: 'identity_conflict',
         lastVerifiedAt: now,
         conflictDetectedAt: current?.conflictDetectedAt ?? now,
+        ...absence,
+        lastEvidenceSource: source,
+        lastSyncedAt: now,
+        ...seenInRun,
+      };
+    }
+    if (state === 'unavailable_verified') {
+      return {
+        lifecycleState: 'unavailable_verified',
+        providerCreatedAt: current?.providerCreatedAt ?? null,
+        lastVerifiedAt: now,
+        unavailableAt: current?.unavailableAt ?? now,
+        conflictDetectedAt: null,
+        ...absence,
+        lastEvidenceSource: source,
+        lastSyncedAt: now,
+        ...seenInRun,
+      };
+    }
+    return {
+      lifecycleState: absenceConfirmed ? 'unavailable_verified' : 'unknown',
+      providerCreatedAt: current?.providerCreatedAt ?? null,
+      lastVerifiedAt: now,
+      unavailableAt: absenceConfirmed ? current?.unavailableAt ?? now : null,
+      conflictDetectedAt: null,
+      ...absence,
+      lastEvidenceSource: source,
+      lastSyncedAt: now,
+      ...seenInRun,
+    };
+  }
+
+  if (evidence.deleted) {
+    if (state === 'identity_conflict') {
+      return {
+        lifecycleState: 'identity_conflict',
+        lastVerifiedAt: now,
+        conflictDetectedAt: current?.conflictDetectedAt ?? now,
+        ...currentAbsenceEvidence(current),
         lastEvidenceSource: source,
         lastSyncedAt: now,
         ...seenInRun,
@@ -84,10 +190,11 @@ export function decideProductLifecycleWrite(input: {
     }
     return {
       lifecycleState: 'unavailable_verified',
-      providerCreatedAt: current?.providerCreatedAt ?? evidence?.providerCreatedAt ?? null,
+      providerCreatedAt: current?.providerCreatedAt ?? evidence.providerCreatedAt,
       lastVerifiedAt: now,
       unavailableAt: current?.unavailableAt ?? now,
       conflictDetectedAt: null,
+      ...clearedAbsenceEvidence(),
       lastEvidenceSource: source,
       lastSyncedAt: now,
       ...seenInRun,
@@ -103,6 +210,7 @@ export function decideProductLifecycleWrite(input: {
       lifecycleState: 'identity_conflict',
       lastVerifiedAt: now,
       conflictDetectedAt: current?.conflictDetectedAt ?? now,
+      ...currentAbsenceEvidence(current),
       lastEvidenceSource: source,
       lastSyncedAt: now,
       ...seenInRun,
@@ -124,6 +232,7 @@ export function decideProductLifecycleWrite(input: {
     lastVerifiedAt: now,
     unavailableAt: null,
     conflictDetectedAt: null,
+    ...clearedAbsenceEvidence(),
     lastEvidenceSource: source,
     lastSyncedAt: now,
     ...seenInRun,
@@ -133,10 +242,14 @@ export function decideProductLifecycleWrite(input: {
 export function isFreshActiveProduct(
   snapshot: { lifecycleState: string; lastVerifiedAt: Date | null },
   now = new Date(),
+  coverageCompletedAt: Date | null = null,
 ): boolean {
+  const lastVerifiedAt = [snapshot.lastVerifiedAt, coverageCompletedAt]
+    .filter((value): value is Date => value !== null)
+    .reduce<Date | null>((latest, value) => !latest || value > latest ? value : latest, null);
   return snapshot.lifecycleState === 'active_verified' &&
-    snapshot.lastVerifiedAt !== null &&
-    now.getTime() - snapshot.lastVerifiedAt.getTime() <= PRODUCT_ACTIVE_EVIDENCE_MAX_AGE_MS;
+    lastVerifiedAt !== null &&
+    now.getTime() - lastVerifiedAt.getTime() <= PRODUCT_ACTIVE_EVIDENCE_MAX_AGE_MS;
 }
 
 export function resolveSafeSlugProductIds(
@@ -147,6 +260,7 @@ export function resolveSafeSlugProductIds(
     lastVerifiedAt: Date | null;
   }>,
   now = new Date(),
+  coverageCompletedAt: Date | null = null,
 ): Record<string, string> {
   const grouped = new Map<string, typeof snapshots>();
   for (const snapshot of snapshots) {
@@ -159,7 +273,7 @@ export function resolveSafeSlugProductIds(
   const resolved: Record<string, string> = {};
   for (const [slug, group] of grouped) {
     const relevant = group.filter((snapshot) => snapshot.lifecycleState !== 'unavailable_verified');
-    if (relevant.some((snapshot) => !isFreshActiveProduct(snapshot, now))) continue;
+    if (relevant.some((snapshot) => !isFreshActiveProduct(snapshot, now, coverageCompletedAt))) continue;
     const activeProductIds = [...new Set(relevant.map((snapshot) => snapshot.productId))];
     if (activeProductIds.length === 1) resolved[slug] = activeProductIds[0];
   }

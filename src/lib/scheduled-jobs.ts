@@ -14,7 +14,7 @@ import { runReviewEmailLifecycleMaintenance } from '@/lib/review-email/maintenan
 import { retryFailedStoreReviewEmailErasures } from '@/lib/review-email/erasure';
 import { retryPendingReviewEmailDataSubjectRuns } from '@/lib/review-email/data-subject';
 import { normalizeReviewEmailFailure, reportReviewEmailFailure } from '@/lib/review-email/failures';
-import { runProductReconciliationMaintenance } from '@/lib/product-reconciliation';
+import { runProductReconciliationMaintenance } from '@/lib/product-reconciliation-sweep';
 
 export const SCHEDULED_JOB_TASKS = ['daily-maintenance-full', 'cleanup-images'] as const;
 export type ScheduledJobTask = (typeof SCHEDULED_JOB_TASKS)[number];

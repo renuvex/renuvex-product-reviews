@@ -87,6 +87,18 @@ export async function activateIkasStoreInstallation(token: AuthToken, now = new 
         sanitizedErrorCode: null,
       },
     });
+    const staleReconciliationRuns = await tx.productReconciliationRun.findMany({
+      where: {
+        storeId: token.merchantId,
+        status: { in: ['pending', 'scanning', 'verifying', 'error'] },
+      },
+      select: { id: true },
+    });
+    if (staleReconciliationRuns.length > 0) {
+      await tx.productReconciliationObservation.deleteMany({
+        where: { runId: { in: staleReconciliationRuns.map((run) => run.id) } },
+      });
+    }
     await tx.productReconciliationRun.updateMany({
       where: {
         storeId: token.merchantId,

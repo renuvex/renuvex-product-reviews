@@ -86,6 +86,11 @@ const SERVER_FAILURES = {
     route: 'product-reconciliation',
     operation: 'process',
   },
+  product_reconciliation_sweep_failed: {
+    source: 'internal-api',
+    route: 'product-reconciliation-sweep',
+    operation: 'process',
+  },
   storefront_script_sync_failed: {
     source: 'admin-api',
     route: 'inject-scripts',

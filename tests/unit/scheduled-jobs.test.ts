@@ -40,7 +40,7 @@ vi.mock('@/lib/review-email/maintenance', () => ({
 vi.mock('@/lib/review-email/data-subject', () => ({
   retryPendingReviewEmailDataSubjectRuns: maintenanceMock.retryPendingReviewEmailDataSubjectRuns,
 }));
-vi.mock('@/lib/product-reconciliation', () => ({
+vi.mock('@/lib/product-reconciliation-sweep', () => ({
   runProductReconciliationMaintenance: maintenanceMock.runProductReconciliationMaintenance,
 }));
 vi.mock('@/lib/prisma', () => ({ prisma: { mediaCleanupRun: { create: maintenanceMock.mediaCleanupRunCreate } } }));
@@ -86,10 +86,11 @@ describe('scheduled job helpers', () => {
       retention: { runId: 'purge-1', mode: 'report', batches: 1, candidates: {}, deleted: {}, elapsedMs: 1 },
     });
     maintenanceMock.runProductReconciliationMaintenance.mockResolvedValue({
-      created: 0,
-      dispatched: 0,
+      createdSweeps: 0,
+      dispatchedSweeps: 0,
       dispatchFailed: 0,
-      redispatched: 0,
+      redispatchedRuns: 0,
+      redispatchedSweeps: 0,
     });
   });
 

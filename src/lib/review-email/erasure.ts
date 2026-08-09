@@ -23,10 +23,22 @@ const MAX_ERASURE_ATTEMPTS = 8;
 const BASE_RETRY_DELAY_MS = 5 * 60 * 1000;
 const MAX_RETRY_DELAY_MS = 6 * 60 * 60 * 1000;
 const ERASURE_BATCH_SIZE = 100;
-const ERASURE_MAX_BATCHES = 10;
+const ERASURE_MAX_BATCHES = 12;
 const ERASURE_MAX_DURATION_MS = 8_000;
 
-type ErasurePhase = 'reviews' | 'pending_images' | 'video_sessions' | 'review_requests' | 'review_batches' | 'orders' | 'finalize' | 'complete';
+type ErasurePhase =
+  | 'reviews'
+  | 'pending_images'
+  | 'video_sessions'
+  | 'review_requests'
+  | 'review_batches'
+  | 'orders'
+  | 'product_reconciliation_observations'
+  | 'product_reconciliation_runs'
+  | 'product_catalog_coverage'
+  | 'product_snapshots'
+  | 'finalize'
+  | 'complete';
 type ErasureProgress = { phase: ErasurePhase; deleted: Record<string, number> };
 
 export type StoreReviewEmailErasureResult = {
@@ -51,7 +63,20 @@ function erasureRetryAt(now: Date, attempts: number): Date {
 function parseProgress(value: Prisma.JsonValue | null): ErasureProgress {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return { phase: 'reviews', deleted: {} };
   const row = value as Record<string, Prisma.JsonValue>;
-  const allowed: ErasurePhase[] = ['reviews', 'pending_images', 'video_sessions', 'review_requests', 'review_batches', 'orders', 'finalize', 'complete'];
+  const allowed: ErasurePhase[] = [
+    'reviews',
+    'pending_images',
+    'video_sessions',
+    'review_requests',
+    'review_batches',
+    'orders',
+    'product_reconciliation_observations',
+    'product_reconciliation_runs',
+    'product_catalog_coverage',
+    'product_snapshots',
+    'finalize',
+    'complete',
+  ];
   const phase = typeof row.phase === 'string' && allowed.includes(row.phase as ErasurePhase)
     ? row.phase as ErasurePhase
     : 'reviews';
@@ -275,6 +300,7 @@ async function ensureStoreErasureJournal(
           'delete_verified_reviews',
           'enqueue_media_cleanup',
           'delete_pending_upload_data',
+          'delete_product_lifecycle_evidence',
           'delete_auth_token',
         ],
         createdAt: preflight.run.createdAt.toISOString(),
@@ -410,6 +436,60 @@ async function processStoreErasureBatch(runId: string, storeId: string, now: Dat
       if (orders.length) {
         await tx.ikasOrderSnapshot.deleteMany({ where: { id: { in: orders.map((order) => order.id) }, storeId } });
         progress = addCount(progress, 'orderSnapshots', orders.length);
+      } else progress = { ...progress, phase: 'product_reconciliation_observations' };
+    } else if (progress.phase === 'product_reconciliation_observations') {
+      const observations = await tx.productReconciliationObservation.findMany({
+        where: { storeId },
+        orderBy: [{ runId: 'asc' }, { productId: 'asc' }],
+        take: ERASURE_BATCH_SIZE,
+        select: { runId: true, productId: true },
+      });
+      if (observations.length) {
+        await tx.productReconciliationObservation.deleteMany({
+          where: {
+            storeId,
+            OR: observations.map((observation) => ({
+              runId: observation.runId,
+              productId: observation.productId,
+            })),
+          },
+        });
+        progress = addCount(progress, 'productReconciliationObservations', observations.length);
+      } else progress = { ...progress, phase: 'product_reconciliation_runs' };
+    } else if (progress.phase === 'product_reconciliation_runs') {
+      const runs = await tx.productReconciliationRun.findMany({
+        where: { storeId },
+        orderBy: { id: 'asc' },
+        take: ERASURE_BATCH_SIZE,
+        select: { id: true },
+      });
+      if (runs.length) {
+        const runIds = runs.map((run) => run.id);
+        await tx.productSnapshot.updateMany({
+          where: { storeId, lastSeenReconciliationRunId: { in: runIds } },
+          data: { lastSeenReconciliationRunId: null },
+        });
+        await tx.productReconciliationRun.deleteMany({
+          where: { id: { in: runIds }, storeId },
+        });
+        progress = addCount(progress, 'productReconciliationRuns', runs.length);
+      } else progress = { ...progress, phase: 'product_catalog_coverage' };
+    } else if (progress.phase === 'product_catalog_coverage') {
+      const deleted = await tx.productCatalogCoverage.deleteMany({ where: { storeId } });
+      progress = addCount(progress, 'productCatalogCoverage', deleted.count);
+      progress = { ...progress, phase: 'product_snapshots' };
+    } else if (progress.phase === 'product_snapshots') {
+      const snapshots = await tx.productSnapshot.findMany({
+        where: { storeId },
+        orderBy: { id: 'asc' },
+        take: ERASURE_BATCH_SIZE,
+        select: { id: true },
+      });
+      if (snapshots.length) {
+        await tx.productSnapshot.deleteMany({
+          where: { id: { in: snapshots.map((snapshot) => snapshot.id) }, storeId },
+        });
+        progress = addCount(progress, 'productSnapshots', snapshots.length);
       } else progress = { ...progress, phase: 'finalize' };
     } else if (progress.phase === 'finalize') {
       const counts = {
