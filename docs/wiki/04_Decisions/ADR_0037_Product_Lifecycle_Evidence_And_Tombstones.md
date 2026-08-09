@@ -48,10 +48,11 @@ verifier exposes only aggregate conflict counts; alerting and an audited
 operator-resolution path remain a Release B gate.
 
 The original Release A database/backend is merged and deployed for the current
-test installation. The 2026-08-09 closure source adds two-step absence
+test installation. PR #30 merged the 2026-08-09 closure source and Production
+now includes two-step absence
 evidence, bounded global discovery, changed-only snapshot persistence,
-generation-fenced erasure, and 42-day terminal run/sweep retention. That newer
-source is not yet merged or deployed. End-to-end storefront rollout also
+generation-fenced erasure, and 42-day terminal run/sweep retention. End-to-end
+storefront rollout still
 remains open because the live Worker still caches `ratings-by-slug`. Release B
 consumer enforcement is not implemented or deployed. Local scale evidence is
 not production or provider-capacity evidence. Follow the canonical closure
@@ -67,14 +68,17 @@ Release A database/backend was merged and deployed at commit
 observed a Worker `MISS` followed by `HIT` for `ratings-by-slug`, and the newest
 serving Worker deployment predates the merge.
 
-The 2026-08-09 closure implementation is on a feature branch and expands the
-source migration set to 64. It passed disposable PostgreSQL 16/17 migration,
-schema-diff, RLS/default-grant, verifier, and integration checks. A local
-PostgreSQL 17 benchmark also passed the 5,000-installation by 500-product model,
-but representative managed PostgreSQL, live QStash/provider quotas, production
-`--expect=expanded`, and production convergence remain unproven. Release B is
-intentionally separate and remains unimplemented. These boundaries prevent a
-full live or Tam GO claim.
+PR #30 merged the closure implementation at
+`37ed06d5182fe6c66b3cf162ac46604bca49b9ce`. Vercel Production deployment
+`dpl_DL7H2XEMnnvZVD6qg8rzbhhrotoH` applied migrations 63 and 64. Production
+`--expect=expanded` and the RLS/default-grant audit pass. The initial
+`--expect=ready` baseline is false because the one active installation has no
+fresh current-generation coverage; every reported snapshot, observation,
+conflict, and stuck-work drift count is zero. The local PostgreSQL 17 benchmark
+passed the 5,000-installation by 500-product model, but representative managed
+PostgreSQL, live QStash/provider quotas, convergence, and Worker acceptance
+remain unproven. Release B remains separate and unimplemented. These boundaries
+prevent a full live or Tam GO claim.
 
 ## Context
 

@@ -62,13 +62,13 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
-- 2026-08-09: The product-lifecycle closure branch adds two-slot absence
-  evidence, bounded global sweeps, changed-only snapshot writes, transient scan
-  observations, 42-day terminal run/sweep retention, lifecycle erasure, and
-  initial QStash flow control. Disposable PostgreSQL 16/17 and a local 5,000 x
-  500 benchmark pass. This is not merged or deployed; Worker, production
-  migration/convergence, managed scale, conflict operations, and Release B are
-  still gated.
+- 2026-08-09: Product-lifecycle closure PR #30 and all 64 migrations are
+  deployed. Two-slot absence, bounded sweeps, changed-only snapshots, transient
+  observations, 42-day retention, lifecycle erasure, and QStash flow control
+  are live. PostgreSQL 16/17 and the local 5,000 x 500 benchmark pass.
+  Production `expanded` and RLS/default-grants checks pass; `ready` awaits fresh
+  coverage for one active installation. Worker, convergence, managed scale,
+  conflict operations, and Release B remain gated.
 - 2026-07-28: Store erasure retries are installation-fenced; the stale live run
   closed without deleting current review/media data. See [[Maintenance_Runbook]].
 - 2026-07-28: Strict JWT admin auth requires the exact active installation/token
@@ -88,7 +88,7 @@ source_files:
 - Storefront is Turkish-first; future EN/DE needs real i18n, not only merchant copy.
 - Keep post-deploy smoke after runtime widget changes.
 - Worker V2 read origin: `widget.renuvex.app`; write/upload/video/lazy-sync origin: `app.renuvex.app`.
-- Supabase RLS/default grants remain live-verified through all 62 migrations:
+- Supabase RLS/default grants remain live-verified through all 64 migrations:
   every public table has RLS, grant/default-ACL drift is zero, and the unused
   hosted Data API is disabled.
 - The 2026-08-09 ikas v1/v2 `Storefront` schema removed the theme fields.

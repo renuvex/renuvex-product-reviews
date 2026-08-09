@@ -42,11 +42,12 @@ source_files:
 
 Use this page before changing product lifecycle retention, reconciliation
 cadence, store erasure, storefront slug resolution, or making a merchant-scale
-claim. The 2026-08-03 deployed baseline and the 2026-08-09 feature-branch
-closure evidence are deliberately separate. The closure source replaces the
+claim. The 2026-08-03 baseline and the 2026-08-09 closure deployment evidence
+are deliberately separated from managed-scale and convergence claims. The
+closure implementation replaces the
 measured unbounded discovery/write path with persistent sweeps, changed-only
 snapshot writes, transient observations, bounded retention, and lifecycle
-erasure. It is not yet merged or deployed. The live Cloudflare Worker still
+erasure. It is merged and deployed, but the live Cloudflare Worker still
 caches `ratings-by-slug`, Release B is unimplemented, and representative managed
 PostgreSQL plus live provider/QStash capacity evidence is still open.
 
@@ -58,14 +59,17 @@ a scale claim.
 
 - Historical deployed baseline: commit
   `6e6414989b45dd443058e252948585a34f30ed2e` with 62 migrations.
-- Closure implementation baseline: `main = origin/main =
-  a579840421d2db4c8bbc82b9a9d73f018db2668c`; the feature branch adds the 63rd
-  and 64th additive source migrations. These migrations are local source only
-  until a separately approved deployment.
-- Release A migration count: 62; the additive lifecycle migration is applied.
-- Read-only verifier result: `expanded=true`, `ready=true`, one active
-  installation, zero active-installation missing/unknown/stale snapshots, and
-  zero unavailable/conflict snapshots for that active installation.
+- Closure implementation: PR #30 merged as
+  `37ed06d5182fe6c66b3cf162ac46604bca49b9ce`. Vercel Production deployment
+  `dpl_DL7H2XEMnnvZVD6qg8rzbhhrotoH` applied the 63rd and 64th additive
+  migrations; all 64 migrations are now deployed.
+- Production `--expect=expanded` result: valid with zero missing columns,
+  constraints, or indexes, ready RLS, and zero Data API privileges. The full
+  Data API/default-grants audit also reports zero drift.
+- Initial post-deploy `--expect=ready` result: false because the one active
+  installation has no fresh current-generation coverage. Missing referenced
+  snapshots, unknown/stale snapshots, orphan/mismatched/terminal observations,
+  invalid coverage, conflicts, and stuck run/sweep counts are all zero.
 - Database measurements below were taken in explicit read-only PostgreSQL
   transactions and contain aggregate counts only. No store id, product id,
   slug, token, or PII is recorded here.
@@ -77,8 +81,10 @@ a scale claim.
   newest serving deployment as 2026-07-04, before the Release A merge. Current
   Worker source uses `forceNoStore`; source and live edge are therefore not yet
   equivalent.
-- No production Worker deploy, production database write, QStash publish, or
-  provider mutation was performed by the closure implementation or benchmark.
+- The approved Vercel deploy and two additive Production migrations are the only
+  live mutations in the closure checkpoint. No Production Worker deploy, QStash
+  publish, or provider mutation was performed by the benchmark or evidence
+  capture.
 
 ## Architecture Verdict
 
@@ -352,6 +358,10 @@ count.
 
 ## Change Log
 
+- 2026-08-09: Recorded PR #30 merge, Vercel Production deployment, successful
+  64-migration application, `expanded` and RLS/default-grants acceptance, and
+  the expected pre-convergence `ready=false` aggregate baseline. Worker,
+  convergence, managed scale, and Release B remain open.
 - 2026-08-09: Revalidated the audit against the closure feature branch. Recorded
   the 64-migration source contract, bounded sweeps, changed-only snapshots,
   transient observations, 42-day terminal retention, lifecycle erasure, local
