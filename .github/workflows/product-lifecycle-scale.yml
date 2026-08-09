@@ -1,0 +1,76 @@
+name: Product Lifecycle Scale
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: product-lifecycle-scale-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  postgres-17-scale:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: renuvex_scale_ci
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d renuvex_scale_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/renuvex_scale_ci?schema=public&connection_limit=10
+      DIRECT_URL: postgresql://postgres:postgres@127.0.0.1:5432/renuvex_scale_ci?schema=public&connection_limit=10
+      PRODUCT_LIFECYCLE_SCALE_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/renuvex_scale_ci?schema=public&connection_limit=10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
+        with:
+          version: 10.4.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm prisma:generate
+
+      - name: Apply all migrations
+        run: pnpm prisma:migrate:deploy
+
+      - name: Run 5,000 by 500 scale benchmark
+        run: >-
+          pnpm benchmark:product-lifecycle:scale --
+          --confirm-disposable
+          --stores=5000
+          --products-per-store=500
+          --output=.tmp/product-lifecycle-scale-report.json
+
+      - name: Upload scale evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: product-lifecycle-scale-report
+          path: .tmp/product-lifecycle-scale-report.json
+          if-no-files-found: error
+          retention-days: 30
