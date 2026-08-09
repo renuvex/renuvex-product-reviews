@@ -72,11 +72,12 @@ source-of-truth. Real cleanup deletes are guarded by `MediaCleanupRun`,
 `OrphanImageQuarantine`, idempotent provider jobs, and breaker rules. Never run
 manual cleanup, force flags, provider deletes, schedule mutation, or deploy
 commands without explicit scope, risk, rollback, and approval. The 2026-08-09
-closure branch adds truthful dispatch, persistent bounded discovery,
+closure deployment adds truthful dispatch, persistent bounded discovery,
 changed-only snapshots, delayed retry, lifecycle erasure, and bounded terminal
-retention. It is source/local evidence only. The live slug Worker cutover,
-production migration/convergence, managed PostgreSQL scale, and Release B remain
-open.
+retention. All 64 Production migrations, the live slug Worker no-store cutover,
+one manual QStash convergence run, and the current one-installation ready gate
+are verified. Scheduled live retention, journal-backed erasure, managed
+PostgreSQL scale/provider quotas, and Release B remain open.
 
 Operational reference for the scheduled background jobs and how their failures surface.
 
@@ -133,10 +134,11 @@ pnpm verify:product-lifecycle --expect=ready
 `expanded` is the post-migration schema/RLS/default-deny gate. `ready` requires
 fresh current-generation coverage for every active installation and zero
 missing/unknown/stale referenced evidence, orphan/mismatched/terminal
-observations, invalid coverage, or stuck runs/sweeps. The original deployed
-62-migration backend passed both modes for one active installation on
-2026-08-03. The closure branch passed expanded/ready on disposable PostgreSQL,
-not production.
+observations, invalid coverage, or stuck runs/sweeps. The 64-migration
+Production backend passed both modes for one active installation on 2026-08-09
+after manual QStash convergence. This does not prove the scheduled retention
+phases have executed under the closure deployment or authorize a journal-backed
+live uninstall.
 
 Terminal runs and sweeps are retained for 42 days. Cleanup processes at most
 100 rows per phase and protects the latest successful run for each active exact

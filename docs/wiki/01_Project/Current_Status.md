@@ -30,7 +30,7 @@ delivery, QStash maintenance scheduling, and public read-cache paths are live.
 Remaining public-launch blockers are mainly security hardening, operational
 observability, authenticated dashboard smoke, and product polish.
 The review-request email V5 plus Multi-Product Batch/Envelope V3.2 packages are
-deployed as a disabled backend and schema; all 62 Production migrations are
+deployed as a disabled backend and schema; all 64 Production migrations are
 applied, customer/request/job/attempt lifecycle rows remain zero, and
 `REVIEW_EMAIL_ENABLED` remains absent. Report-mode maintenance has produced
 only successful, error-free `ReviewEmailPurgeRun` audit rows.
@@ -217,11 +217,13 @@ Active development on the production test store. Core review, image, Mux video, 
   only for one active installation without fresh catalog coverage; no lifecycle
   data drift or stuck work was reported. Worker deployment and QStash
   convergence remain separate gates.
-- 2026-08-09: Recorded the source/local lifecycle closure implementation and its
+- 2026-08-09: Recorded the lifecycle closure implementation and its
   64-migration, PostgreSQL 16/17, erasure/retention, bounded sweep,
   changed-only-write, and local 5,000 x 500 evidence. Production deployment,
-  Worker cutover, managed scale, live convergence, conflict operations, and
-  Release B remain separate gates.
+  Worker no-store cutover, one manual QStash convergence run, and the current
+  one-installation ready gate are now verified. Scheduled live retention,
+  journal-backed erasure, managed scale/provider quotas, conflict operations,
+  and Release B remain separate gates.
 - 2026-08-08: Corrected Product Lifecycle rollout status after the independent
   audit and live edge recheck. Backend/DB readiness remains proven for one
   active installation, but Worker no-store cutover, truthful manual dispatch,
