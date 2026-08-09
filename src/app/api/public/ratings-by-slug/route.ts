@@ -3,7 +3,10 @@ import { prisma } from '@/lib/prisma';
 import { anonymousPublicCorsOptions, withAnonymousPublicCors } from '@/lib/cors';
 import { checkFixedWindowRateLimit, getClientIp } from '@/lib/public-rate-limit';
 import { publicRatingFromSummary } from '@/lib/review-summary';
-import { resolveSafeSlugProductIds } from '@/lib/product-lifecycle';
+import {
+  resolveCurrentCatalogCoverageStartedAt,
+  resolveSafeSlugProductIds,
+} from '@/lib/product-lifecycle';
 import { reportServerFailure } from '@/lib/server-failures';
 
 const RATINGS_RATE_LIMIT_MAX = 300;
@@ -80,6 +83,9 @@ export async function GET(request: Request) {
           productId: true,
           lifecycleState: true,
           lastVerifiedAt: true,
+          exactEvidenceAuthorizedAppId: true,
+          exactEvidenceGeneration: true,
+          exactEvidenceStateVersion: true,
         },
       }),
       prisma.ikasStoreInstallation.findUnique({
@@ -93,20 +99,47 @@ export async function GET(request: Request) {
       }),
     ]);
     const coverage = installation?.status === 'active'
-      ? await prisma.productCatalogCoverage.findFirst({
+      ? await prisma.productCatalogCoverage.findUnique({
           where: {
             storeId,
-            authorizedAppId: installation.authorizedAppId,
-            installationGeneration: installation.generation,
-            installationStateVersion: installation.stateVersion,
           },
-          select: { completedAt: true },
+          select: {
+            storeId: true,
+            authorizedAppId: true,
+            installationGeneration: true,
+            installationStateVersion: true,
+            completedAt: true,
+            reconciliationRun: {
+              select: {
+                storeId: true,
+                authorizedAppId: true,
+                installationGeneration: true,
+                installationStateVersion: true,
+                status: true,
+                startedAt: true,
+                finishedAt: true,
+              },
+            },
+          },
         })
       : null;
+    const installationEvidence = installation?.status === 'active'
+      ? {
+          authorizedAppId: installation.authorizedAppId,
+          generation: installation.generation,
+          stateVersion: installation.stateVersion,
+        }
+      : null;
+    const coverageStartedAt = resolveCurrentCatalogCoverageStartedAt(
+      storeId,
+      installationEvidence,
+      coverage,
+    );
     const slugToProductId = resolveSafeSlugProductIds(
       snapshots,
+      installationEvidence,
       new Date(),
-      coverage?.completedAt ?? null,
+      coverageStartedAt,
     );
 
     const resolvedProductIds = Array.from(new Set(Object.values(slugToProductId)));

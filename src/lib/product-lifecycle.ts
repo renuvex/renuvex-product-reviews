@@ -36,6 +36,37 @@ export type CurrentProductEvidence = {
   absenceLastScheduleSlot: string | null;
 };
 
+export type ProductInstallationEvidence = {
+  authorizedAppId: string;
+  generation: number;
+  stateVersion: number;
+};
+
+export type ProductFreshnessEvidence = {
+  lifecycleState: string;
+  lastVerifiedAt: Date | null;
+  exactEvidenceAuthorizedAppId: string | null;
+  exactEvidenceGeneration: number | null;
+  exactEvidenceStateVersion: number | null;
+};
+
+export type ProductCatalogCoverageEvidence = {
+  storeId: string;
+  authorizedAppId: string;
+  installationGeneration: number;
+  installationStateVersion: number;
+  completedAt: Date;
+  reconciliationRun: {
+    storeId: string;
+    authorizedAppId: string;
+    installationGeneration: number;
+    installationStateVersion: number;
+    status: string;
+    startedAt: Date | null;
+    finishedAt: Date | null;
+  } | null;
+};
+
 export type ProductLifecycleWrite = {
   lifecycleState: ProductLifecycleState;
   slug?: string | null;
@@ -239,14 +270,58 @@ export function decideProductLifecycleWrite(input: {
   };
 }
 
-export function isFreshActiveProduct(
-  snapshot: { lifecycleState: string; lastVerifiedAt: Date | null },
-  now = new Date(),
-  coverageCompletedAt: Date | null = null,
-): boolean {
-  const lastVerifiedAt = [snapshot.lastVerifiedAt, coverageCompletedAt]
+export function resolveEffectiveProductEvidenceAt(
+  snapshot: ProductFreshnessEvidence,
+  installation: ProductInstallationEvidence | null,
+  coverageStartedAt: Date | null,
+): Date | null {
+  const exactAt = installation &&
+    snapshot.exactEvidenceAuthorizedAppId === installation.authorizedAppId &&
+    snapshot.exactEvidenceGeneration === installation.generation &&
+    snapshot.exactEvidenceStateVersion === installation.stateVersion
+    ? snapshot.lastVerifiedAt
+    : null;
+  return [exactAt, coverageStartedAt]
     .filter((value): value is Date => value !== null)
     .reduce<Date | null>((latest, value) => !latest || value > latest ? value : latest, null);
+}
+
+export function resolveCurrentCatalogCoverageStartedAt(
+  storeId: string,
+  installation: ProductInstallationEvidence | null,
+  coverage: ProductCatalogCoverageEvidence | null,
+): Date | null {
+  const run = coverage?.reconciliationRun;
+  if (
+    !installation ||
+    !coverage ||
+    !run ||
+    coverage.storeId !== storeId ||
+    coverage.authorizedAppId !== installation.authorizedAppId ||
+    coverage.installationGeneration !== installation.generation ||
+    coverage.installationStateVersion !== installation.stateVersion ||
+    run.storeId !== storeId ||
+    run.authorizedAppId !== installation.authorizedAppId ||
+    run.installationGeneration !== installation.generation ||
+    run.installationStateVersion !== installation.stateVersion ||
+    run.status !== 'completed' ||
+    !run.startedAt ||
+    !run.finishedAt ||
+    run.finishedAt.getTime() < run.startedAt.getTime() ||
+    coverage.completedAt.getTime() !== run.finishedAt.getTime()
+  ) {
+    return null;
+  }
+  return run.startedAt;
+}
+
+export function isFreshActiveProduct(
+  snapshot: ProductFreshnessEvidence,
+  installation: ProductInstallationEvidence | null,
+  now = new Date(),
+  coverageStartedAt: Date | null = null,
+): boolean {
+  const lastVerifiedAt = resolveEffectiveProductEvidenceAt(snapshot, installation, coverageStartedAt);
   return snapshot.lifecycleState === 'active_verified' &&
     lastVerifiedAt !== null &&
     now.getTime() - lastVerifiedAt.getTime() <= PRODUCT_ACTIVE_EVIDENCE_MAX_AGE_MS;
@@ -258,9 +333,13 @@ export function resolveSafeSlugProductIds(
     productId: string;
     lifecycleState: string;
     lastVerifiedAt: Date | null;
+    exactEvidenceAuthorizedAppId: string | null;
+    exactEvidenceGeneration: number | null;
+    exactEvidenceStateVersion: number | null;
   }>,
+  installation: ProductInstallationEvidence | null,
   now = new Date(),
-  coverageCompletedAt: Date | null = null,
+  coverageStartedAt: Date | null = null,
 ): Record<string, string> {
   const grouped = new Map<string, typeof snapshots>();
   for (const snapshot of snapshots) {
@@ -273,7 +352,12 @@ export function resolveSafeSlugProductIds(
   const resolved: Record<string, string> = {};
   for (const [slug, group] of grouped) {
     const relevant = group.filter((snapshot) => snapshot.lifecycleState !== 'unavailable_verified');
-    if (relevant.some((snapshot) => !isFreshActiveProduct(snapshot, now, coverageCompletedAt))) continue;
+    if (relevant.some((snapshot) => !isFreshActiveProduct(
+      snapshot,
+      installation,
+      now,
+      coverageStartedAt,
+    ))) continue;
     const activeProductIds = [...new Set(relevant.map((snapshot) => snapshot.productId))];
     if (activeProductIds.length === 1) resolved[slug] = activeProductIds[0];
   }

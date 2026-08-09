@@ -47,6 +47,7 @@ source_files:
   - "prisma/migrations/20260803120000_add_product_lifecycle_evidence/migration.sql"
   - "prisma/migrations/20260809120000_harden_product_lifecycle_evidence/migration.sql"
   - "prisma/migrations/20260809130000_add_product_reconciliation_scale/migration.sql"
+  - "prisma/migrations/20260809140000_add_product_exact_evidence_provenance/migration.sql"
   - "src/lib/review-media.ts"
   - "src/lib/review-summary.ts"
   - "src/lib/cleanup-orphan-images.ts"
@@ -323,7 +324,10 @@ the row is retained as a tombstone when current product availability disappears.
 | `lifecycleState` | String | `unknown`, `active_verified`, `unavailable_verified`, or sticky `identity_conflict` |
 | `providerCreatedAt` | DateTime? | Audit evidence only; never proves safe reactivation |
 | `ikasUpdatedAt` | DateTime? | ikas product `updatedAt` timestamp |
-| `lastVerifiedAt` | DateTime? | Exact provider evidence time; active evidence expires after the 36-hour Renuvex policy window |
+| `lastVerifiedAt` | DateTime? | Point-exact evidence time only when all three exact-provenance fields match the current installation; tuple-less legacy values do not establish freshness |
+| `exactEvidenceAuthorizedAppId` | String? | Current point-exact authorized app provenance; all three exact fields are null or non-null together |
+| `exactEvidenceGeneration` | Int? | Current point-exact installation generation provenance |
+| `exactEvidenceStateVersion` | Int? | Current point-exact installation state-version provenance |
 | `unavailableAt`, `conflictDetectedAt` | DateTime? | Tombstone/conflict transition evidence |
 | `lastEvidenceSource` | String? | Fixed internal source label without provider payload |
 | `lastSeenReconciliationRunId` | String? | Marks ids observed by a complete-run scan page |
@@ -374,9 +378,11 @@ so vacuum/autovacuum remains part of the operating cost.
 
 One row per store records the exact authorized app, installation generation and
 state version, completed run, product count, and completion time of the latest
-full catalog proof. The current generation's coverage supplies the 36-hour
-freshness boundary, allowing unchanged active products to avoid daily snapshot
-updates.
+full catalog proof. Coverage supplies the 36-hour freshness boundary only when
+the row links to a matching completed run with ordered timestamps and coverage
+`completedAt` equal to run `finishedAt`. Run `startedAt` is the conservative
+evidence time; finish/completion records when the evidence became available.
+This allows unchanged active products to avoid daily snapshot updates.
 
 ### `ProductReconciliationSweep`
 

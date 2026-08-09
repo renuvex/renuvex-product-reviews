@@ -18,6 +18,10 @@ const scaleMigration = fs.readFileSync(
   path.join(root, 'prisma', 'migrations', '20260809130000_add_product_reconciliation_scale', 'migration.sql'),
   'utf8',
 );
+const provenanceMigration = fs.readFileSync(
+  path.join(root, 'prisma', 'migrations', '20260809140000_add_product_exact_evidence_provenance', 'migration.sql'),
+  'utf8',
+);
 
 describe('product lifecycle evidence schema', () => {
   it('owns snapshots and reconciliation runs in the lifecycle domain exactly once', () => {
@@ -29,6 +33,9 @@ describe('product lifecycle evidence schema', () => {
     expect(schema).toMatch(/lifecycleState\s+String\s+@default\("unknown"\)/);
     expect(schema).toMatch(/providerCreatedAt\s+DateTime\?/);
     expect(schema).toMatch(/lastVerifiedAt\s+DateTime\?/);
+    expect(schema).toMatch(/exactEvidenceAuthorizedAppId\s+String\?\s+@db\.VarChar\(128\)/);
+    expect(schema).toMatch(/exactEvidenceGeneration\s+Int\?/);
+    expect(schema).toMatch(/exactEvidenceStateVersion\s+Int\?/);
     expect(schema).toMatch(/lastSeenReconciliationRunId\s+String\?/);
     expect(schema).toMatch(/absenceObservationCount\s+Int\s+@default\(0\)/);
     expect(schema).toMatch(/expectedProductCount\s+Int\?/);
@@ -51,6 +58,10 @@ describe('product lifecycle evidence schema', () => {
     expect(absenceMigration).toContain('ProductReconciliationRun_schedule_slot_check');
     expect(scaleMigration).toContain('ProductReconciliationSweep_phase_check');
     expect(scaleMigration).toContain('ProductReconciliationSweep_single_nonterminal_idx');
+    expect(provenanceMigration).toContain('ADD COLUMN "exactEvidenceAuthorizedAppId" VARCHAR(128)');
+    expect(provenanceMigration).toContain('ADD COLUMN "exactEvidenceGeneration" INTEGER');
+    expect(provenanceMigration).toContain('ADD COLUMN "exactEvidenceStateVersion" INTEGER');
+    expect(provenanceMigration).toContain('ProductSnapshot_exact_evidence_provenance_check');
     for (const table of [
       'ProductReconciliationObservation',
       'ProductCatalogCoverage',
@@ -60,7 +71,8 @@ describe('product lifecycle evidence schema', () => {
       expect(scaleMigration).toContain(`REVOKE ALL PRIVILEGES ON TABLE "${table}" FROM PUBLIC`);
     }
     expect(scaleMigration).toContain("ARRAY['anon', 'authenticated', 'service_role']");
-    expect([lifecycleMigration, absenceMigration, scaleMigration].join('\n'))
+    expect([lifecycleMigration, absenceMigration, scaleMigration, provenanceMigration].join('\n'))
       .not.toMatch(/DROP\s+(TABLE|COLUMN)|DELETE\s+FROM\s+"(?:Review|ProductSnapshot)"/i);
+    expect(provenanceMigration).not.toMatch(/CREATE\s+(?:UNIQUE\s+)?INDEX|CREATE\s+TABLE/i);
   });
 });

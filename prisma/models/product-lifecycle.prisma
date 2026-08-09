@@ -1,24 +1,27 @@
 model ProductSnapshot {
-  id                          String    @id @default(uuid())
-  storeId                     String
-  productId                   String
-  slug                        String?
-  name                        String?
-  lifecycleState              String    @default("unknown") @db.VarChar(32)
-  providerCreatedAt           DateTime?
-  ikasUpdatedAt               DateTime?
-  lastVerifiedAt              DateTime?
-  unavailableAt               DateTime?
-  conflictDetectedAt          DateTime?
-  lastEvidenceSource          String?   @db.VarChar(32)
-  lastSeenReconciliationRunId String?
-  absenceFirstObservedAt      DateTime?
-  absenceLastObservedAt       DateTime?
-  absenceObservationCount     Int       @default(0)
-  absenceLastScheduleSlot     String?   @db.VarChar(32)
-  lastSyncedAt                DateTime  @default(now())
-  createdAt                   DateTime  @default(now())
-  updatedAt                   DateTime  @updatedAt
+  id                           String    @id @default(uuid())
+  storeId                      String
+  productId                    String
+  slug                         String?
+  name                         String?
+  lifecycleState               String    @default("unknown") @db.VarChar(32)
+  providerCreatedAt            DateTime?
+  ikasUpdatedAt                DateTime?
+  lastVerifiedAt               DateTime?
+  exactEvidenceAuthorizedAppId String?   @db.VarChar(128)
+  exactEvidenceGeneration      Int?
+  exactEvidenceStateVersion    Int?
+  unavailableAt                DateTime?
+  conflictDetectedAt           DateTime?
+  lastEvidenceSource           String?   @db.VarChar(32)
+  lastSeenReconciliationRunId  String?
+  absenceFirstObservedAt       DateTime?
+  absenceLastObservedAt        DateTime?
+  absenceObservationCount      Int       @default(0)
+  absenceLastScheduleSlot      String?   @db.VarChar(32)
+  lastSyncedAt                 DateTime  @default(now())
+  createdAt                    DateTime  @default(now())
+  updatedAt                    DateTime  @updatedAt
 
   @@unique([storeId, productId])
   @@index([storeId, slug])

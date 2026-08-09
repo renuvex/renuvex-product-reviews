@@ -20,6 +20,7 @@ related:
   - "[[Current_Status]]"
 source_files:
   - "prisma/models/product-lifecycle.prisma"
+  - "prisma/migrations/20260809140000_add_product_exact_evidence_provenance/migration.sql"
   - "src/lib/product-lifecycle.ts"
   - "src/lib/product-snapshots.ts"
   - "src/lib/product-reconciliation.ts"
@@ -52,6 +53,14 @@ QStash dispatch/readiness gates are live-accepted. Release B is unimplemented,
 and representative managed PostgreSQL plus provider/QStash capacity evidence is
 still open.
 
+The exact-provenance/freshness closure is locally validated on its feature
+branch, not yet merged or deployed. It adds current-installation provenance to
+point-exact timestamps and derives catalog freshness from a linked completed
+run's `startedAt`. The earlier live `ready=true` result remains valid evidence
+for the deployed pre-provenance contract, but it is not revised Production
+acceptance. Natural continuity needs at least two current-generation completed
+coverage runs.
+
 This page separates measured Production evidence from arithmetic projections.
 It does not authorize SQL cleanup, provider mutation, Release B deployment, or
 a scale claim.
@@ -76,6 +85,11 @@ a scale claim.
   slug, token, or PII is recorded here.
 - Measurements describe the 2026-08-03 test-store footprint. They are not a
   future capacity guarantee.
+- The exact-provenance branch contains 65 source migrations. Disposable
+  PostgreSQL 16 and 17 apply all 65 with empty database/datamodel diffs, passing
+  RLS/default-grant checks, a full readiness-query execution, and 45 integration
+  scenarios. Production remains at the separately verified 64 migrations until
+  deployment.
 - A 2026-08-08 read-only edge recheck returned `MISS` and then `HIT` for two
   consecutive `widget.renuvex.app/api/public/ratings-by-slug` requests, with
   `Cache-Control: public, max-age=0, must-revalidate`. Wrangler reported the
@@ -105,6 +119,9 @@ The core database/backend pattern is appropriate, not a patch:
 - Periodic reconciliation covers missed, duplicated, delayed, or out-of-order
   webhook delivery.
 - Unknown, stale, or conflicting evidence fails closed.
+- Point-exact freshness is installation-scoped through the exact
+  authorized-app/generation/state-version tuple. Full-catalog freshness is
+  store-wide coverage evidence and does not rewrite unchanged snapshot rows.
 
 This is consistent with webhook reconciliation practice, but indefinite
 retention of every tombstone and every completed run is not an industry
@@ -217,7 +234,9 @@ and retention findings:
   and stores only temporary present/deleted scan evidence. It is removed when a
   run completes, becomes stale, or exhausts.
 - `ProductCatalogCoverage` carries current-generation freshness, so unchanged
-  active snapshots are not rewritten each day.
+  active snapshots are not rewritten each day. It is valid only with a matching
+  completed run; `run.startedAt` is evidence time and equal coverage
+  `completedAt` / run `finishedAt` values are availability time.
 - Terminal runs and sweeps use 42-day bounded retention. The latest successful
   run for each active installation and latest global successful sweep are
   protected.
@@ -234,9 +253,10 @@ and retention findings:
 - QStash flow control is configured at one message per second and parallelism
   four. DB lease/idempotency remains the correctness boundary.
 
-Disposable PostgreSQL 16 and 17 both applied all 64 migrations with clean
-migration status and empty schema diffs. RLS/default-grant checks, expanded
-verifier, and integration tests passed. A disposable PostgreSQL 17 benchmark
+The closure baseline applied 64 migrations on disposable PostgreSQL 16 and 17.
+The exact-provenance branch now applies all 65 with clean migration status and
+empty schema diffs; RLS/default-grant checks, expanded/readiness-query
+verifiers, and 45 integration scenarios pass on both versions. A disposable PostgreSQL 17 benchmark
 with 5,000 installations and 500 products each recorded:
 
 | Measurement | Local synthetic result |
@@ -276,6 +296,8 @@ this table instead of inventing a second sequence.
 | `A0-CI` | Promote the existing Worker unit tests plus `pnpm worker:widget:deploy:dry-run` into a required Worker-change CI gate. | A Worker-source/config PR cannot merge when unit tests, prepared assets, binding types, or Wrangler dry-run fail. This gate does not deploy. | Future Worker mutations |
 | `A1-ERASURE` | Add `ProductSnapshot` and `ProductReconciliationRun` to the existing store-scoped, generation-fenced erasure inventory and destructive phases. Preserve lock order and immutable-journal prerequisite; never direct-SQL-delete the measured orphan rows. | PostgreSQL 16/17 races prove reinstall data is protected, exact-store rows are removed only after journal evidence, row counts are audited, and stale generations no-op. | Release B |
 | `A1-RUN-RETENTION` | Define an explicit terminal-run retention interval and bounded maintenance deletion. Preserve the latest successful evidence per active installation plus a bounded diagnostic/error history. Do not guess the interval: record the chosen incident/restore rationale before implementation. | Retention tests cover completed, stale, exhausted, recent-error, active/nonterminal, and latest-success cases; cleanup is bounded and tenant-scoped. | Sustained multi-merchant operation and Release B |
+| `A1-PROVENANCE` | Persist point-exact freshness with an all-or-none current-installation tuple and require the installation fence at the exact-sync API plus final transaction. Catalog coverage must not manufacture exact provenance or advance an existing exact timestamp. | Additive migration, compile-time API contract, stale/reinstall fence tests, PostgreSQL constraint test, and changed-only coverage tests pass on PG16/17. Production `--expect=expanded` and a current exact read are separate acceptance. | Release B |
+| `A1-CONTINUITY` | Evaluate catalog freshness from the linked completed run's `startedAt`, while `finishedAt` records availability. Report `next finishedAt - previous startedAt` continuity without turning retained historical violations into a permanent ready failure. | Natural current-generation coverage produces at least two samples; latest gap is at most 36 hours and the separate normal-cycle target is at most 10 hours. First coverage alone remains `BEKLİYOR`, not failure. | Release B rollout and ongoing freshness operations |
 | `B-EVIDENCE` | Close the undocumented Ikas absence-consistency boundary. A transient single exact-empty response must not become consumer-visible unavailability unless Ikas supplies a suitable contract or Renuvex adds a tested multi-step confirmation policy. | ADR records the evidence rule; delayed visibility and transient empty provider responses cannot produce a false tombstone. | Release B |
 | `B-SCAN` | Strengthen page-scan integrity. Require a provider snapshot/ordering contract or add deterministic ordering and whole-run detection for cross-page duplicate/drift conditions before absence candidates are trusted. | Tests cover concurrent catalog mutation, cross-page duplicate IDs, changing count/page contents, malformed pagination, and partial scans; uncertainty remains fail-closed. | Release B |
 | `B-RETRY` | Schedule a delayed continuation for `busy`, `deferred`, auth-temporary, and retryable processing outcomes using the persisted lease/`nextRetryAt`. Daily maintenance remains a disaster-recovery fallback, not the normal retry clock. | QStash tests prove delay calculation, duplicate safety, publish failure visibility, and recovery before the next daily schedule. | Release B operations |
@@ -294,6 +316,8 @@ this table instead of inventing a second sequence.
 | `A0-CI` | Closed on PR #30: required unit/assets/types/dry-run Worker job passed | Keep the job required for Worker-source/config changes |
 | `A1-ERASURE` | Implemented with bounded generation-fenced phases and integration tests | Production migration/deploy and lifecycle erasure acceptance |
 | `A1-RUN-RETENTION` | Implemented as 42 days with latest-success protections | Production maintenance evidence |
+| `A1-PROVENANCE` | Implemented and locally validated as the 65th additive migration; PG16/17 pass | PR/CI, Production expanded verifier, then a current fenced exact-read acceptance |
+| `A1-CONTINUITY` | Tuple-aware resolver and sanitized continuity aggregates implemented locally | Production deploy plus two natural current-generation coverage runs; latest gap `<=36h`, normal cycle `<=10h` |
 | `B-EVIDENCE` | Implemented two-slot/24-hour absence policy | Live convergence and dev-store delete/recreate smoke |
 | `B-SCAN` | Cross-page duplicate and malformed scan handling implemented | Live provider behavior and drift monitoring |
 | `B-RETRY` | Persisted delayed continuation and publish visibility implemented | Live QStash retry/backlog evidence |
@@ -307,7 +331,8 @@ this table instead of inventing a second sequence.
 
 1. `A0-EDGE`, `A0-DISPATCH`, and `A0-CI` closed on 2026-08-09. Preserve their
    acceptance evidence on later Worker/reconciliation changes.
-2. Close `A1-ERASURE` and `A1-RUN-RETENTION` before Release B rollout.
+2. Close `A1-ERASURE`, `A1-RUN-RETENTION`, `A1-PROVENANCE`, and natural
+   `A1-CONTINUITY` acceptance before Release B rollout.
 3. Close every `B-*` item before enabling consumer enforcement. Source-only
    implementation is not deployment evidence.
 4. Close every `SCALE-*` item before a 5,000-store claim. A 100,000-store claim
@@ -367,6 +392,10 @@ count.
 
 ## Change Log
 
+- 2026-08-09: Recorded the 65th source migration and local PG16/17 evidence for
+  point-exact installation provenance, linked-run `startedAt` freshness, and
+  sanitized continuity metrics. Kept PR/CI, Production expanded acceptance,
+  two-run natural continuity, managed scale, and Release B as separate gates.
 - 2026-08-09: Recorded PR #30 merge, Vercel Production deployment, successful
   64-migration application, `expanded` and RLS/default-grants acceptance, and
   the expected pre-convergence `ready=false` aggregate baseline. Worker,

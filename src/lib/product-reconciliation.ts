@@ -402,7 +402,7 @@ async function commitScanPage(
       now,
       reconciliationTrigger: locked.run.trigger as ProductReconciliationTrigger,
       scheduleSlot: locked.run.scheduleSlot,
-      freshnessMode: 'coverage',
+      provenance: { kind: 'catalog_coverage' },
     });
     const reconstructedCount = payload.hasNext
       ? 0
@@ -535,7 +535,7 @@ async function commitVerificationBatch(
         now,
         reconciliationTrigger: locked.run.trigger as ProductReconciliationTrigger,
         scheduleSlot: locked.run.scheduleSlot,
-        freshnessMode: 'coverage',
+        provenance: { kind: 'catalog_coverage' },
       },
     );
     const updated = await tx.productReconciliationRun.update({

@@ -135,5 +135,8 @@ jobs:
       - name: Verify expanded product lifecycle schema
         run: pnpm verify:product-lifecycle --expect=expanded
 
+      - name: Execute product lifecycle readiness query
+        run: pnpm verify:product-lifecycle --expect=ready
+
       - name: Run PostgreSQL integration tests
         run: pnpm test:integration:review-email

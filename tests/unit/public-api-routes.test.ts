@@ -18,7 +18,7 @@ const prismaMock = vi.hoisted(() => ({
     findUnique: vi.fn(),
   },
   productCatalogCoverage: {
-    findFirst: vi.fn(),
+    findUnique: vi.fn(),
   },
   productReviewSummary: {
     findMany: vi.fn(),
@@ -394,7 +394,7 @@ beforeEach(() => {
   prismaMock.productSnapshot.findUnique.mockReset();
   prismaMock.productSnapshot.findMany.mockReset();
   prismaMock.ikasStoreInstallation.findUnique.mockReset();
-  prismaMock.productCatalogCoverage.findFirst.mockReset();
+  prismaMock.productCatalogCoverage.findUnique.mockReset();
   prismaMock.productReviewSummary.findMany.mockReset();
   prismaMock.productReviewSummary.findUnique.mockReset();
   prismaMock.productReviewSummary.create.mockReset();
@@ -751,9 +751,31 @@ describe('/api/public/ratings-by-slug', () => {
   it('resolves current product ids by slug and reads aggregate summaries', async () => {
     checkFixedWindowRateLimitMock.mockResolvedValue({ allowed: true });
     const verifiedAt = new Date();
+    prismaMock.ikasStoreInstallation.findUnique.mockResolvedValue({
+      authorizedAppId: 'app-1',
+      generation: 3,
+      stateVersion: 7,
+      status: 'active',
+    });
     prismaMock.productSnapshot.findMany.mockResolvedValue([
-      { slug: 'premium-shorts', productId: 'product-1', lifecycleState: 'active_verified', lastVerifiedAt: verifiedAt },
-      { slug: 'linen-shirt', productId: 'product-2', lifecycleState: 'active_verified', lastVerifiedAt: verifiedAt },
+      {
+        slug: 'premium-shorts',
+        productId: 'product-1',
+        lifecycleState: 'active_verified',
+        lastVerifiedAt: verifiedAt,
+        exactEvidenceAuthorizedAppId: 'app-1',
+        exactEvidenceGeneration: 3,
+        exactEvidenceStateVersion: 7,
+      },
+      {
+        slug: 'linen-shirt',
+        productId: 'product-2',
+        lifecycleState: 'active_verified',
+        lastVerifiedAt: verifiedAt,
+        exactEvidenceAuthorizedAppId: 'app-1',
+        exactEvidenceGeneration: 3,
+        exactEvidenceStateVersion: 7,
+      },
     ]);
     prismaMock.productReviewSummary.findMany.mockResolvedValue([
       summaryRow({ productId: 'product-1', approvedCount: 12, ratingSum: 57, averageRating: 4.75 }),
@@ -783,9 +805,31 @@ describe('/api/public/ratings-by-slug', () => {
 
   it('returns no rating for ambiguous or unverified slug evidence', async () => {
     checkFixedWindowRateLimitMock.mockResolvedValue({ allowed: true });
+    prismaMock.ikasStoreInstallation.findUnique.mockResolvedValue({
+      authorizedAppId: 'app-1',
+      generation: 3,
+      stateVersion: 7,
+      status: 'active',
+    });
     prismaMock.productSnapshot.findMany.mockResolvedValue([
-      { slug: 'shared-slug', productId: 'product-1', lifecycleState: 'active_verified', lastVerifiedAt: new Date() },
-      { slug: 'shared-slug', productId: 'product-2', lifecycleState: 'unknown', lastVerifiedAt: null },
+      {
+        slug: 'shared-slug',
+        productId: 'product-1',
+        lifecycleState: 'active_verified',
+        lastVerifiedAt: new Date(),
+        exactEvidenceAuthorizedAppId: 'app-1',
+        exactEvidenceGeneration: 3,
+        exactEvidenceStateVersion: 7,
+      },
+      {
+        slug: 'shared-slug',
+        productId: 'product-2',
+        lifecycleState: 'unknown',
+        lastVerifiedAt: null,
+        exactEvidenceAuthorizedAppId: null,
+        exactEvidenceGeneration: null,
+        exactEvidenceStateVersion: null,
+      },
     ]);
     const { GET } = await import('@/app/api/public/ratings-by-slug/route');
 
@@ -805,6 +849,9 @@ describe('/api/public/ratings-by-slug', () => {
       productId: 'product-1',
       lifecycleState: 'active_verified',
       lastVerifiedAt: new Date(now - 48 * 60 * 60 * 1000),
+      exactEvidenceAuthorizedAppId: null,
+      exactEvidenceGeneration: null,
+      exactEvidenceStateVersion: null,
     }]);
     prismaMock.ikasStoreInstallation.findUnique.mockResolvedValue({
       authorizedAppId: 'app-1',
@@ -812,7 +859,24 @@ describe('/api/public/ratings-by-slug', () => {
       stateVersion: 7,
       status: 'active',
     });
-    prismaMock.productCatalogCoverage.findFirst.mockResolvedValue({ completedAt: new Date(now) });
+    const startedAt = new Date(now - 60 * 60 * 1000);
+    const finishedAt = new Date(now);
+    prismaMock.productCatalogCoverage.findUnique.mockResolvedValue({
+      storeId: 'store-1',
+      authorizedAppId: 'app-1',
+      installationGeneration: 3,
+      installationStateVersion: 7,
+      completedAt: finishedAt,
+      reconciliationRun: {
+        storeId: 'store-1',
+        authorizedAppId: 'app-1',
+        installationGeneration: 3,
+        installationStateVersion: 7,
+        status: 'completed',
+        startedAt,
+        finishedAt,
+      },
+    });
     prismaMock.productReviewSummary.findMany.mockResolvedValue([
       summaryRow({ productId: 'product-1', approvedCount: 2, ratingSum: 10, averageRating: 5 }),
     ]);
@@ -826,15 +890,100 @@ describe('/api/public/ratings-by-slug', () => {
     await expect(response.json()).resolves.toEqual({
       data: { 'covered-product': { avg: '5.0', count: 2 } },
     });
-    expect(prismaMock.productCatalogCoverage.findFirst).toHaveBeenCalledWith({
-      where: {
+    expect(prismaMock.productCatalogCoverage.findUnique).toHaveBeenCalledWith({
+      where: { storeId: 'store-1' },
+      select: {
+        storeId: true,
+        authorizedAppId: true,
+        installationGeneration: true,
+        installationStateVersion: true,
+        completedAt: true,
+        reconciliationRun: {
+          select: {
+            storeId: true,
+            authorizedAppId: true,
+            installationGeneration: true,
+            installationStateVersion: true,
+            status: true,
+            startedAt: true,
+            finishedAt: true,
+          },
+        },
+      },
+    });
+  });
+
+  it('ignores tuple-less legacy exact timestamps without current coverage', async () => {
+    checkFixedWindowRateLimitMock.mockResolvedValue({ allowed: true });
+    prismaMock.ikasStoreInstallation.findUnique.mockResolvedValue({
+      authorizedAppId: 'app-1',
+      generation: 3,
+      stateVersion: 7,
+      status: 'active',
+    });
+    prismaMock.productSnapshot.findMany.mockResolvedValue([{
+      slug: 'legacy-product',
+      productId: 'product-legacy',
+      lifecycleState: 'active_verified',
+      lastVerifiedAt: new Date(),
+      exactEvidenceAuthorizedAppId: null,
+      exactEvidenceGeneration: null,
+      exactEvidenceStateVersion: null,
+    }]);
+    const { GET } = await import('@/app/api/public/ratings-by-slug/route');
+
+    const response = await GET(new Request(
+      'https://app.test/api/public/ratings-by-slug?storeId=store-1&slugs=legacy-product',
+    ));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ data: {} });
+    expect(prismaMock.productReviewSummary.findMany).not.toHaveBeenCalled();
+  });
+
+  it('rejects coverage whose completion timestamp does not match its linked run', async () => {
+    checkFixedWindowRateLimitMock.mockResolvedValue({ allowed: true });
+    const now = new Date();
+    prismaMock.ikasStoreInstallation.findUnique.mockResolvedValue({
+      authorizedAppId: 'app-1',
+      generation: 3,
+      stateVersion: 7,
+      status: 'active',
+    });
+    prismaMock.productSnapshot.findMany.mockResolvedValue([{
+      slug: 'mismatched-coverage',
+      productId: 'product-1',
+      lifecycleState: 'active_verified',
+      lastVerifiedAt: null,
+      exactEvidenceAuthorizedAppId: null,
+      exactEvidenceGeneration: null,
+      exactEvidenceStateVersion: null,
+    }]);
+    prismaMock.productCatalogCoverage.findUnique.mockResolvedValue({
+      storeId: 'store-1',
+      authorizedAppId: 'app-1',
+      installationGeneration: 3,
+      installationStateVersion: 7,
+      completedAt: now,
+      reconciliationRun: {
         storeId: 'store-1',
         authorizedAppId: 'app-1',
         installationGeneration: 3,
         installationStateVersion: 7,
+        status: 'completed',
+        startedAt: new Date(now.getTime() - 60_000),
+        finishedAt: new Date(now.getTime() - 1),
       },
-      select: { completedAt: true },
     });
+    const { GET } = await import('@/app/api/public/ratings-by-slug/route');
+
+    const response = await GET(new Request(
+      'https://app.test/api/public/ratings-by-slug?storeId=store-1&slugs=mismatched-coverage',
+    ));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ data: {} });
+    expect(prismaMock.productReviewSummary.findMany).not.toHaveBeenCalled();
   });
 });
 

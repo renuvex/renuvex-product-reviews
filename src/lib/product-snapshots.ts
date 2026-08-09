@@ -83,6 +83,24 @@ export type ProductEvidenceBatchResult = ProductEvidenceWriteCounts & {
   newIdentityConflicts: number;
 };
 
+export type ProductEvidenceProvenance =
+  | {
+      kind: 'point_exact';
+      installationFence: IkasInstallationFence;
+    }
+  | {
+      kind: 'catalog_coverage';
+    };
+
+type ProductEvidenceInput = {
+  source: string;
+  now?: Date;
+  reconciliationRunId?: string;
+  reconciliationTrigger?: 'install' | 'daily' | 'manual';
+  scheduleSlot?: string | null;
+  provenance: ProductEvidenceProvenance;
+};
+
 function emptyWriteCounts(): ProductEvidenceWriteCounts {
   return {
     unknown: 0,
@@ -94,6 +112,9 @@ function emptyWriteCounts(): ProductEvidenceWriteCounts {
 
 type SnapshotEvidenceRow = CurrentProductEvidence & {
   productId: string;
+  exactEvidenceAuthorizedAppId: string | null;
+  exactEvidenceGeneration: number | null;
+  exactEvidenceStateVersion: number | null;
   lastEvidenceSource: string | null;
   lastSeenReconciliationRunId: string | null;
   lastSyncedAt: Date;
@@ -107,7 +128,9 @@ function materializeSnapshotWrite(
   current: SnapshotEvidenceRow | null,
   evidence: NormalizedProductEvidence | null,
   write: ReturnType<typeof decideProductLifecycleWrite>,
+  provenance: ProductEvidenceProvenance,
 ): MaterializedSnapshotWrite {
+  const exactFence = provenance.kind === 'point_exact' ? provenance.installationFence : null;
   return {
     lifecycleState: write.lifecycleState,
     slug: write.slug !== undefined ? write.slug : current?.slug ?? evidence?.slug ?? null,
@@ -118,7 +141,10 @@ function materializeSnapshotWrite(
     ikasUpdatedAt: write.ikasUpdatedAt !== undefined
       ? write.ikasUpdatedAt
       : current?.ikasUpdatedAt ?? evidence?.ikasUpdatedAt ?? null,
-    lastVerifiedAt: write.lastVerifiedAt,
+    lastVerifiedAt: exactFence ? write.lastVerifiedAt : current?.lastVerifiedAt ?? write.lastVerifiedAt,
+    exactEvidenceAuthorizedAppId: exactFence?.authorizedAppId ?? current?.exactEvidenceAuthorizedAppId ?? null,
+    exactEvidenceGeneration: exactFence?.generation ?? current?.exactEvidenceGeneration ?? null,
+    exactEvidenceStateVersion: exactFence?.stateVersion ?? current?.exactEvidenceStateVersion ?? null,
     unavailableAt: write.unavailableAt !== undefined ? write.unavailableAt : current?.unavailableAt ?? null,
     conflictDetectedAt: write.conflictDetectedAt !== undefined
       ? write.conflictDetectedAt
@@ -171,6 +197,9 @@ async function updateSnapshotsSetBased(
     CAST(${target.providerCreatedAt} AS timestamp(3)),
     CAST(${target.ikasUpdatedAt} AS timestamp(3)),
     CAST(${target.lastVerifiedAt} AS timestamp(3)),
+    CAST(${target.exactEvidenceAuthorizedAppId} AS varchar(128)),
+    CAST(${target.exactEvidenceGeneration} AS integer),
+    CAST(${target.exactEvidenceStateVersion} AS integer),
     CAST(${target.unavailableAt} AS timestamp(3)),
     CAST(${target.conflictDetectedAt} AS timestamp(3)),
     CAST(${target.absenceFirstObservedAt} AS timestamp(3)),
@@ -190,6 +219,9 @@ async function updateSnapshotsSetBased(
       "providerCreatedAt" = evidence."providerCreatedAt",
       "ikasUpdatedAt" = evidence."ikasUpdatedAt",
       "lastVerifiedAt" = evidence."lastVerifiedAt",
+      "exactEvidenceAuthorizedAppId" = evidence."exactEvidenceAuthorizedAppId",
+      "exactEvidenceGeneration" = evidence."exactEvidenceGeneration",
+      "exactEvidenceStateVersion" = evidence."exactEvidenceStateVersion",
       "unavailableAt" = evidence."unavailableAt",
       "conflictDetectedAt" = evidence."conflictDetectedAt",
       "absenceFirstObservedAt" = evidence."absenceFirstObservedAt",
@@ -208,6 +240,9 @@ async function updateSnapshotsSetBased(
       "providerCreatedAt",
       "ikasUpdatedAt",
       "lastVerifiedAt",
+      "exactEvidenceAuthorizedAppId",
+      "exactEvidenceGeneration",
+      "exactEvidenceStateVersion",
       "unavailableAt",
       "conflictDetectedAt",
       "absenceFirstObservedAt",
@@ -239,15 +274,15 @@ export async function applyExactProductEvidenceBatch(
   tx: Prisma.TransactionClient,
   storeId: string,
   entries: Array<{ productId: string; product: ProductLike | null }>,
-  input: {
-    source: string;
-    now?: Date;
-    reconciliationRunId?: string;
-    reconciliationTrigger?: 'install' | 'daily' | 'manual';
-    scheduleSlot?: string | null;
-    freshnessMode?: 'snapshot' | 'coverage';
-  },
+  input: ProductEvidenceInput,
 ): Promise<ProductEvidenceBatchResult> {
+  if (input.provenance.kind === 'point_exact') {
+    await requireActiveIkasStoreInstallationFence(
+      tx,
+      storeId,
+      input.provenance.installationFence,
+    );
+  }
   const productIds = entries.map((entry) => entry.productId);
   if (new Set(productIds).size !== productIds.length) throw new Error('duplicate_product_evidence_id');
 
@@ -261,6 +296,9 @@ export async function applyExactProductEvidenceBatch(
       providerCreatedAt: true,
       ikasUpdatedAt: true,
       lastVerifiedAt: true,
+      exactEvidenceAuthorizedAppId: true,
+      exactEvidenceGeneration: true,
+      exactEvidenceStateVersion: true,
       unavailableAt: true,
       conflictDetectedAt: true,
       absenceFirstObservedAt: true,
@@ -296,12 +334,12 @@ export async function applyExactProductEvidenceBatch(
       reconciliationTrigger: input.reconciliationTrigger,
       scheduleSlot: input.scheduleSlot,
     });
-    const target = materializeSnapshotWrite(current, evidence, write);
+    const target = materializeSnapshotWrite(current, evidence, write, input.provenance);
     if (target.lifecycleState === 'identity_conflict' && current?.lifecycleState !== 'identity_conflict') {
       newIdentityConflicts += 1;
     }
     if (current) {
-      const shouldUpdate = input.freshnessMode !== 'coverage' || hasSemanticSnapshotChange(current, target);
+      const shouldUpdate = input.provenance.kind === 'point_exact' || hasSemanticSnapshotChange(current, target);
       if (shouldUpdate) updates.push({ productId: entry.productId, target });
     } else {
       creates.push({
@@ -329,14 +367,7 @@ export async function applyExactProductEvidence(
   storeId: string,
   productId: string,
   product: ProductLike | null,
-  input: {
-    source: string;
-    now?: Date;
-    reconciliationRunId?: string;
-    reconciliationTrigger?: 'install' | 'daily' | 'manual';
-    scheduleSlot?: string | null;
-    freshnessMode?: 'snapshot' | 'coverage';
-  },
+  input: ProductEvidenceInput,
 ) {
   return applyExactProductEvidenceBatch(tx, storeId, [{ productId, product }], input);
 }
@@ -345,7 +376,7 @@ export async function syncSingleProductForStore(
   ikas: IkasClient,
   storeId: string,
   productId: string,
-  installationFence?: IkasInstallationFence,
+  installationFence: IkasInstallationFence,
 ) {
   const response = await ikas.queries.listProductsForSync({
     id: { eq: productId },
@@ -373,11 +404,9 @@ export async function syncSingleProductForStore(
   const product = products[0] ?? null;
 
   const result = await prisma.$transaction(async (tx) => {
-    if (installationFence) {
-      await requireActiveIkasStoreInstallationFence(tx, storeId, installationFence);
-    }
     return applyExactProductEvidence(tx, storeId, productId, product, {
       source: 'webhook_exact',
+      provenance: { kind: 'point_exact', installationFence },
     });
   });
   reportProductIdentityConflicts(result.newIdentityConflicts, 'webhook_exact');

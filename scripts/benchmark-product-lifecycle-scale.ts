@@ -225,7 +225,7 @@ async function applyUnchangedSnapshotEvidence(input: {
         now: input.now,
         reconciliationTrigger: 'daily',
         scheduleSlot: input.scheduleSlot,
-        freshnessMode: 'coverage',
+        provenance: { kind: 'catalog_coverage' },
       });
       changedSnapshots += result.changedSnapshots;
       createdSnapshots += result.createdSnapshots;

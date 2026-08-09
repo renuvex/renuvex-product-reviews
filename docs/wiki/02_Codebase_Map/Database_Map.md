@@ -51,6 +51,7 @@ source_files:
   - "prisma/migrations/20260803120000_add_product_lifecycle_evidence/migration.sql"
   - "prisma/migrations/20260809120000_harden_product_lifecycle_evidence/migration.sql"
   - "prisma/migrations/20260809130000_add_product_reconciliation_scale/migration.sql"
+  - "prisma/migrations/20260809140000_add_product_exact_evidence_provenance/migration.sql"
   - "src/lib/ikas-installation-lifecycle.ts"
   - "src/lib/cleanup-orphan-images.ts"
   - "src/lib/review-email/"
@@ -83,7 +84,7 @@ Postgres (Supabase) accessed via Prisma. Core review/media models now include th
 |---|---|
 | [prisma/schema.prisma](prisma/schema.prisma) | Multi-file entrypoint; owns the generator and datasource blocks |
 | [prisma/models/](prisma/models/) | Domain-owned Prisma model sources |
-| [prisma/migrations/](prisma/migrations/) | Immutable migration history (64 source migrations on the closure branch; production applied count remains a separately verified live-state fact) |
+| [prisma/migrations/](prisma/migrations/) | Immutable migration history (65 source migrations on the exact-provenance branch; Production remains at the separately verified 64-migration state until deployment acceptance) |
 | [src/lib/prisma.ts](src/lib/prisma.ts) | Prisma client singleton |
 | [src/models/auth-token/index.ts](src/models/auth-token/index.ts) | `AuthToken` interface |
 | [src/models/auth-token/manager.ts](src/models/auth-token/manager.ts) | `AuthTokenManager` reads tokens and refreshes existing rows without recreating erased installations; install/delete writes belong to the lifecycle helper and erasure transaction. |
@@ -124,10 +125,10 @@ normal migration workflow below.
 | `ProductReviewSummary` | `id` (uuid), unique `(storeId, productId)` | Product-level aggregate read model for public badge, structured-data, summary distribution, and exact filtered review-list counts |
 | `StoreSettings` | `id` (uuid), unique `storeId` | Per-merchant config; tracks storefront script/theme sync state and additive `videoMonthlyLimit` quota gate (default `0`, so video stays closed). |
 | `WidgetSettings` | `id` (uuid), unique `(storeId, widgetId)` | Per-widget JSON settings |
-| `ProductSnapshot` | `id` (uuid), unique `(storeId, productId)` | Product identity evidence with `unknown`, fresh active, unavailable tombstone, or sticky identity-conflict state. Two daily exact-empty observations in distinct slots at least 24 hours apart are required before absence becomes unavailable; explicit provider deletion is immediate. Slug/name remain non-identity metadata. |
+| `ProductSnapshot` | `id` (uuid), unique `(storeId, productId)` | Product identity evidence with `unknown`, active, unavailable tombstone, or sticky identity-conflict state. Point-exact freshness is valid only when its nullable all-or-none authorized-app/generation/state-version tuple matches the current installation. Two daily exact-empty observations in distinct slots at least 24 hours apart are required before absence becomes unavailable; explicit provider deletion is immediate. Slug/name remain non-identity metadata. |
 | `ProductReconciliationRun` | `id` (uuid), unique daily store/generation/trigger slot | Bounded per-installation scan/exact-verification progress, lease, delayed retry, counters, installation-generation fence, and 42-day terminal audit evidence. The latest successful run for each active exact installation generation is retention-protected. |
 | `ProductReconciliationObservation` | composite `(runId, productId)` | Temporary nonterminal present/deleted scan evidence for cross-page duplicate detection and exact-candidate anti-join. It is terminally deleted on completed, stale, or exhausted runs; it is not a 42-day audit log. |
-| `ProductCatalogCoverage` | `storeId`, unique optional `reconciliationRunId` | Current installation generation's last completed full-catalog evidence. It carries 36-hour freshness without rewriting unchanged active snapshots. |
+| `ProductCatalogCoverage` | `storeId`, unique optional `reconciliationRunId` | Current installation generation's last completed full-catalog evidence. It carries freshness without rewriting unchanged active snapshots only when linked to a matching completed run: run `startedAt` is the conservative evidence time and equal coverage `completedAt` / run `finishedAt` values are availability evidence. |
 | `ProductReconciliationSweep` | `id` (uuid), unique `scheduleSlot` | Durable global active-installation discovery cursor, lease, retry, dispatch counters, and retention phases. One invocation discovers at most 50 installations; the latest successful global sweep is retention-protected. |
 | `PendingReviewImage` | `publicId` | Legacy-named pending media registry. AWS image upload intents and Mux video sessions stage here behind provider-aware fields until review submit or cleanup. |
 | `MediaCleanupRun` | `id` (uuid) | Audit log, one row per `cleanup-images` cron run (scan/quarantine/sweep counts, breaker status, `sampleDeleted` sample). See [[ADR_0030_Cleanup_Hardening]] |
@@ -386,6 +387,10 @@ code run together, so a migration must not break the old code.
 - [[Legacy_Review_Media_Reconciliation]]
 
 ## Change Log
+- 2026-08-09: Added the 65th source migration for nullable all-or-none
+  point-exact installation provenance. Recorded linked completed-run
+  `startedAt` freshness, continuity reporting, and the boundary that Production
+  remains at the separately accepted 64-migration state until deployment.
 - 2026-08-09: Recorded the closure-branch 64-migration lifecycle schema:
   two-slot absence evidence, transient observations, current-generation
   coverage, durable bounded sweeps, 42-day terminal run/sweep retention, and
