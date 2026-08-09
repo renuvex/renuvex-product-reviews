@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-17
-updated: 2026-07-30
-last_verified: 2026-07-30
+updated: 2026-08-09
+last_verified: 2026-08-09
 confidence: high
 tags:
   - adr
@@ -24,6 +24,7 @@ source_files:
   - "src/app/api/admin/sync-products/route.ts"
   - "src/app/api/oauth/callback/ikas/route.ts"
   - "src/lib/product-snapshots.ts"
+  - "src/lib/product-reconciliation.ts"
   - "src/widget/core/storefront-context.js"
   - "src/widget/listing-badges/collect.js"
   - "src/widget/listing-badges/ratings.js"
@@ -88,10 +89,12 @@ Deletion creates a tombstone; a tombstoned id that reappears becomes
 rollout gates that supersede the old direct-slug fallback decision.
 
 ## Reasoning
-Product ids are stable; slugs are mutable. Using slugs as identity makes review
-visibility depend on unrelated SEO edits. Keeping `(storeId, productId)` as the
-read key matches the PDP path, matches ikas product identity semantics, and avoids
-a destructive review data migration because existing reviews already carry
+Product ids are the strongest available provider identifier; slugs are mutable.
+Ikas does not publish an id-reuse guarantee, so a tombstoned id that reappears
+is treated as conflict rather than automatically reactivated. Using slugs as
+identity makes review visibility depend on unrelated SEO edits. Keeping
+`(storeId, productId)` as the read key matches the PDP path and avoids a
+destructive review data migration because existing reviews already carry
 `productId`.
 
 Keeping `slug` and `productName` as snapshots preserves useful admin/display
@@ -118,13 +121,13 @@ fields define identity.
 - DOM-only listing fallback resolves a slug only through one fresh
   `active_verified` snapshot. Missing, stale, unknown, or conflicting evidence
   returns no rating rather than attaching historical reviews by slug.
-- The local `ProductSnapshot` table is a read model/cache. ikas remains the
-  source of truth; webhook misses can be repaired by running the admin backfill
-  endpoint.
-- Install-time backfill runs after the OAuth callback response is sent (Next.js
-  `after()`), so a large product catalog never delays or fails the install. A
-  backfill interrupted by the serverless function timeout is recovered by product
-  webhooks or `POST /api/admin/sync-products`.
+- The local `ProductSnapshot` table is lifecycle evidence. Ikas remains the
+  current-product source of truth; webhook misses converge through DB-owned
+  reconciliation rather than a request-scoped full backfill.
+- Install-time work creates/reuses an installation-fenced run after the OAuth
+  callback response and publishes only its opaque id. Catalog pages are handled
+  by bounded QStash continuations; scheduled sweeps recover accepted DB work
+  after a dispatch/runtime interruption.
 - Reviews remain product-level, not variant-level. `ikasVariantId` is not part of
   the review identity unless a future product requirement explicitly changes the
   domain model.

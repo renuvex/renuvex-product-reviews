@@ -3,8 +3,8 @@ type: database
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-08
-last_verified: 2026-08-08
+updated: 2026-08-09
+last_verified: 2026-08-09
 confidence: high
 tags:
   - database
@@ -49,6 +49,8 @@ source_files:
   - "prisma/migrations/20260728120000_harden_supabase_data_api_surface/migration.sql"
   - "prisma/migrations/20260802170000_add_admin_review_list_indexes/migration.sql"
   - "prisma/migrations/20260803120000_add_product_lifecycle_evidence/migration.sql"
+  - "prisma/migrations/20260809120000_harden_product_lifecycle_evidence/migration.sql"
+  - "prisma/migrations/20260809130000_add_product_reconciliation_scale/migration.sql"
   - "src/lib/ikas-installation-lifecycle.ts"
   - "src/lib/cleanup-orphan-images.ts"
   - "src/lib/review-email/"
@@ -81,7 +83,7 @@ Postgres (Supabase) accessed via Prisma. Core review/media models now include th
 |---|---|
 | [prisma/schema.prisma](prisma/schema.prisma) | Multi-file entrypoint; owns the generator and datasource blocks |
 | [prisma/models/](prisma/models/) | Domain-owned Prisma model sources |
-| [prisma/migrations/](prisma/migrations/) | Immutable migration history (62 source migrations after the additive product-lifecycle evidence migration; production applied count remains a separately verified live-state fact) |
+| [prisma/migrations/](prisma/migrations/) | Immutable migration history (64 source migrations on the closure branch; production applied count remains a separately verified live-state fact) |
 | [src/lib/prisma.ts](src/lib/prisma.ts) | Prisma client singleton |
 | [src/models/auth-token/index.ts](src/models/auth-token/index.ts) | `AuthToken` interface |
 | [src/models/auth-token/manager.ts](src/models/auth-token/manager.ts) | `AuthTokenManager` reads tokens and refreshes existing rows without recreating erased installations; install/delete writes belong to the lifecycle helper and erasure transaction. |
@@ -95,7 +97,7 @@ Postgres (Supabase) accessed via Prisma. Core review/media models now include th
 | `storefront.prisma` | Store and widget settings |
 | `media.prisma` | Image/video upload and provider lifecycle |
 | `operations.prisma` | Cleanup, scheduled-run locks, and quarantine |
-| `product-lifecycle.prisma` | Product evidence snapshots, tombstones, and bounded reconciliation runs |
+| `product-lifecycle.prisma` | Product evidence snapshots/tombstones, per-run observations, current-generation catalog coverage, bounded runs, and global sweeps |
 | `review-email-config.prisma` | Merchant review-email settings |
 | `review-email-orders.prisma` | Ikas order evidence, reconciliation, and receipt fence |
 | `review-email-delivery.prisma` | Batch, request, token, session, job, attempt, and event |
@@ -122,8 +124,11 @@ normal migration workflow below.
 | `ProductReviewSummary` | `id` (uuid), unique `(storeId, productId)` | Product-level aggregate read model for public badge, structured-data, summary distribution, and exact filtered review-list counts |
 | `StoreSettings` | `id` (uuid), unique `storeId` | Per-merchant config; tracks storefront script/theme sync state and additive `videoMonthlyLimit` quota gate (default `0`, so video stays closed). |
 | `WidgetSettings` | `id` (uuid), unique `(storeId, widgetId)` | Per-widget JSON settings |
-| `ProductSnapshot` | `id` (uuid), unique `(storeId, productId)` | Product identity evidence with `unknown`, fresh active, unavailable tombstone, or sticky identity-conflict state; slug/name remain non-identity metadata. `unavailableAt` is the existing first-unavailable retention anchor. |
-| `ProductReconciliationRun` | `id` (uuid), unique daily store/generation/trigger slot | Bounded per-run scan/exact-verification progress, lease, retry, counters, and installation-generation fence for missed product webhook convergence. Global installation discovery and terminal-run retention are separate open bounds. |
+| `ProductSnapshot` | `id` (uuid), unique `(storeId, productId)` | Product identity evidence with `unknown`, fresh active, unavailable tombstone, or sticky identity-conflict state. Two daily exact-empty observations in distinct slots at least 24 hours apart are required before absence becomes unavailable; explicit provider deletion is immediate. Slug/name remain non-identity metadata. |
+| `ProductReconciliationRun` | `id` (uuid), unique daily store/generation/trigger slot | Bounded per-installation scan/exact-verification progress, lease, delayed retry, counters, installation-generation fence, and 42-day terminal audit evidence. The latest successful run for each active exact installation generation is retention-protected. |
+| `ProductReconciliationObservation` | composite `(runId, productId)` | Temporary nonterminal present/deleted scan evidence for cross-page duplicate detection and exact-candidate anti-join. It is terminally deleted on completed, stale, or exhausted runs; it is not a 42-day audit log. |
+| `ProductCatalogCoverage` | `storeId`, unique optional `reconciliationRunId` | Current installation generation's last completed full-catalog evidence. It carries 36-hour freshness without rewriting unchanged active snapshots. |
+| `ProductReconciliationSweep` | `id` (uuid), unique `scheduleSlot` | Durable global active-installation discovery cursor, lease, retry, dispatch counters, and retention phases. One invocation discovers at most 50 installations; the latest successful global sweep is retention-protected. |
 | `PendingReviewImage` | `publicId` | Legacy-named pending media registry. AWS image upload intents and Mux video sessions stage here behind provider-aware fields until review submit or cleanup. |
 | `MediaCleanupRun` | `id` (uuid) | Audit log, one row per `cleanup-images` cron run (scan/quarantine/sweep counts, breaker status, `sampleDeleted` sample). See [[ADR_0030_Cleanup_Hardening]] |
 | `OrphanImageQuarantine` | `publicId` | Two-phase orphan-deletion state: orphans are marked here, then hard-deleted only after a grace window if still orphaned. See [[ADR_0030_Cleanup_Hardening]] |
@@ -348,11 +353,13 @@ code run together, so a migration must not break the old code.
 - Review Video upload performance diagnostics are stored in `VideoUploadPerformanceSample`. Treat the table as operational evidence, not source-of-truth lifecycle state; `VideoUploadSession`, `WebhookEvent`, and `MediaProviderJob` remain authoritative for provider lifecycle.
 - Legacy global image-provider paths (`review_images/...` without `stores/<storeId>`) are not trusted tenant media. The old reconciliation scripts were removed during the AWS-only teardown; do not reintroduce legacy provider trust for storefront reads.
 - `Review.status` is a string column, not a Postgres enum. Code uses `'pending' | 'approved' | 'rejected'` literals. Be consistent.
-- Product lifecycle Release A's database/backend is ready for the current active
-  installation, but end-to-end Worker rollout remains open. `ProductSnapshot`
-  and `ProductReconciliationRun` are not yet covered by store erasure and
-  completed daily runs have no bounded retention. Do not direct-SQL delete
-  measured orphan rows. Follow
+- Product lifecycle closure source adds two additive migrations on top of the
+  deployed Release A. It covers observations, runs, coverage, and snapshots in
+  generation-fenced store erasure; applies 42-day bounded terminal run/sweep
+  retention; persists a 50-installation global sweep cursor; and avoids
+  unchanged active snapshot updates through current-generation coverage.
+  Tombstones/conflicts remain until store erasure. This source is not yet
+  production-deployed; do not direct-SQL clean lifecycle rows. Follow
   [[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]].
 - `StoreSettings.storefrontScripts` is a JSON map `{ [storefrontId]: ikasScriptId }` used as an idempotency cache. Remote ikas script listing is the source of truth when available, so re-installs adopt/update existing scripts instead of creating duplicates. See [[Auth_And_Installation_Flow]].
 - `StoreSettings.storefrontTheme` stores non-sensitive storefront/theme evidence. Current app-layer shape is `{ syncStatus, stable, pending, lastCheckedAt, verificationDueAt, verifiedAt }`, and metadata includes `evidenceStatus`. Since the 2026-08-09 ikas schema no longer exposes active-theme fields, new observations are `provider_unavailable` and legacy rows are `legacy_unverifiable`; public automatic placement remains fail-closed while explicit review mounts use the generic adapter.
@@ -379,6 +386,10 @@ code run together, so a migration must not break the old code.
 - [[Legacy_Review_Media_Reconciliation]]
 
 ## Change Log
+- 2026-08-09: Recorded the closure-branch 64-migration lifecycle schema:
+  two-slot absence evidence, transient observations, current-generation
+  coverage, durable bounded sweeps, 42-day terminal run/sweep retention, and
+  generation-fenced erasure. Production deployment remains a separate gate.
 - 2026-08-03: Added the verified Product Lifecycle scale/retention boundary,
   including lifecycle-table erasure and terminal-run retention gaps. No schema
   or live data mutation was performed by the documentation update.

@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-06-09
-updated: 2026-08-08
-last_verified: 2026-08-08
+updated: 2026-08-09
+last_verified: 2026-08-09
 confidence: high
 tags:
   - runbook
@@ -35,10 +35,12 @@ source_files:
   - "src/lib/ikas-installation-lifecycle.ts"
   - "src/lib/product-reconciliation.ts"
   - "src/lib/product-reconciliation-dispatcher.ts"
+  - "src/lib/product-reconciliation-sweep.ts"
+  - "src/lib/product-lifecycle-retention.ts"
   - "src/app/api/admin/sync-products/route.ts"
   - "src/app/api/internal/product-reconciliation/route.ts"
+  - "src/app/api/internal/product-reconciliation-sweep/route.ts"
   - "workers/widget-delivery/src/index.ts"
-  - "src/app/api/internal/product-reconciliation/route.ts"
   - "scripts/verify-product-lifecycle.ts"
   - "src/app/api/admin/daily-maintenance/route.ts"
   - "src/app/api/admin/cleanup-images/route.ts"
@@ -69,10 +71,12 @@ failure playbooks. Current source of truth: QStash schedules trigger
 source-of-truth. Real cleanup deletes are guarded by `MediaCleanupRun`,
 `OrphanImageQuarantine`, idempotent provider jobs, and breaker rules. Never run
 manual cleanup, force flags, provider deletes, schedule mutation, or deploy
-commands without explicit scope, risk, rollback, and approval. Product
-reconciliation's backend/DB is accepted for the current pre-launch footprint
-only. The live slug Worker cutover, manual dispatch truthfulness, and the
-current discovery/write path remain open; none is a 5,000-store capacity proof.
+commands without explicit scope, risk, rollback, and approval. The 2026-08-09
+closure branch adds truthful dispatch, persistent bounded discovery,
+changed-only snapshots, delayed retry, lifecycle erasure, and bounded terminal
+retention. It is source/local evidence only. The live slug Worker cutover,
+production migration/convergence, managed PostgreSQL scale, and Release B remain
+open.
 
 Operational reference for the scheduled background jobs and how their failures surface.
 
@@ -99,14 +103,27 @@ QStash is the active maintenance scheduler per [[ADR_0035_QStash_Scheduler_For_M
 
 Both require `Authorization: Bearer <CRON_SECRET>`.
 
-Product reconciliation reuses the daily QStash schedule but owns separate
-DB-backed runs and a signed continuation endpoint. Maintenance redispatches due
-pending/error/expired-lease runs, then creates at most one daily run for each
-active installation. A continuation accepts only `{ "runId": "<uuid>" }` and
-processes one scan page (maximum 200) or exact candidate batch (maximum 50).
-Missing provider pagination evidence, API failure, or a partial scan cannot mark
-a product unavailable. Reinstall closes nonterminal older-generation runs as
-`stale_ignored`. Use the aggregate-only read verifier:
+Product reconciliation reuses the daily QStash schedule but owns a durable
+global sweep and per-installation runs. Maintenance recovers due work and
+creates/resumes one nonterminal sweep. A signed sweep continuation accepts only
+`{ "sweepId": "<uuid>" }`, discovers at most 50 active installations, persists
+its cursor, and republishes continuation work. A signed run continuation accepts
+only `{ "runId": "<uuid>" }` and processes one scan page (maximum 200) or exact
+candidate batch (maximum 50).
+
+Scan observations are a temporary nonterminal working set. They detect
+cross-page duplicate product ids and drive exact-candidate selection, then are
+removed atomically when the run completes, becomes stale, or exhausts. Current
+generation `ProductCatalogCoverage` carries freshness, so a stable daily sweep
+does not update unchanged active snapshots. Missing provider pagination
+evidence, duplicate ids, API failure, or a partial scan cannot mark a product
+unavailable. Reinstall closes older-generation runs as `stale_ignored` and
+removes their observations.
+
+Daily exact-empty evidence is deliberately delayed: two distinct daily
+schedule slots at least 24 hours apart are required. Explicit provider
+`deleted=true` is immediate. Install/manual empty results and provider errors do
+not advance the daily absence count. Use the aggregate-only read verifier:
 
 ```text
 pnpm verify:product-lifecycle --expect=expanded
@@ -114,41 +131,42 @@ pnpm verify:product-lifecycle --expect=ready
 ```
 
 `expanded` is the post-migration schema/RLS/default-deny gate. `ready` requires
-a fresh completed run per active installation and zero missing/unknown/stale
-active evidence. Both modes passed on 2026-08-03 after one bounded QStash run
-for the active installation. This proves current convergence, not large-scale
-capacity or Release B deployment.
+fresh current-generation coverage for every active installation and zero
+missing/unknown/stale referenced evidence, orphan/mismatched/terminal
+observations, invalid coverage, or stuck runs/sweeps. The original deployed
+62-migration backend passed both modes for one active installation on
+2026-08-03. The closure branch passed expanded/ready on disposable PostgreSQL,
+not production.
 
-The same read-only audit found that global installation discovery still loops
-through every active installation in one maintenance invocation, evidence
-writes execute once per product, terminal daily runs have no retention policy,
-and store erasure does not include `ProductSnapshot` or
-`ProductReconciliationRun`. Do not resolve those gaps with direct SQL, manual
-row deletion, a longer function timeout, or unbounded retries. Close lifecycle-
-table erasure and bounded run retention before Release B rollout. Cursor global
-discovery and reduce write amplification before any 5,000-store claim. See
-[[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]] and
-[[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]].
+Terminal runs and sweeps are retained for 42 days. Cleanup processes at most
+100 rows per phase and protects the latest successful run for each active exact
+installation generation plus the latest global successful sweep. Tombstones
+and identity conflicts are not operational logs and are excluded from that
+retention. Generation-fenced store erasure removes observations, runs, coverage,
+and snapshots in batches of at most 100 after the existing journal boundary.
+Never replace these paths with direct SQL cleanup.
 
 ### Product reconciliation operational limitations
 
-- `POST /api/admin/sync-products` currently awaits but does not inspect the
-  dispatcher's boolean result. Until `A0-DISPATCH` is fixed and deployed, a
-  `202` proves only that a DB-owned run exists; it does not prove QStash accepted
-  the message. Verify QStash delivery and run completion separately.
-- `busy` or future-`nextRetryAt` claims return without publishing a delayed
-  continuation. Retryable processing failures set `nextRetryAt` and return an
-  error, but an early QStash redelivery may then become `deferred` and stop.
-  Daily maintenance is the current recovery path. Do not hide this by extending
-  function timeout or manually editing `nextRetryAt`; implement `B-RETRY` so the
-  persisted retry time schedules a delayed continuation.
-- The scan validates each page and rejects duplicate IDs within that page. It
-  does not yet prove a stable provider snapshot or reject duplicates/drift
-  across different pages. Do not enable Release B absence-based consumer denial
-  until `B-SCAN` and `B-EVIDENCE` close.
-- `identity_conflict` is deliberately sticky, but there is no current alert or
-  audited resolution workflow. Never resolve it by SQL. Follow
-  `B-CONFLICT-OPS` in the canonical audit matrix.
+- Closure-source admin sync returns `202` only when QStash accepts publish; a
+  publish failure preserves the recoverable pending run and returns fixed
+  `503 product_reconciliation_dispatch_failed`. This still needs a live
+  dev-store QStash acceptance after deployment.
+- Busy/deferred and retryable outcomes publish a delayed continuation at the
+  persisted lease/`nextRetryAt`. The deduplication key includes durable progress
+  plus the lease/retry epoch, so QStash's long-lived deduplication window cannot
+  suppress a post-crash lease recovery. DB lease and idempotent state
+  transitions remain the correctness boundary.
+- Cross-page duplicates fail the run. Provider catalog mutation between pages
+  may still cause a retry/fail-closed outcome; no undocumented provider sort or
+  snapshot guarantee is assumed.
+- `identity_conflict` is deliberately sticky and aggregate-visible, but alerting
+  and a controlled operator-resolution workflow remain open. Never resolve it
+  by SQL.
+- Initial flow control is one message per second with parallelism four. Change
+  it only from live 429/5xx, backlog, Vercel concurrency, and database evidence.
+- The local 5,000 x 500 benchmark is not a provider-quota or managed PostgreSQL
+  acceptance. See the canonical audit for exact evidence and remaining gates.
 
 ### Slug Worker rollout acceptance
 

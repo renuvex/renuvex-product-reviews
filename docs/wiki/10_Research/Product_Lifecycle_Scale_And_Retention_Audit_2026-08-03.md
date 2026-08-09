@@ -3,8 +3,8 @@ type: research
 project: renuvex-product-reviews
 status: active
 created: 2026-08-03
-updated: 2026-08-08
-last_verified: 2026-08-08
+updated: 2026-08-09
+last_verified: 2026-08-09
 confidence: high
 tags:
   - product-lifecycle
@@ -24,8 +24,11 @@ source_files:
   - "src/lib/product-snapshots.ts"
   - "src/lib/product-reconciliation.ts"
   - "src/lib/product-reconciliation-dispatcher.ts"
+  - "src/lib/product-reconciliation-sweep.ts"
+  - "src/lib/product-lifecycle-retention.ts"
   - "src/app/api/admin/sync-products/route.ts"
   - "src/app/api/internal/product-reconciliation/route.ts"
+  - "src/app/api/internal/product-reconciliation-sweep/route.ts"
   - "src/app/api/public/upload/sign/route.ts"
   - "src/lib/review-email/erasure.ts"
   - "workers/widget-delivery/src/index.ts"
@@ -39,13 +42,13 @@ source_files:
 
 Use this page before changing product lifecycle retention, reconciliation
 cadence, store erasure, storefront slug resolution, or making a merchant-scale
-claim. Release A's database/backend is merged, deployed, and ready for the
-current active installation. The end-to-end storefront cutover is not closed:
-the live Cloudflare Worker still caches `ratings-by-slug` even though current
-source bypasses that cache. The tombstone/evidence model remains a valid
-durability boundary, but the current global discovery loop, per-product write
-pattern, terminal-run retention, and uninstall coverage are not approved for
-5,000 or 100,000 stores.
+claim. The 2026-08-03 deployed baseline and the 2026-08-09 feature-branch
+closure evidence are deliberately separate. The closure source replaces the
+measured unbounded discovery/write path with persistent sweeps, changed-only
+snapshot writes, transient observations, bounded retention, and lifecycle
+erasure. It is not yet merged or deployed. The live Cloudflare Worker still
+caches `ratings-by-slug`, Release B is unimplemented, and representative managed
+PostgreSQL plus live provider/QStash capacity evidence is still open.
 
 This page separates measured Production evidence from arithmetic projections.
 It does not authorize SQL cleanup, provider mutation, Release B deployment, or
@@ -53,7 +56,12 @@ a scale claim.
 
 ## Evidence Boundary
 
-- Repository baseline: `main = origin/main = 6e6414989b45dd443058e252948585a34f30ed2e`.
+- Historical deployed baseline: commit
+  `6e6414989b45dd443058e252948585a34f30ed2e` with 62 migrations.
+- Closure implementation baseline: `main = origin/main =
+  a579840421d2db4c8bbc82b9a9d73f018db2668c`; the feature branch adds the 63rd
+  and 64th additive source migrations. These migrations are local source only
+  until a separately approved deployment.
 - Release A migration count: 62; the additive lifecycle migration is applied.
 - Read-only verifier result: `expanded=true`, `ready=true`, one active
   installation, zero active-installation missing/unknown/stale snapshots, and
@@ -69,8 +77,8 @@ a scale claim.
   newest serving deployment as 2026-07-04, before the Release A merge. Current
   Worker source uses `forceNoStore`; source and live edge are therefore not yet
   equivalent.
-- No Worker deploy, database write, QStash publish, or provider mutation was
-  performed by this audit.
+- No production Worker deploy, production database write, QStash publish, or
+  provider mutation was performed by the closure implementation or benchmark.
 
 ## Architecture Verdict
 
@@ -162,7 +170,7 @@ At 100,000 stores with 1,000 products each, the same shape implies about
 500,000 catalog pages, 100,000 runs, and 100,000,000 snapshot writes per day.
 This workload has not been provider-quota-tested or load-tested.
 
-## Verified Scale Limits
+## Deployed Baseline Scale Limits
 
 Individual continuation work is bounded to one 200-product scan page or one
 50-id verification batch. Global daily discovery is not bounded across
@@ -179,8 +187,67 @@ Therefore:
 - 100,000-store production claim: NO-GO without a new measured capacity model,
   provider quota contract, backpressure, and representative load tests.
 
-The evidence/tombstone data model can remain. The orchestration and write
-strategy must change before a large-scale claim.
+The evidence/tombstone data model can remain. These findings describe the
+2026-08-03 deployed orchestration/write path, not the newer closure branch.
+
+## 2026-08-09 Closure Source Evidence
+
+The branch implementation closes the source-level form of the original scale
+and retention findings:
+
+- `ProductReconciliationSweep` persists global discovery progress and limits
+  one invocation to 50 active installations.
+- Per-installation work remains bounded to 200 scan products or 50 exact ids.
+- `ProductReconciliationObservation` has a composite `(runId, productId)` key
+  and stores only temporary present/deleted scan evidence. It is removed when a
+  run completes, becomes stale, or exhausts.
+- `ProductCatalogCoverage` carries current-generation freshness, so unchanged
+  active snapshots are not rewritten each day.
+- Terminal runs and sweeps use 42-day bounded retention. The latest successful
+  run for each active installation and latest global successful sweep are
+  protected.
+- Generation-fenced erasure deletes observations, runs, coverage, and snapshots
+  in batches of at most 100. Tombstones/conflicts are otherwise retained.
+- Daily exact-empty requires two distinct daily schedule slots at least 24 hours
+  apart. Explicit provider `deleted=true` remains immediate; install/manual
+  empty results do not advance the absence count.
+- Cross-page duplicate ids fail the run. Retry and busy outcomes publish a
+  continuation at the persisted lease/`nextRetryAt`; the deduplication key also
+  carries that lease/retry epoch so QStash's 90-day deduplication record cannot
+  suppress crash recovery. Publish failure is visible as a retryable error
+  rather than accepted work.
+- QStash flow control is configured at one message per second and parallelism
+  four. DB lease/idempotency remains the correctness boundary.
+
+Disposable PostgreSQL 16 and 17 both applied all 64 migrations with clean
+migration status and empty schema diffs. RLS/default-grant checks, expanded
+verifier, and integration tests passed. A disposable PostgreSQL 17 benchmark
+with 5,000 installations and 500 products each recorded:
+
+| Measurement | Local synthetic result |
+|---|---:|
+| Snapshot rows | 2,500,000 |
+| Stable-catalog messages | 20,103 |
+| Completion at 1 message/second | 5.584 hours |
+| Production changed-only helper duration | 130,609 ms |
+| Helper-reported changed/created snapshots | 0 / 0 |
+| PostgreSQL unchanged snapshot updates | 0 |
+| Changed-only helper interval WAL | 4,601,488 bytes |
+| Peak observations | 2,500,000 |
+| Final observations | 0 |
+| Final coverage rows | 5,000 |
+| Daily evidence WAL | 1,187,833,960 bytes |
+| Terminalization WAL | 441,951,040 bytes |
+| Observation dead tuples after terminal delete | 2,500,000 |
+
+The unchanged-product result now executes the production
+`applyExactProductEvidenceBatch()` path for all 2.5 million synthetic products;
+it is not inferred from a raw-SQL no-op. The nonzero helper-interval WAL is
+reported rather than hidden even though `ProductSnapshot` recorded no updates;
+the disposable cluster may perform background WAL-producing work. This
+benchmark still excludes exact-verification backlog, retries, provider quotas,
+network latency, and managed-service behavior. It is a source/local architecture
+GO, not the representative managed 5K Scale GO and not a 100,000-store claim.
 
 ## Canonical Closure Matrix
 
@@ -203,6 +270,24 @@ this table instead of inventing a second sequence.
 | `SCALE-WRITES` | Replace one unconditional row write per active product with measured set-based or changed-only evidence persistence without weakening per-product identity/freshness. | Representative PostgreSQL plans and load tests report rows written, WAL, dead tuples, autovacuum, duration, and correctness under retries. | 5,000+ store claim |
 | `SCALE-FLOW` | Configure measured QStash backpressure/flow control and alert on run age, dispatch failures, exhausted runs, DLQ, conflict counts, provider failures, DB/WAL pressure, and autovacuum lag. | Provider quota, QStash volume, Vercel concurrency, and PostgreSQL capacity tests pass at the stated merchant/product model. | 5,000/100,000 store claim |
 
+### 2026-08-09 gate status
+
+| Gate | Source/local status | Still required before live GO |
+|---|---|---|
+| `A0-EDGE` | Worker source remains `no-store`; live behavior unchanged | Approved Worker deploy, two no-hit header checks, five-minute old-runtime window, storefront recheck |
+| `A0-DISPATCH` | Implemented and unit-tested | Live dev-store QStash delivery and completed run |
+| `A0-CI` | Existing Worker unit/assets/types/dry-run contract confirmed as a dedicated job | Successful PR CI on the closure commit |
+| `A1-ERASURE` | Implemented with bounded generation-fenced phases and integration tests | Production migration/deploy and lifecycle erasure acceptance |
+| `A1-RUN-RETENTION` | Implemented as 42 days with latest-success protections | Production maintenance evidence |
+| `B-EVIDENCE` | Implemented two-slot/24-hour absence policy | Live convergence and dev-store delete/recreate smoke |
+| `B-SCAN` | Cross-page duplicate and malformed scan handling implemented | Live provider behavior and drift monitoring |
+| `B-RETRY` | Persisted delayed continuation and publish visibility implemented | Live QStash retry/backlog evidence |
+| `B-CONFLICT-OPS` | Sticky state and aggregate verifier retained | Alerting and controlled operator runbook remain open |
+| `B-CONSUMERS` | Not implemented | Separate Release B PR after production `--expect=ready` |
+| `SCALE-DISCOVERY` | Persistent 50-installation sweep implemented and locally benchmarked | Representative managed DB and live provider/QStash evidence |
+| `SCALE-WRITES` | Changed-only snapshots and coverage implemented; local unchanged updates are zero | Managed WAL/vacuum/autovacuum evidence |
+| `SCALE-FLOW` | Initial 1/s, parallelism 4 source policy implemented | Provider quotas, live backlog/429/5xx and managed capacity evidence |
+
 ### Gate ordering
 
 1. Close `A0-EDGE`, `A0-DISPATCH`, and `A0-CI` before calling Release A
@@ -223,11 +308,17 @@ show that bounded batching and changed-only writes are insufficient.
 
 ## Retention Rules
 
-- Keep snapshots/tombstones while an active store has historical references.
+- Keep snapshots/tombstones and conflicts until generation-fenced store erasure;
+  they are identity evidence, not 42-day operational logs.
 - Keep `identity_conflict` until an explicit evidence/operator process resolves
   it; never resolve it by direct SQL.
-- Remove lifecycle rows for an erased/missing installation through the same
+- Remove lifecycle rows for an erased installation through the same
   store-scoped, generation-fenced erasure workflow as the rest of tenant data.
+- Keep terminal runs and sweeps for 42 days, while protecting each active
+  installation's latest successful run and the latest global successful sweep.
+- Treat observations as nonterminal run working data. Remove them atomically
+  when the run completes, becomes stale, or exhausts; PostgreSQL vacuum remains
+  responsible for reclaiming/reusing dead tuples.
 - Do not add a second `missingSince`/`deletedAt` field now. `unavailableAt`
   already records the first verified unavailable transition.
 - A bounded policy for active-store, unreferenced tombstones may be designed
@@ -260,6 +351,13 @@ count.
 - [Upstash QStash flow control](https://upstash.com/docs/qstash/features/flowcontrol)
 
 ## Change Log
+
+- 2026-08-09: Revalidated the audit against the closure feature branch. Recorded
+  the 64-migration source contract, bounded sweeps, changed-only snapshots,
+  transient observations, 42-day terminal retention, lifecycle erasure, local
+  PostgreSQL 16/17 gates, and the 5,000 x 500 disposable benchmark. Kept Worker,
+  production migration/convergence, managed scale, provider quotas, conflict
+  operations, and Release B as separate open gates.
 
 - 2026-08-08: Added the independent re-audit closure matrix. Corrected the
   backend/DB-ready versus live-Worker distinction, recorded the false-`202`
