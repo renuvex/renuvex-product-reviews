@@ -224,6 +224,14 @@ order.
 | Product lifecycle evidence | Focused lifecycle Vitest files plus `pnpm test:integration:review-email` | Pure tests cover two daily exact-empty slots separated by at least 24 hours, explicit deletion, sticky conflict, safe slug resolution, malformed/duplicate provider pages, delayed retry, truthful publish failure, opaque run/sweep continuations, terminal observation cleanup, bounded 42-day retention, and reinstall stale fencing. Disposable PostgreSQL proves schema/RLS/default-grants, changed-only snapshot persistence under current-generation coverage, one global nonterminal sweep, tombstone/conflict persistence, same-slug/new-id isolation, and transactional stale closure/observation deletion. PG16/17 database jobs run `pnpm verify:product-lifecycle --expect=expanded`; a live `--expect=ready` remains a separate post-deploy gate. |
 | Product lifecycle scale | `pnpm benchmark:product-lifecycle:scale` and manual `.github/workflows/product-lifecycle-scale.yml` | Refuses non-local PostgreSQL and caps input at 5,000 installations x 500 products. It seeds 2.5 million snapshots, models scan observations and terminalization, asserts zero unchanged snapshot updates, terminal observation removal, exact coverage count, bounded message/time arithmetic, and records relation bytes, WAL, dead tuples, transaction duration, and representative `EXPLAIN (ANALYZE, BUFFERS)` output. The workflow uploads a sanitized report. This is synthetic architecture evidence; it does not call Ikas/QStash, prove provider quotas, or replace representative managed PostgreSQL/live convergence evidence. |
 
+The lifecycle erasure acceptance in
+`tests/integration/review-email-installation-fence.test.ts` seeds 101
+observations, reconciliation runs, and snapshots plus catalog coverage in a
+local disposable database. It proves repeated 100-row erasure batches, exact
+row-count evidence, exact installation/token finalization, and preservation of
+another store's lifecycle rows. This test does not authorize or replace the
+separately gated live journal-backed uninstall acceptance.
+
 The full `node scripts/wiki-audit.mjs` command is blocking when it reports an
 error. `--changed-source-check` is deliberately advisory: it reads uncommitted
 paths from `git diff --name-only HEAD`, reports source-to-wiki findings as

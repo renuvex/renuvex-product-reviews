@@ -13,6 +13,8 @@ import {
 const integrationDatabaseUrl = process.env.REVIEW_EMAIL_INTEGRATION_DATABASE_URL;
 const integrationDescribe = integrationDatabaseUrl ? describe : describe.skip;
 const STORE_ID = 'review-email-installation-fence-test';
+const CONTROL_STORE_ID = 'review-email-installation-fence-control';
+const LIFECYCLE_ERASURE_ROW_COUNT = 101;
 
 function token(authorizedAppId: string) {
   return {
@@ -29,10 +31,75 @@ function token(authorizedAppId: string) {
 }
 
 async function cleanupFixture() {
-  await prisma.storeDataErasureRun.deleteMany({ where: { storeId: STORE_ID } });
-  await prisma.review.deleteMany({ where: { storeId: STORE_ID } });
-  await prisma.authToken.deleteMany({ where: { merchantId: STORE_ID } });
-  await prisma.ikasStoreInstallation.deleteMany({ where: { storeId: STORE_ID } });
+  const storeIds = [STORE_ID, CONTROL_STORE_ID];
+  await prisma.storeDataErasureRun.deleteMany({ where: { storeId: { in: storeIds } } });
+  await prisma.productCatalogCoverage.deleteMany({ where: { storeId: { in: storeIds } } });
+  await prisma.productReconciliationObservation.deleteMany({ where: { storeId: { in: storeIds } } });
+  await prisma.productSnapshot.deleteMany({ where: { storeId: { in: storeIds } } });
+  await prisma.productReconciliationRun.deleteMany({ where: { storeId: { in: storeIds } } });
+  await prisma.review.deleteMany({ where: { storeId: { in: storeIds } } });
+  await prisma.authToken.deleteMany({ where: { merchantId: { in: storeIds } } });
+  await prisma.ikasStoreInstallation.deleteMany({ where: { storeId: { in: storeIds } } });
+}
+
+async function createProductLifecycleFixture(input: {
+  storeId: string;
+  authorizedAppId: string;
+  installationGeneration: number;
+  installationStateVersion: number;
+  rowCount: number;
+}) {
+  const observedAt = new Date('2026-07-10T11:30:00.000Z');
+  const runIds = Array.from(
+    { length: input.rowCount },
+    (_, index) => `${input.storeId}-lifecycle-run-${index}`,
+  );
+
+  await prisma.productReconciliationRun.createMany({
+    data: runIds.map((id) => ({
+      id,
+      storeId: input.storeId,
+      authorizedAppId: input.authorizedAppId,
+      installationGeneration: input.installationGeneration,
+      installationStateVersion: input.installationStateVersion,
+      trigger: 'manual',
+      scheduleSlot: null,
+      status: 'completed',
+      phase: 'complete',
+      finishedAt: observedAt,
+    })),
+  });
+  await prisma.productReconciliationObservation.createMany({
+    data: runIds.map((runId, index) => ({
+      runId,
+      storeId: input.storeId,
+      productId: `product-${index}`,
+      evidence: 'present',
+      observedAt,
+    })),
+  });
+  await prisma.productSnapshot.createMany({
+    data: runIds.map((runId, index) => ({
+      id: `${input.storeId}-snapshot-${index}`,
+      storeId: input.storeId,
+      productId: `product-${index}`,
+      lifecycleState: 'active_verified',
+      lastVerifiedAt: observedAt,
+      lastEvidenceSource: 'integration_erasure',
+      lastSeenReconciliationRunId: runId,
+    })),
+  });
+  await prisma.productCatalogCoverage.create({
+    data: {
+      storeId: input.storeId,
+      authorizedAppId: input.authorizedAppId,
+      installationGeneration: input.installationGeneration,
+      installationStateVersion: input.installationStateVersion,
+      reconciliationRunId: runIds[0],
+      productCount: input.rowCount,
+      completedAt: observedAt,
+    },
+  });
 }
 
 integrationDescribe('review email installation fence (PostgreSQL)', () => {
@@ -173,6 +240,72 @@ integrationDescribe('review email installation fence (PostgreSQL)', () => {
     await expect(prisma.ikasStoreInstallation.findUniqueOrThrow({ where: { storeId: STORE_ID } })).resolves.toMatchObject({
       authorizedAppId: 'app-new',
       status: 'active',
+    });
+  });
+
+  it('erases product lifecycle evidence in bounded batches without crossing store identity', async () => {
+    const now = new Date('2026-07-10T12:00:00.000Z');
+    await activateIkasStoreInstallation(token('app-old') as never, new Date('2026-07-10T11:00:00.000Z'));
+    const erasureDecision = await prisma.$transaction((tx) =>
+      beginIkasStoreInstallationErasure(tx, {
+        storeId: STORE_ID,
+        authorizedAppId: 'app-old',
+        now,
+      }),
+    );
+    expect(erasureDecision.action).toBe('erase');
+
+    await createProductLifecycleFixture({
+      storeId: STORE_ID,
+      authorizedAppId: 'app-old',
+      installationGeneration: erasureDecision.installation.generation,
+      installationStateVersion: erasureDecision.installation.stateVersion,
+      rowCount: LIFECYCLE_ERASURE_ROW_COUNT,
+    });
+    await createProductLifecycleFixture({
+      storeId: CONTROL_STORE_ID,
+      authorizedAppId: 'app-control',
+      installationGeneration: 1,
+      installationStateVersion: 1,
+      rowCount: 1,
+    });
+    const erasureRun = await prisma.storeDataErasureRun.create({
+      data: {
+        storeId: STORE_ID,
+        authorizedAppId: 'app-old',
+        installationGeneration: erasureDecision.installation.generation,
+        triggerSource: 'ikas_store_app_deleted',
+        status: 'pending',
+        journalStatus: 'verified',
+        progress: { phase: 'product_reconciliation_observations', deleted: {} },
+        startedAt: now,
+      },
+    });
+
+    const result = await processStoreDataErasureRun(erasureRun.id, now);
+
+    expect(result).toMatchObject({
+      state: 'succeeded',
+      rowCounts: {
+        productReconciliationObservations: LIFECYCLE_ERASURE_ROW_COUNT,
+        productReconciliationRuns: LIFECYCLE_ERASURE_ROW_COUNT,
+        productCatalogCoverage: 1,
+        productSnapshots: LIFECYCLE_ERASURE_ROW_COUNT,
+      },
+    });
+    await expect(prisma.productReconciliationObservation.count({ where: { storeId: STORE_ID } })).resolves.toBe(0);
+    await expect(prisma.productReconciliationRun.count({ where: { storeId: STORE_ID } })).resolves.toBe(0);
+    await expect(prisma.productCatalogCoverage.count({ where: { storeId: STORE_ID } })).resolves.toBe(0);
+    await expect(prisma.productSnapshot.count({ where: { storeId: STORE_ID } })).resolves.toBe(0);
+    await expect(prisma.productReconciliationObservation.count({ where: { storeId: CONTROL_STORE_ID } })).resolves.toBe(1);
+    await expect(prisma.productReconciliationRun.count({ where: { storeId: CONTROL_STORE_ID } })).resolves.toBe(1);
+    await expect(prisma.productCatalogCoverage.count({ where: { storeId: CONTROL_STORE_ID } })).resolves.toBe(1);
+    await expect(prisma.productSnapshot.count({ where: { storeId: CONTROL_STORE_ID } })).resolves.toBe(1);
+    await expect(prisma.authToken.count({ where: { merchantId: STORE_ID } })).resolves.toBe(0);
+    await expect(prisma.ikasStoreInstallation.findUniqueOrThrow({ where: { storeId: STORE_ID } })).resolves.toMatchObject({
+      status: 'erased',
+      authorizedAppId: 'app-old',
+      generation: erasureDecision.installation.generation,
     });
   });
 
