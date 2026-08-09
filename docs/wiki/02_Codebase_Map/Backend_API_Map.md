@@ -3,8 +3,8 @@ type: api
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-08
-last_verified: 2026-08-08
+updated: 2026-08-09
+last_verified: 2026-08-09
 confidence: high
 tags:
   - api
@@ -44,7 +44,9 @@ source_files:
   - "src/app/api/public/ratings-by-slug/route.ts"
   - "src/lib/product-lifecycle.ts"
   - "src/lib/product-reconciliation.ts"
+  - "src/lib/product-reconciliation-sweep.ts"
   - "src/app/api/internal/product-reconciliation/route.ts"
+  - "src/app/api/internal/product-reconciliation-sweep/route.ts"
   - "src/app/api/public/settings/route.ts"
   - "src/app/api/public/storefront-theme/lazy-sync/route.ts"
   - "src/app/api/public/upload/sign/route.ts"
@@ -131,13 +133,14 @@ Main API route groups:
 | PUT `/api/admin/settings` `{ widgetId, settings }` | same | Authenticates, validates a plain JSON body, resolves the widget capability fail-closed, validates/sanitizes settings, then fences and upserts. Unknown IDs return `400`; planned or non-configurable widgets return `409` before any write or theme-sync side effect. |
 | POST `/api/admin/inject-scripts` | [route.ts](src/app/api/admin/inject-scripts/route.ts) | Non-destructively create/update this app's loader script on each storefront; recreates only for known missing/deleted script ids |
 | POST `/api/admin/storefront-theme/sync` | [route.ts](src/app/api/admin/storefront-theme/sync/route.ts) | Lightweight active theme sync from ikas `listStorefront`; no script create/update |
-| POST `/api/admin/sync-products` | [route.ts](src/app/api/admin/sync-products/route.ts) | Register product webhooks and create/reuse one installation-fenced bounded reconciliation run. Current source attempts to dispatch its opaque id but ignores a `false` dispatcher result and still returns `202`; until `A0-DISPATCH` closes, `202` is run-creation evidence, not QStash acceptance evidence. It no longer performs an unbounded catalog scan in the request. |
-| GET `/api/admin/daily-maintenance` (Bearer CRON) | [route.ts](src/app/api/admin/daily-maintenance/route.ts) | Manual/admin maintenance route for batch storefront theme verification, pending upload cleanup, storefront script reconciliation, video lifecycle work, provider job redispatch, and bounded product-reconciliation discovery/redispatch. Scheduled daily execution is owned by the QStash-signed `/api/internal/scheduled-jobs` receiver. |
+| POST `/api/admin/sync-products` | [route.ts](src/app/api/admin/sync-products/route.ts) | Register product webhooks and create/reuse one installation-fenced bounded reconciliation run. `202` is returned only after QStash accepts the opaque run id. Publish failure preserves the recoverable pending run and returns fixed `503 product_reconciliation_dispatch_failed`; no catalog scan runs in the request. |
+| GET `/api/admin/daily-maintenance` (Bearer CRON) | [route.ts](src/app/api/admin/daily-maintenance/route.ts) | Manual/admin maintenance route for theme/script/media/review-email work plus due product run/sweep recovery and one bounded global discovery sweep. Scheduled daily execution is owned by the QStash-signed `/api/internal/scheduled-jobs` receiver. |
 | GET `/api/admin/reconcile-storefront-scripts` (Bearer CRON) | [route.ts](src/app/api/admin/reconcile-storefront-scripts/route.ts) | Explicit non-destructive storefront script reconciliation for existing merchants |
 | GET `/api/admin/cleanup-pending-uploads` (Bearer CRON) | [route.ts](src/app/api/admin/cleanup-pending-uploads/route.ts) | Explicit PendingReviewImage cleanup using the same helper as daily maintenance |
 | GET `/api/admin/cleanup-images` (Bearer CRON) | [route.ts](src/app/api/admin/cleanup-images/route.ts) | Monthly AWS review-image family orphan scan with the existing two-phase quarantine/circuit-breaker model. It groups by `storeId + assetId` and does not perform bucket-wide blind deletes |
 | POST `/api/internal/scheduled-jobs` | [route.ts](src/app/api/internal/scheduled-jobs/route.ts) | QStash-signed scheduler receiver for `daily-maintenance-full` and `cleanup-images`. Verifies raw-body `Upstash-Signature`, uses `ScheduledJobRunLock` for `task + scheduleSlot` idempotency, and replaces Vercel Cron as the scheduler source of truth. |
-| POST `/api/internal/product-reconciliation` | [route.ts](src/app/api/internal/product-reconciliation/route.ts) | QStash raw-body-signature receiver accepting only one opaque run UUID. DB state owns store/app/generation, lease, scan page, exact-candidate cursor, retry, and completion. One delivery handles at most one 200-product page or one 50-id exact batch. |
+| POST `/api/internal/product-reconciliation` | [route.ts](src/app/api/internal/product-reconciliation/route.ts) | QStash raw-body-signature receiver accepting only one opaque run UUID. DB state owns store/app/generation, lease, scan page, exact-candidate cursor, delayed retry, observations, coverage, and completion. One delivery handles at most one 200-product page or one 50-id exact batch; continuation publish failure returns retryable `503`. |
+| POST `/api/internal/product-reconciliation-sweep` | [route.ts](src/app/api/internal/product-reconciliation-sweep/route.ts) | QStash raw-body-signature receiver accepting only one opaque sweep UUID. A DB cursor discovers at most 50 active installations per invocation, dispatches/reuses daily runs, then performs bounded terminal run/sweep retention phases. |
 | POST `/api/internal/review-email/due-jobs` | [route.ts](src/app/api/internal/review-email/due-jobs/route.ts) | `CRON_SECRET` + global-feature-gated source-only due-job claimer. Claims due `ReviewEmailJob` rows with DB `FOR UPDATE SKIP LOCKED` and returns opaque job ids for a future dispatcher; it does not send email. |
 | POST `/api/internal/review-email/reconcile-orders` | [route.ts](src/app/api/internal/review-email/reconcile-orders/route.ts) | `CRON_SECRET` + global-feature-gated source-only reconciliation entrypoint. Store ownership is derived from the authorized-app token, and active-installation/merchant-enabled checks are fenced before cursor creation or `listOrder(updatedAt)` processing. |
 | POST `/api/internal/review-email/store-erasure` | [route.ts](src/app/api/internal/review-email/store-erasure/route.ts) | QStash raw-body-signature receiver for bounded store-uninstall continuation. It accepts only an opaque run UUID; DB state plus verified immutable journal evidence owns the phase, tenant, and idempotency contract. |

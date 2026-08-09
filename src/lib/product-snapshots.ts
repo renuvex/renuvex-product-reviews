@@ -1,8 +1,9 @@
 import { getRedirectUri } from '@/helpers/api-helpers';
+import * as Sentry from '@sentry/nextjs';
 import { prisma } from '@/lib/prisma';
 import type { ikasAdminGraphQLAPIClient, SaveProductWebhooksMutationData } from '@/lib/ikas-client/generated/graphql';
 import type { AuthToken } from '@/models/auth-token';
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import {
   requireActiveIkasStoreInstallationFence,
   type IkasInstallationFence,
@@ -76,6 +77,12 @@ export function normalizeProductEvidence(product: ProductLike): NormalizedProduc
 
 export type ProductEvidenceWriteCounts = Record<ProductLifecycleState, number>;
 
+export type ProductEvidenceBatchResult = ProductEvidenceWriteCounts & {
+  changedSnapshots: number;
+  createdSnapshots: number;
+  newIdentityConflicts: number;
+};
+
 function emptyWriteCounts(): ProductEvidenceWriteCounts {
   return {
     unknown: 0,
@@ -83,6 +90,149 @@ function emptyWriteCounts(): ProductEvidenceWriteCounts {
     unavailable_verified: 0,
     identity_conflict: 0,
   };
+}
+
+type SnapshotEvidenceRow = CurrentProductEvidence & {
+  productId: string;
+  lastEvidenceSource: string | null;
+  lastSeenReconciliationRunId: string | null;
+  lastSyncedAt: Date;
+};
+
+type MaterializedSnapshotWrite = Omit<SnapshotEvidenceRow, 'productId' | 'lifecycleState'> & {
+  lifecycleState: ProductLifecycleState;
+};
+
+function materializeSnapshotWrite(
+  current: SnapshotEvidenceRow | null,
+  evidence: NormalizedProductEvidence | null,
+  write: ReturnType<typeof decideProductLifecycleWrite>,
+): MaterializedSnapshotWrite {
+  return {
+    lifecycleState: write.lifecycleState,
+    slug: write.slug !== undefined ? write.slug : current?.slug ?? evidence?.slug ?? null,
+    name: write.name !== undefined ? write.name : current?.name ?? evidence?.name ?? null,
+    providerCreatedAt: write.providerCreatedAt !== undefined
+      ? write.providerCreatedAt
+      : current?.providerCreatedAt ?? evidence?.providerCreatedAt ?? null,
+    ikasUpdatedAt: write.ikasUpdatedAt !== undefined
+      ? write.ikasUpdatedAt
+      : current?.ikasUpdatedAt ?? evidence?.ikasUpdatedAt ?? null,
+    lastVerifiedAt: write.lastVerifiedAt,
+    unavailableAt: write.unavailableAt !== undefined ? write.unavailableAt : current?.unavailableAt ?? null,
+    conflictDetectedAt: write.conflictDetectedAt !== undefined
+      ? write.conflictDetectedAt
+      : current?.conflictDetectedAt ?? null,
+    absenceFirstObservedAt: write.absenceFirstObservedAt,
+    absenceLastObservedAt: write.absenceLastObservedAt,
+    absenceObservationCount: write.absenceObservationCount,
+    absenceLastScheduleSlot: write.absenceLastScheduleSlot,
+    lastEvidenceSource: write.lastEvidenceSource,
+    lastSeenReconciliationRunId: write.lastSeenReconciliationRunId !== undefined
+      ? write.lastSeenReconciliationRunId
+      : current?.lastSeenReconciliationRunId ?? null,
+    lastSyncedAt: write.lastSyncedAt,
+  };
+}
+
+function sameNullableDate(left: Date | null, right: Date | null): boolean {
+  return left?.getTime() === right?.getTime();
+}
+
+function hasSemanticSnapshotChange(
+  current: SnapshotEvidenceRow,
+  target: MaterializedSnapshotWrite,
+): boolean {
+  return current.lifecycleState !== target.lifecycleState ||
+    current.slug !== target.slug ||
+    current.name !== target.name ||
+    !sameNullableDate(current.providerCreatedAt, target.providerCreatedAt) ||
+    !sameNullableDate(current.ikasUpdatedAt, target.ikasUpdatedAt) ||
+    !sameNullableDate(current.unavailableAt, target.unavailableAt) ||
+    !sameNullableDate(current.conflictDetectedAt, target.conflictDetectedAt) ||
+    !sameNullableDate(current.absenceFirstObservedAt, target.absenceFirstObservedAt) ||
+    !sameNullableDate(current.absenceLastObservedAt, target.absenceLastObservedAt) ||
+    current.absenceObservationCount !== target.absenceObservationCount ||
+    current.absenceLastScheduleSlot !== target.absenceLastScheduleSlot;
+}
+
+async function updateSnapshotsSetBased(
+  tx: Prisma.TransactionClient,
+  storeId: string,
+  rows: Array<{ productId: string; target: MaterializedSnapshotWrite }>,
+  now: Date,
+): Promise<void> {
+  if (rows.length === 0) return;
+  const values = rows.map(({ productId, target }) => Prisma.sql`(
+    CAST(${productId} AS text),
+    CAST(${target.lifecycleState} AS text),
+    CAST(${target.slug} AS text),
+    CAST(${target.name} AS text),
+    CAST(${target.providerCreatedAt} AS timestamp(3)),
+    CAST(${target.ikasUpdatedAt} AS timestamp(3)),
+    CAST(${target.lastVerifiedAt} AS timestamp(3)),
+    CAST(${target.unavailableAt} AS timestamp(3)),
+    CAST(${target.conflictDetectedAt} AS timestamp(3)),
+    CAST(${target.absenceFirstObservedAt} AS timestamp(3)),
+    CAST(${target.absenceLastObservedAt} AS timestamp(3)),
+    CAST(${target.absenceObservationCount} AS integer),
+    CAST(${target.absenceLastScheduleSlot} AS text),
+    CAST(${target.lastEvidenceSource} AS text),
+    CAST(${target.lastSeenReconciliationRunId} AS text),
+    CAST(${target.lastSyncedAt} AS timestamp(3))
+  )`);
+  await tx.$executeRaw(Prisma.sql`
+    UPDATE "ProductSnapshot" AS snapshot
+    SET
+      "lifecycleState" = evidence."lifecycleState",
+      "slug" = evidence."slug",
+      "name" = evidence."name",
+      "providerCreatedAt" = evidence."providerCreatedAt",
+      "ikasUpdatedAt" = evidence."ikasUpdatedAt",
+      "lastVerifiedAt" = evidence."lastVerifiedAt",
+      "unavailableAt" = evidence."unavailableAt",
+      "conflictDetectedAt" = evidence."conflictDetectedAt",
+      "absenceFirstObservedAt" = evidence."absenceFirstObservedAt",
+      "absenceLastObservedAt" = evidence."absenceLastObservedAt",
+      "absenceObservationCount" = evidence."absenceObservationCount",
+      "absenceLastScheduleSlot" = evidence."absenceLastScheduleSlot",
+      "lastEvidenceSource" = evidence."lastEvidenceSource",
+      "lastSeenReconciliationRunId" = evidence."lastSeenReconciliationRunId",
+      "lastSyncedAt" = evidence."lastSyncedAt",
+      "updatedAt" = ${now}
+    FROM (VALUES ${Prisma.join(values)}) AS evidence(
+      "productId",
+      "lifecycleState",
+      "slug",
+      "name",
+      "providerCreatedAt",
+      "ikasUpdatedAt",
+      "lastVerifiedAt",
+      "unavailableAt",
+      "conflictDetectedAt",
+      "absenceFirstObservedAt",
+      "absenceLastObservedAt",
+      "absenceObservationCount",
+      "absenceLastScheduleSlot",
+      "lastEvidenceSource",
+      "lastSeenReconciliationRunId",
+      "lastSyncedAt"
+    )
+    WHERE snapshot."storeId" = ${storeId}
+      AND snapshot."productId" = evidence."productId"
+  `);
+}
+
+export function reportProductIdentityConflicts(count: number, source: string): void {
+  if (count <= 0) return;
+  try {
+    Sentry.captureException(new Error('product_identity_conflict_detected'), {
+      tags: { source: 'product-lifecycle', operation: source },
+      extra: { count },
+    });
+  } catch {
+    // Observability must not alter evidence commits.
+  }
 }
 
 export async function applyExactProductEvidenceBatch(
@@ -93,8 +243,11 @@ export async function applyExactProductEvidenceBatch(
     source: string;
     now?: Date;
     reconciliationRunId?: string;
+    reconciliationTrigger?: 'install' | 'daily' | 'manual';
+    scheduleSlot?: string | null;
+    freshnessMode?: 'snapshot' | 'coverage';
   },
-): Promise<ProductEvidenceWriteCounts> {
+): Promise<ProductEvidenceBatchResult> {
   const productIds = entries.map((entry) => entry.productId);
   if (new Set(productIds).size !== productIds.length) throw new Error('duplicate_product_evidence_id');
 
@@ -107,15 +260,26 @@ export async function applyExactProductEvidenceBatch(
       name: true,
       providerCreatedAt: true,
       ikasUpdatedAt: true,
+      lastVerifiedAt: true,
       unavailableAt: true,
       conflictDetectedAt: true,
+      absenceFirstObservedAt: true,
+      absenceLastObservedAt: true,
+      absenceObservationCount: true,
+      absenceLastScheduleSlot: true,
+      lastEvidenceSource: true,
+      lastSeenReconciliationRunId: true,
+      lastSyncedAt: true,
     },
   });
-  const currentByProductId = new Map<string, CurrentProductEvidence>(
+  const currentByProductId = new Map<string, SnapshotEvidenceRow>(
     currentRows.map((row) => [row.productId, row]),
   );
   const counts = emptyWriteCounts();
   const now = input.now ?? new Date();
+  const updates: Array<{ productId: string; target: MaterializedSnapshotWrite }> = [];
+  const creates: Prisma.ProductSnapshotCreateManyInput[] = [];
+  let newIdentityConflicts = 0;
 
   for (const entry of entries) {
     const evidence = entry.product ? normalizeProductEvidence(entry.product) : null;
@@ -129,28 +293,35 @@ export async function applyExactProductEvidenceBatch(
       source: input.source,
       now,
       reconciliationRunId: input.reconciliationRunId,
+      reconciliationTrigger: input.reconciliationTrigger,
+      scheduleSlot: input.scheduleSlot,
     });
-
+    const target = materializeSnapshotWrite(current, evidence, write);
+    if (target.lifecycleState === 'identity_conflict' && current?.lifecycleState !== 'identity_conflict') {
+      newIdentityConflicts += 1;
+    }
     if (current) {
-      await tx.productSnapshot.update({
-        where: { storeId_productId: { storeId, productId: entry.productId } },
-        data: write,
-      });
+      const shouldUpdate = input.freshnessMode !== 'coverage' || hasSemanticSnapshotChange(current, target);
+      if (shouldUpdate) updates.push({ productId: entry.productId, target });
     } else {
-      await tx.productSnapshot.create({
-        data: {
-          storeId,
-          productId: entry.productId,
-          slug: evidence?.slug ?? null,
-          name: evidence?.name ?? null,
-          ...write,
-        },
+      creates.push({
+        storeId,
+        productId: entry.productId,
+        ...target,
       });
     }
-    counts[write.lifecycleState] += 1;
+    counts[target.lifecycleState] += 1;
   }
 
-  return counts;
+  await updateSnapshotsSetBased(tx, storeId, updates, now);
+  if (creates.length > 0) await tx.productSnapshot.createMany({ data: creates });
+
+  return {
+    ...counts,
+    changedSnapshots: updates.length,
+    createdSnapshots: creates.length,
+    newIdentityConflicts,
+  };
 }
 
 export async function applyExactProductEvidence(
@@ -162,6 +333,9 @@ export async function applyExactProductEvidence(
     source: string;
     now?: Date;
     reconciliationRunId?: string;
+    reconciliationTrigger?: 'install' | 'daily' | 'manual';
+    scheduleSlot?: string | null;
+    freshnessMode?: 'snapshot' | 'coverage';
   },
 ) {
   return applyExactProductEvidenceBatch(tx, storeId, [{ productId, product }], input);
@@ -198,7 +372,7 @@ export async function syncSingleProductForStore(
   if (unexpected || products.length > 1) throw new Error('Unexpected ikas product verification response');
   const product = products[0] ?? null;
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     if (installationFence) {
       await requireActiveIkasStoreInstallationFence(tx, storeId, installationFence);
     }
@@ -206,6 +380,8 @@ export async function syncSingleProductForStore(
       source: 'webhook_exact',
     });
   });
+  reportProductIdentityConflicts(result.newIdentityConflicts, 'webhook_exact');
+  return result;
 }
 
 export function buildProductWebhookEndpoint(host: string) {

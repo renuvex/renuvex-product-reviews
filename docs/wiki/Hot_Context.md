@@ -62,9 +62,13 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
-- 2026-08-08: Product lifecycle backend/DB passed migration 62, bounded
-  reconciliation, and readiness for the active installation. Live Worker
-  no-store cutover is open (`MISS` then `HIT`); Release B is unimplemented.
+- 2026-08-09: The product-lifecycle closure branch adds two-slot absence
+  evidence, bounded global sweeps, changed-only snapshot writes, transient scan
+  observations, 42-day terminal run/sweep retention, lifecycle erasure, and
+  initial QStash flow control. Disposable PostgreSQL 16/17 and a local 5,000 x
+  500 benchmark pass. This is not merged or deployed; Worker, production
+  migration/convergence, managed scale, conflict operations, and Release B are
+  still gated.
 - 2026-07-28: Store erasure retries are installation-fenced; the stale live run
   closed without deleting current review/media data. See [[Maintenance_Runbook]].
 - 2026-07-28: Strict JWT admin auth requires the exact active installation/token
@@ -79,12 +83,6 @@ source_files:
   stack policy, and termination protection. Full `foundation-no-dns`
   verification passes; sending and sandbox gates remain closed, DNS is pending,
   and sender/subscription/tenant surfaces are absent.
-- 2026-07-23: Least-privilege review-email access hardening is live; approval
-  windows are closed and temporary Administrator config is removed. See
-  [[AWS_Setup_And_Access]].
-- 2026-07-20: Current ikas consent, immutable delivery evidence, package-line
-  grouping, and all four shipping methods are deployed but disabled; all 59
-  migrations are applied and lifecycle rows remain zero.
 
 ## Current Risks / Open Questions
 - Storefront is Turkish-first; future EN/DE needs real i18n, not only merchant copy.
@@ -102,12 +100,13 @@ source_files:
   sender/DNS/sandbox evidence, product/legal gates, and live acceptance. Signed
   app-deleted delivery and safe stale-run closure are proven; journal
   activation is not.
-- Product lifecycle backend/DB is ready only for the current footprint. A0
-  requires Worker no-store, truthful manual dispatch, and Worker CI. Release B
-  also requires erasure/retention, evidence/scan integrity, delayed retry,
-  conflict operations, and consumer gates. Scale requires bounded discovery,
-  measured write reduction, flow control, quotas, and load tests. Never
-  direct-SQL-clean orphan rows or claim 5,000/100,000-store capacity. See
+- Product lifecycle closure source now includes truthful dispatch, bounded
+  discovery, changed-only snapshots, evidence/scan/retry hardening, lifecycle
+  erasure, retention, and initial flow control. It has local/disposable evidence
+  only. Never direct-SQL-clean lifecycle rows or call it live: PR CI, production
+  migrations, Worker no-store, QStash convergence/readiness, managed 5K/provider
+  quotas, conflict operations, dev-store smoke, and Release B are still open.
+  No 100,000-store capacity claim exists. See
   [[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]].
 
 ## Read Next

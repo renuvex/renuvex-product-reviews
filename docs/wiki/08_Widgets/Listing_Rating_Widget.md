@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-01
-last_verified: 2026-07-01
+updated: 2026-08-09
+last_verified: 2026-08-09
 confidence: high
 tags:
   - widget
@@ -33,6 +33,7 @@ source_files:
   - "src/widget/observer.js"
   - "src/widget/core/storefront-context.js"
   - "src/app/api/public/ratings/route.ts"
+  - "src/app/api/public/ratings-by-slug/route.ts"
   - "src/widget/surfaces/listing-badge.surface.js"
   - "src/widget/themes/current-adapter.js"
   - "src/widget/themes/ozy/adapter.js"
@@ -61,7 +62,7 @@ Star+count badge injected into product cards on collection / search / category p
 
 ## API
 - Primary endpoint: `GET /api/public/ratings?storeId=<id>&productIds=a,b,c` ([src/app/api/public/ratings/route.ts](src/app/api/public/ratings/route.ts)).
-- Fallback endpoint: `GET /api/public/ratings-by-slug?storeId=<id>&slugs=a,b,c` ([src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts)) for DOM-only contexts where ikas Events did not provide product ids. The endpoint first resolves current slugs through `ProductSnapshot`, then reads reviews by `productId`; legacy direct `Review.slug` lookup is last resort only.
+- Fallback endpoint: `GET /api/public/ratings-by-slug?storeId=<id>&slugs=a,b,c` ([src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts)) for DOM-only contexts where ikas Events did not provide product ids. A slug resolves only through exactly one fresh, current-generation `active_verified` snapshot with no unknown, stale, or conflict ambiguity; historical `Review.slug` is never queried as identity.
 - Server groups approved reviews by `productId`, returns `{ productId: { avg: '4.5', count: 12 } }` on the primary path.
 - Bulk fetch (one request per batch) instead of per-card requests.
 - Max 100 ids/slugs per request — server-side cap.
@@ -73,7 +74,10 @@ Star+count badge injected into product cards on collection / search / category p
 
 ## Performance notes
 - Single API call per listing page = small fixed cost regardless of # of products on screen.
-- Server caches at edge with `s-maxage=60, stale-while-revalidate=300`.
+- Exact product-id ratings may use the normal public read cache. The slug-only
+  fallback is `no-store` in backend/Worker source and is not written to widget
+  session cache because lifecycle evidence can change independently of the slug.
+  Live Worker no-store acceptance remains a separate deployment gate.
 - DOM discovery is scoped to theme product containers first, then `main/[role=main]` fallback; it no longer starts from every link in the whole document.
 - MutationObserver re-render checks use the same scoped discovery path, so lazy product-card changes do not trigger a whole-document `document.querySelectorAll('a[href]')` scan.
 - Below-the-fold listing/product-slider candidates are registered with `IntersectionObserver` through [core/listing-viewport-gate.js](src/widget/core/listing-viewport-gate.js). The default `rootMargin` is `900px 0px`: near/above-viewport cards hydrate at current speed, while far below-the-fold cards do not load the `listing-badges-*` chunk or call `/api/public/ratings*` until the shopper scrolls near them. A passive scroll/resize check exists only as a non-polling safety fallback if the observer callback does not fire.
@@ -94,7 +98,9 @@ CSS variable before injecting badges. Badge stars are no longer hardcoded to
   - Themes that lazy-load cards with IntersectionObserver — handled by our MutationObserver.
   - Themes that render slugs differently from product URLs — verify slug parsing.
 - If a card moves (e.g., theme reflows), the badge may end up in a stale position. Watch for re-injection logic.
-- DOM-only fallback is snapshot-backed: current slug resolves to product id through `ProductSnapshot`. If a snapshot is missing, legacy direct slug lookup remains as a compatibility path.
+- DOM-only fallback is fail-closed and snapshot-backed. Missing, stale,
+  unknown, conflicting, or ambiguous lifecycle evidence produces no badge; it
+  never falls back to historical slug rows.
 - Cold direct entry to home/category/search pages once rendered listing badges as `avg (count)` text without star icons. Root cause: the shared star CSS was injected only by the PDP `render.js` path. Fixed 2026-05-17: `core/badge.js` self-injects badge styles via `ensureBadgeStyles()`, independent of the PDP path. See [[Bug_Listing_Badge_Stars_Direct_Load]].
 - The full Phase 1 listing audit checklist lives in [[Phase_1_Widget_Runtime_Audit]].
 
@@ -127,6 +133,10 @@ This protects against obvious footer/menu/header false positives, but it is not 
 - [[ADR_0015_Canonical_Product_Identity]]
 
 ## Change Log
+- 2026-08-09: Corrected the lifecycle identity/cache contract. Slug-only reads
+  require one fresh unambiguous active snapshot, never query historical
+  `Review.slug`, and remain outside edge/session caches. Live Worker acceptance
+  remains separately gated.
 - 2026-07-01: Added viewport-aware lazy hydration for below-the-fold listing/product-slider badge candidates. Far below-the-fold candidates now wait behind an `IntersectionObserver` gate before loading the listing badge chunk or sending the bulk ratings read; above/near-viewport cards and the no-`IntersectionObserver` fallback keep the previous eager behavior. Network smoke covers no early `listing-badges-*` chunk, scroll-triggered hydration, one bulk ratings request, disabled/unsupported theme fail-closed behavior, and duplicate navigation guards.
 - 2026-06-01: Completed ADR_0017 listing mount rollout cleanup. Removed the temporary publicApiKey gate and legacy in-`<h2>` mount branch; browser coverage now pins that listing badge slots mount as title siblings and keep one bulk ratings request.
 - 2026-05-24/25: Listing badge stars now render via the shared SVG `<symbol>` sprite (`<use>`) instead of inline `<path>` (~4.6 KB/badge of duplicated path data removed); the badge is labelled via an sr-only `aria-labelledby` span and aligned via `data-renuvex-align`. See [[ADR_0019_Icon_Sprite_Rendering]].

@@ -75,6 +75,7 @@
     "verify:ikas-installation-auth": "node --env-file-if-exists=.env.local scripts/verify-ikas-installation-auth.mjs",
     "verify:supabase-data-api-surface": "node --env-file-if-exists=.env.local scripts/verify-supabase-data-api-surface.mjs",
     "verify:product-lifecycle": "tsx --env-file-if-exists=.env.local scripts/verify-product-lifecycle.ts",
+    "benchmark:product-lifecycle:scale": "tsx scripts/benchmark-product-lifecycle-scale.ts",
     "verify:video-infrastructure": "node --env-file=.env.local scripts/verify-mux-infrastructure.mjs --phase=pre-webhook --expect-disabled",
     "verify:video-infrastructure:post-webhook": "node --env-file=.env.local scripts/verify-mux-infrastructure.mjs --phase=post-webhook",
     "video:canary:ops": "node --env-file=.env.local scripts/video-canary-ops.mjs",

@@ -69,19 +69,45 @@ export async function GET(request: Request) {
 
     const data: Record<string, { avg: string; count: number }> = {};
 
-    const snapshots = await prisma.productSnapshot.findMany({
-      where: {
-        storeId,
-        slug: { in: safeSlugs },
-      },
-      select: {
-        slug: true,
-        productId: true,
-        lifecycleState: true,
-        lastVerifiedAt: true,
-      },
-    });
-    const slugToProductId = resolveSafeSlugProductIds(snapshots);
+    const [snapshots, installation] = await Promise.all([
+      prisma.productSnapshot.findMany({
+        where: {
+          storeId,
+          slug: { in: safeSlugs },
+        },
+        select: {
+          slug: true,
+          productId: true,
+          lifecycleState: true,
+          lastVerifiedAt: true,
+        },
+      }),
+      prisma.ikasStoreInstallation.findUnique({
+        where: { storeId },
+        select: {
+          authorizedAppId: true,
+          generation: true,
+          stateVersion: true,
+          status: true,
+        },
+      }),
+    ]);
+    const coverage = installation?.status === 'active'
+      ? await prisma.productCatalogCoverage.findFirst({
+          where: {
+            storeId,
+            authorizedAppId: installation.authorizedAppId,
+            installationGeneration: installation.generation,
+            installationStateVersion: installation.stateVersion,
+          },
+          select: { completedAt: true },
+        })
+      : null;
+    const slugToProductId = resolveSafeSlugProductIds(
+      snapshots,
+      new Date(),
+      coverage?.completedAt ?? null,
+    );
 
     const resolvedProductIds = Array.from(new Set(Object.values(slugToProductId)));
     if (resolvedProductIds.length > 0) {

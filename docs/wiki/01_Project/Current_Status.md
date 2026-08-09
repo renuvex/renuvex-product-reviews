@@ -3,8 +3,8 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-08
-last_verified: 2026-08-08
+updated: 2026-08-09
+last_verified: 2026-08-09
 confidence: high
 source_files: []
 tags:
@@ -99,9 +99,18 @@ Active development on the production test store. Core review, image, Mux video, 
   one bounded QStash reconciliation run for the active installation. The live
   Worker cutover is not closed: a 2026-08-08 read-only probe still returned
   `MISS` then `HIT` for `ratings-by-slug`, while current source requires
-  `no-store`. Manual sync also returns `202` without checking whether QStash
-  publish succeeded. Release B consumer/media/email/admin enforcement remains
-  unimplemented. See
+  `no-store`.
+- The 2026-08-09 lifecycle closure feature branch expands the source set to 64
+  additive migrations and implements truthful manual dispatch, two-slot absence
+  evidence, cross-page duplicate rejection, delayed retries, a persistent
+  50-installation global sweep, changed-only snapshots with catalog coverage,
+  generation-fenced lifecycle erasure, and 42-day terminal run/sweep retention.
+  Disposable PostgreSQL 16/17 contracts pass. A local PostgreSQL 17 benchmark
+  passed 5,000 installations x 500 products with zero unchanged snapshot
+  updates and 5.584 hours of stable-catalog message arithmetic at 1 message per
+  second. This branch is not yet merged/deployed; managed PostgreSQL, provider
+  quotas, production convergence, Worker acceptance, and Release B remain open.
+  See
   [[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]] and
   [[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]].
 - Preview compatibility cleanup: after the first production deployment proves
@@ -148,14 +157,15 @@ Active development on the production test store. Core review, image, Mux video, 
   `active_verified` snapshot before reading by product id. Missing, stale,
   unknown, or conflicting evidence returns no slug-only rating; direct historical
   `Review.slug` fallback has been removed in Release A source.
-- Product lifecycle closure is staged. Immediate gates are the approved Worker
-  no-store rollout, truthful manual-sync dispatch status, and a required Worker
-  dry-run CI gate. Release B additionally requires lifecycle-table erasure,
-  bounded run retention, provider-absence/scan-integrity policy, timely delayed
-  retries, conflict operations, and all consumer/media/email/admin gates. The
-  2026-08-03 audit also measured 31 unreferenced unknown snapshots, a globally
-  unbounded installation discovery loop, and one evidence write per product.
-  Do not direct-SQL-delete rows or claim 5,000/100,000-store readiness. See
+- Product lifecycle closure is staged. The feature branch closes the source and
+  disposable-DB form of truthful dispatch, lifecycle erasure, terminal
+  retention, absence/scan/retry, bounded discovery, changed-only persistence,
+  and initial QStash flow control. Still open are PR/CI merge, production
+  migration and `--expect=expanded`, live Worker no-store acceptance, QStash
+  convergence and `--expect=ready`, managed PostgreSQL/provider quota evidence,
+  conflict alert/operator workflow, dev-store delete/same-slug/reinstall smoke,
+  and every Release B consumer/media/email/admin gate. Do not direct-SQL-delete
+  lifecycle rows or claim 5,000 managed/100,000-store readiness. See
   [[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]].
 
 ## Important Decisions
@@ -170,32 +180,39 @@ Active development on the production test store. Core review, image, Mux video, 
 - [[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]] - product absence is a tombstone, reappearing ids conflict, and bounded reconciliation plus live readiness gates consumer enforcement.
 
 ## Next Recommended Steps
-1. Close Product Lifecycle A0 in source and live operation: make manual sync
-   dispatch truthful, add the Worker dry-run CI gate, then separately deploy the
-   merged Worker/runtime and prove two consecutive slug reads remain `no-store`
-   with no edge hit after the old five-minute runtime cache window.
-2. Close Product Lifecycle A1: add lifecycle tables to generation-fenced store
-   erasure and implement an explicitly justified bounded terminal-run retention
-   policy.
-3. Before Release B, close the `B-*` evidence, scan, retry, conflict-operations,
-   and consumer-enforcement gates in the canonical audit matrix.
-4. Before a 5,000-store capacity claim, cursor global installation discovery,
-   replace measured per-product daily write amplification, add QStash
-   backpressure, and verify provider quotas plus representative load tests.
-5. Run authenticated dashboard smoke and Sentry post-deploy health after the next meaningful deploy.
-6. Add a periodic Mux asset reconciliation dry-run/report if video ops needs automated orphan evidence.
-7. Validate structured-data SEO on a public PDP with approved reviews.
-8. Keep the deployed V3.2 backend feature-disabled while the AWS
+1. Merge the lifecycle closure branch only after all PR CI gates pass. Then use
+   separately approved deployment gates for the 63rd/64th migrations and run
+   production `verify:product-lifecycle --expect=expanded`.
+2. Separately deploy the approved Worker/runtime and prove two consecutive slug
+   reads remain `no-store` with no edge hit; wait the old five-minute runtime
+   cache window and repeat storefront acceptance.
+3. Let only QStash drive production convergence, then require aggregate-only
+   `--expect=ready`; do not SQL-backfill lifecycle evidence.
+4. Run the representative managed PostgreSQL 5,000 x 500 benchmark and collect
+   provider quota, 429/5xx, backlog, WAL, vacuum, and autovacuum evidence before
+   granting the managed 5K Scale GO.
+5. Add conflict alerting and a controlled operator runbook, then implement
+   Release B consumers in a separate PR after readiness and dev-store
+   delete/same-slug/reinstall acceptance.
+6. Run authenticated dashboard smoke and Sentry post-deploy health after the next meaningful deploy.
+7. Add a periodic Mux asset reconciliation dry-run/report if video ops needs automated orphan evidence.
+8. Validate structured-data SEO on a public PDP with approved reviews.
+9. Keep the deployed V3.2 backend feature-disabled while the AWS
    dispatcher/sender, SES/DNS/env, merchant UI, journal, and live-acceptance
    packages proceed through separate gates.
-9. Decide and document Q&A widget scope before adding fields to schema (see [[Open_Questions]]).
-10. Add CSV import/export for reviews.
-11. Build a minimal analytics view in admin (counts, average rating trend).
+10. Decide and document Q&A widget scope before adding fields to schema (see [[Open_Questions]]).
+11. Add CSV import/export for reviews.
+12. Build a minimal analytics view in admin (counts, average rating trend).
 
 ## Last Updated
-2026-08-08
+2026-08-09
 
 ## Change Log
+- 2026-08-09: Recorded the source/local lifecycle closure implementation and its
+  64-migration, PostgreSQL 16/17, erasure/retention, bounded sweep,
+  changed-only-write, and local 5,000 x 500 evidence. Production deployment,
+  Worker cutover, managed scale, live convergence, conflict operations, and
+  Release B remain separate gates.
 - 2026-08-08: Corrected Product Lifecycle rollout status after the independent
   audit and live edge recheck. Backend/DB readiness remains proven for one
   active installation, but Worker no-store cutover, truthful manual dispatch,

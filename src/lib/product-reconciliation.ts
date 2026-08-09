@@ -17,10 +17,15 @@ import type { AuthToken } from '@/models/auth-token';
 import {
   applyExactProductEvidenceBatch,
   normalizeProductEvidence,
-  type ProductEvidenceWriteCounts,
+  reportProductIdentityConflicts,
+  type ProductEvidenceBatchResult,
   type ProductLike,
 } from '@/lib/product-snapshots';
-import { dispatchProductReconciliationRun } from '@/lib/product-reconciliation-dispatcher';
+import { isValidDailyScheduleSlot } from '@/lib/product-lifecycle';
+import type {
+  ProductReconciliationDispatchReason,
+  ProductReconciliationDispatchRequest,
+} from '@/lib/product-reconciliation-dispatcher';
 
 const SCAN_PAGE_SIZE = 200;
 const VERIFY_BATCH_SIZE = 50;
@@ -28,8 +33,6 @@ const RUN_LEASE_MS = 5 * 60 * 1000;
 const MAX_FAILURE_ATTEMPTS = 8;
 const RETRY_BASE_MS = 5 * 60 * 1000;
 const RETRY_MAX_MS = 6 * 60 * 60 * 1000;
-const INSTALLATION_DISCOVERY_PAGE_SIZE = 50;
-
 const TERMINAL_STATUSES = new Set(['completed', 'exhausted', 'stale_ignored']);
 const NONTERMINAL_STATUSES = ['pending', 'scanning', 'verifying', 'error'] as const;
 
@@ -66,7 +69,21 @@ export type ProductReconciliationProcessResult = {
   runId: string;
   status: string;
   continuationRequired: boolean;
+  continuation: ProductReconciliationDispatchRequest | null;
 };
+
+function processResult(
+  run: ProductReconciliationRun,
+  reason: ProductReconciliationDispatchReason | null = null,
+  notBefore: Date | null = null,
+): ProductReconciliationProcessResult {
+  return {
+    runId: run.id,
+    status: run.status,
+    continuationRequired: reason !== null,
+    continuation: reason ? { run, reason, notBefore } : null,
+  };
+}
 
 function retryAt(now: Date, attempts: number): Date {
   const delay = Math.min(RETRY_MAX_MS, RETRY_BASE_MS * 2 ** Math.max(0, attempts - 1));
@@ -95,11 +112,19 @@ async function lockRun(
   return rows[0] ?? null;
 }
 
+async function clearRunObservations(
+  tx: Prisma.TransactionClient,
+  runId: string,
+): Promise<void> {
+  await tx.productReconciliationObservation.deleteMany({ where: { runId } });
+}
+
 async function markRunStale(
   tx: Prisma.TransactionClient,
   runId: string,
   now: Date,
 ): Promise<ProductReconciliationRun> {
+  await clearRunObservations(tx, runId);
   return tx.productReconciliationRun.update({
     where: { id: runId },
     data: {
@@ -118,10 +143,16 @@ export async function startProductReconciliationRun(input: {
   storeId: string;
   fence: IkasInstallationFence;
   trigger: ProductReconciliationTrigger;
-  scheduleSlot?: string;
+  scheduleSlot?: string | null;
   now?: Date;
 }): Promise<StartRunResult> {
   const now = input.now ?? new Date();
+  const validScheduleSlot = input.trigger === 'daily'
+    ? isValidDailyScheduleSlot(input.scheduleSlot)
+    : input.scheduleSlot == null;
+  if (!validScheduleSlot) {
+    throw new ProductReconciliationError('product_reconciliation_schedule_slot_invalid', false);
+  }
   return prisma.$transaction(async (tx) => {
     const installation = await lockIkasStoreInstallationLifecycle(tx, input.storeId);
     if (!installationMatchesRun(installation, {
@@ -184,6 +215,7 @@ async function claimProductReconciliationRun(runId: string, now: Date): Promise<
     if (!authToken || authToken.merchantId !== run.storeId) {
       const attempts = run.attempts + 1;
       const status = attempts >= MAX_FAILURE_ATTEMPTS ? 'exhausted' : 'error';
+      if (status === 'exhausted') await clearRunObservations(tx, run.id);
       const updated = await tx.productReconciliationRun.update({
         where: { id: run.id },
         data: {
@@ -240,6 +272,45 @@ async function reconstructReferencedProductSnapshots(
     WHERE "productId" IS NOT NULL AND btrim("productId") <> ''
     ON CONFLICT ("storeId", "productId") DO NOTHING
   `;
+}
+
+type ProductObservationInput = {
+  productId: string;
+  product: ProductLike | null;
+};
+
+async function recordProductObservations(
+  tx: Prisma.TransactionClient,
+  run: ProductReconciliationRun,
+  entries: ProductObservationInput[],
+  now: Date,
+): Promise<void> {
+  if (entries.length === 0) return;
+  const productIds = entries.map((entry) => entry.productId);
+  if (new Set(productIds).size !== productIds.length) {
+    throw new ProductReconciliationError('product_provider_contract_invalid');
+  }
+  const existingCount = await tx.productReconciliationObservation.count({
+    where: { runId: run.id, productId: { in: productIds } },
+  });
+  if (existingCount > 0) {
+    throw new ProductReconciliationError('product_provider_cross_page_duplicate');
+  }
+  await tx.productReconciliationObservation.createMany({
+    data: entries.map((entry) => {
+      const evidence = entry.product ? normalizeProductEvidence(entry.product) : null;
+      if (entry.product && (!evidence || evidence.productId !== entry.productId)) {
+        throw new ProductReconciliationError('product_provider_contract_invalid');
+      }
+      return {
+        runId: run.id,
+        storeId: run.storeId,
+        productId: entry.productId,
+        evidence: !evidence ? 'absent' : evidence.deleted ? 'deleted' : 'present',
+        observedAt: now,
+      };
+    }),
+  });
 }
 
 async function lockClaimedRunForCommit(
@@ -300,66 +371,88 @@ function requireProviderPage(input: {
 
 async function commitScanPage(
   claimed: ClaimedRun,
-  products: ProductLike[],
-  hasNext: boolean,
+  payload: {
+    count: number;
+    data: ProductLike[];
+    hasNext: boolean;
+  },
   now: Date,
 ): Promise<ProductReconciliationProcessResult> {
-  return prisma.$transaction(async (tx) => {
+  const committed = await prisma.$transaction(async (tx) => {
     const locked = await lockClaimedRunForCommit(tx, claimed, now);
-    if (locked.stale) return { runId: locked.run.id, status: locked.run.status, continuationRequired: false };
+    if (locked.stale) return { result: processResult(locked.run), newIdentityConflicts: 0 };
     if (locked.run.phase !== 'scan' || locked.run.nextPage !== claimed.run.nextPage) {
       throw new ProductReconciliationError('product_reconciliation_progress_conflict');
     }
+    if (locked.run.expectedProductCount != null && locked.run.expectedProductCount !== payload.count) {
+      throw new ProductReconciliationError('product_provider_catalog_drift');
+    }
+    const scannedCount = locked.run.scannedCount + payload.data.length;
+    if ((payload.hasNext && scannedCount >= payload.count) || (!payload.hasNext && scannedCount !== payload.count)) {
+      throw new ProductReconciliationError('product_provider_catalog_drift');
+    }
 
-    const entries = products.map((product) => ({
+    const entries = payload.data.map((product) => ({
       productId: normalizeProductEvidence(product)!.productId,
       product,
     }));
+    await recordProductObservations(tx, locked.run, entries, now);
     const counts = await applyExactProductEvidenceBatch(tx, locked.run.storeId, entries, {
       source: 'reconciliation_scan',
       now,
-      reconciliationRunId: locked.run.id,
+      reconciliationTrigger: locked.run.trigger as ProductReconciliationTrigger,
+      scheduleSlot: locked.run.scheduleSlot,
+      freshnessMode: 'coverage',
     });
-    const reconstructedCount = hasNext
+    const reconstructedCount = payload.hasNext
       ? 0
       : await reconstructReferencedProductSnapshots(tx, locked.run.storeId, now);
     const updated = await tx.productReconciliationRun.update({
       where: { id: locked.run.id },
       data: {
         status: 'pending',
-        phase: hasNext ? 'scan' : 'verify',
-        nextPage: hasNext ? locked.run.nextPage + 1 : locked.run.nextPage,
+        phase: payload.hasNext ? 'scan' : 'verify',
+        nextPage: payload.hasNext ? locked.run.nextPage + 1 : locked.run.nextPage,
+        expectedProductCount: locked.run.expectedProductCount ?? payload.count,
         scannedCount: { increment: entries.length },
         verifiedCount: { increment: entries.length },
         activeCount: { increment: counts.active_verified },
         unavailableCount: { increment: counts.unavailable_verified },
         conflictCount: { increment: counts.identity_conflict },
         reconstructedCount: { increment: reconstructedCount },
+        snapshotCreatedCount: { increment: counts.createdSnapshots },
+        snapshotUpdatedCount: { increment: counts.changedSnapshots },
         leaseOwner: null,
         leaseExpiresAt: null,
         nextRetryAt: now,
         lastErrorCode: null,
       },
     });
-    return { runId: updated.id, status: updated.status, continuationRequired: true };
+    return {
+      result: processResult(updated, 'progress'),
+      newIdentityConflicts: counts.newIdentityConflicts,
+    };
   });
+  reportProductIdentityConflicts(committed.newIdentityConflicts, 'reconciliation_scan');
+  return committed.result;
 }
 
 async function loadVerificationCandidates(run: ProductReconciliationRun) {
-  return prisma.productSnapshot.findMany({
-    where: {
-      storeId: run.storeId,
-      lifecycleState: { in: ['unknown', 'active_verified'] },
-      productId: run.candidateCursor ? { gt: run.candidateCursor } : undefined,
-      OR: [
-        { lastSeenReconciliationRunId: null },
-        { lastSeenReconciliationRunId: { not: run.id } },
-      ],
-    },
-    orderBy: { productId: 'asc' },
-    take: VERIFY_BATCH_SIZE,
-    select: { productId: true },
-  });
+  return prisma.$queryRaw<Array<{ productId: string }>>`
+    SELECT snapshot."productId"
+    FROM "ProductSnapshot" snapshot
+    WHERE snapshot."storeId" = ${run.storeId}
+      AND snapshot."lifecycleState" IN ('unknown', 'active_verified')
+      AND (${run.candidateCursor}::text IS NULL OR snapshot."productId" > ${run.candidateCursor})
+      AND NOT EXISTS (
+        SELECT 1
+        FROM "ProductReconciliationObservation" observation
+        WHERE observation."runId" = ${run.id}
+          AND observation."productId" = snapshot."productId"
+      )
+    ORDER BY snapshot."productId" ASC
+    LIMIT ${VERIFY_BATCH_SIZE}
+  `;
 }
 
 async function completeVerification(
@@ -368,7 +461,32 @@ async function completeVerification(
 ): Promise<ProductReconciliationProcessResult> {
   return prisma.$transaction(async (tx) => {
     const locked = await lockClaimedRunForCommit(tx, claimed, now);
-    if (locked.stale) return { runId: locked.run.id, status: locked.run.status, continuationRequired: false };
+    if (locked.stale) return processResult(locked.run);
+    if (locked.run.phase !== 'verify') {
+      throw new ProductReconciliationError('product_reconciliation_progress_conflict');
+    }
+    const productCount = locked.run.expectedProductCount ?? locked.run.scannedCount;
+    await tx.productCatalogCoverage.upsert({
+      where: { storeId: locked.run.storeId },
+      create: {
+        storeId: locked.run.storeId,
+        authorizedAppId: locked.run.authorizedAppId,
+        installationGeneration: locked.run.installationGeneration,
+        installationStateVersion: locked.run.installationStateVersion,
+        reconciliationRunId: locked.run.id,
+        productCount,
+        completedAt: now,
+      },
+      update: {
+        authorizedAppId: locked.run.authorizedAppId,
+        installationGeneration: locked.run.installationGeneration,
+        installationStateVersion: locked.run.installationStateVersion,
+        reconciliationRunId: locked.run.id,
+        productCount,
+        completedAt: now,
+      },
+    });
+    await clearRunObservations(tx, locked.run.id);
     const updated = await tx.productReconciliationRun.update({
       where: { id: locked.run.id },
       data: {
@@ -381,7 +499,7 @@ async function completeVerification(
         finishedAt: now,
       },
     });
-    return { runId: updated.id, status: updated.status, continuationRequired: false };
+    return processResult(updated);
   });
 }
 
@@ -400,19 +518,24 @@ async function commitVerificationBatch(
     returned.set(evidence.productId, product);
   }
 
-  return prisma.$transaction(async (tx) => {
+  const committed = await prisma.$transaction(async (tx) => {
     const locked = await lockClaimedRunForCommit(tx, claimed, now);
-    if (locked.stale) return { runId: locked.run.id, status: locked.run.status, continuationRequired: false };
+    if (locked.stale) return { result: processResult(locked.run), newIdentityConflicts: 0 };
     if (locked.run.phase !== 'verify' || locked.run.candidateCursor !== claimed.run.candidateCursor) {
       throw new ProductReconciliationError('product_reconciliation_progress_conflict');
     }
-    const counts: ProductEvidenceWriteCounts = await applyExactProductEvidenceBatch(
+    const entries = productIds.map((productId) => ({ productId, product: returned.get(productId) ?? null }));
+    await recordProductObservations(tx, locked.run, entries, now);
+    const counts: ProductEvidenceBatchResult = await applyExactProductEvidenceBatch(
       tx,
       locked.run.storeId,
-      productIds.map((productId) => ({ productId, product: returned.get(productId) ?? null })),
+      entries,
       {
         source: 'reconciliation_exact',
         now,
+        reconciliationTrigger: locked.run.trigger as ProductReconciliationTrigger,
+        scheduleSlot: locked.run.scheduleSlot,
+        freshnessMode: 'coverage',
       },
     );
     const updated = await tx.productReconciliationRun.update({
@@ -424,27 +547,35 @@ async function commitVerificationBatch(
         activeCount: { increment: counts.active_verified },
         unavailableCount: { increment: counts.unavailable_verified },
         conflictCount: { increment: counts.identity_conflict },
+        snapshotCreatedCount: { increment: counts.createdSnapshots },
+        snapshotUpdatedCount: { increment: counts.changedSnapshots },
         leaseOwner: null,
         leaseExpiresAt: null,
         nextRetryAt: now,
         lastErrorCode: null,
       },
     });
-    return { runId: updated.id, status: updated.status, continuationRequired: true };
+    return {
+      result: processResult(updated, 'progress'),
+      newIdentityConflicts: counts.newIdentityConflicts,
+    };
   });
+  reportProductIdentityConflicts(committed.newIdentityConflicts, 'reconciliation_exact');
+  return committed.result;
 }
 
 async function markRunFailure(
   claimed: ClaimedRun,
   code: string,
   now: Date,
-): Promise<void> {
-  await prisma.$transaction(async (tx) => {
+): Promise<ProductReconciliationRun | null> {
+  return prisma.$transaction(async (tx) => {
     const run = await lockRun(tx, claimed.run.id);
-    if (!run || TERMINAL_STATUSES.has(run.status) || run.leaseOwner !== claimed.leaseOwner) return;
+    if (!run || TERMINAL_STATUSES.has(run.status) || run.leaseOwner !== claimed.leaseOwner) return run;
     const attempts = run.attempts + 1;
     const exhausted = attempts >= MAX_FAILURE_ATTEMPTS;
-    await tx.productReconciliationRun.update({
+    if (exhausted) await clearRunObservations(tx, run.id);
+    return tx.productReconciliationRun.update({
       where: { id: run.id },
       data: {
         status: exhausted ? 'exhausted' : 'error',
@@ -467,11 +598,9 @@ export async function processProductReconciliationRun(
   const now = input.now ?? new Date();
   const claim = await claimProductReconciliationRun(runId, now);
   if (claim.state !== 'claimed') {
-    return {
-      runId,
-      status: claim.run.status,
-      continuationRequired: false,
-    };
+    if (claim.state === 'busy') return processResult(claim.run, 'lease', claim.run.leaseExpiresAt);
+    if (claim.state === 'deferred') return processResult(claim.run, 'retry', claim.run.nextRetryAt);
+    return processResult(claim.run);
   }
 
   try {
@@ -486,11 +615,15 @@ export async function processProductReconciliationRun(
         expectedPage: claim.run.nextPage,
         maxItems: SCAN_PAGE_SIZE,
       });
-      return commitScanPage(claim, payload.data, payload.hasNext, now);
+      const committed = await commitScanPage(claim, payload, now);
+      return committed;
     }
 
     const candidates = await loadVerificationCandidates(claim.run);
-    if (candidates.length === 0) return completeVerification(claim, now);
+    if (candidates.length === 0) {
+      const completed = await completeVerification(claim, now);
+      return completed;
+    }
     const productIds = candidates.map((candidate) => candidate.productId);
     const response = await ikas.queries.listProductsForSync({
       id: { in: productIds },
@@ -506,86 +639,15 @@ export async function processProductReconciliationRun(
     if (payload.count !== payload.data.length) {
       throw new ProductReconciliationError('product_provider_contract_invalid');
     }
-    return commitVerificationBatch(claim, productIds, payload.data, now);
+    const committed = await commitVerificationBatch(claim, productIds, payload.data, now);
+    return committed;
   } catch (error) {
     const code = error instanceof ProductReconciliationError
       ? error.code
       : 'product_reconciliation_processing_failed';
-    await markRunFailure(claim, code, now);
-    throw error instanceof ProductReconciliationError
-      ? error
-      : new ProductReconciliationError(code);
+    const failedRun = await markRunFailure(claim, code, now);
+    if (!failedRun) throw new ProductReconciliationError(code);
+    if (failedRun.status === 'exhausted') return processResult(failedRun);
+    return processResult(failedRun, 'retry', failedRun.nextRetryAt);
   }
-}
-
-async function activeInstallationPage(cursor: string | null) {
-  return prisma.ikasStoreInstallation.findMany({
-    where: {
-      status: 'active',
-      storeId: cursor ? { gt: cursor } : undefined,
-    },
-    orderBy: { storeId: 'asc' },
-    take: INSTALLATION_DISCOVERY_PAGE_SIZE,
-    select: {
-      storeId: true,
-      authorizedAppId: true,
-      generation: true,
-      stateVersion: true,
-    },
-  });
-}
-
-export async function runProductReconciliationMaintenance(
-  input: { now?: Date; redispatchLimit?: number } = {},
-): Promise<{ created: number; dispatched: number; dispatchFailed: number; redispatched: number }> {
-  const now = input.now ?? new Date();
-  const redispatchLimit = Math.min(Math.max(input.redispatchLimit ?? 50, 1), 100);
-  const dueRuns = await prisma.productReconciliationRun.findMany({
-    where: {
-      status: { in: [...NONTERMINAL_STATUSES] },
-      OR: [
-        { status: 'pending' },
-        { status: 'error', nextRetryAt: { lte: now } },
-        { status: { in: ['scanning', 'verifying'] }, leaseExpiresAt: { lte: now } },
-      ],
-    },
-    orderBy: { updatedAt: 'asc' },
-    take: redispatchLimit,
-    select: { id: true },
-  });
-
-  let redispatched = 0;
-  let dispatchFailed = 0;
-  for (const run of dueRuns) {
-    if (await dispatchProductReconciliationRun(run.id)) redispatched += 1;
-    else dispatchFailed += 1;
-  }
-
-  const scheduleSlot = now.toISOString().slice(0, 10);
-  let cursor: string | null = null;
-  let created = 0;
-  let dispatched = 0;
-  while (true) {
-    const installations = await activeInstallationPage(cursor);
-    for (const installation of installations) {
-      const result = await startProductReconciliationRun({
-        storeId: installation.storeId,
-        fence: {
-          authorizedAppId: installation.authorizedAppId,
-          generation: installation.generation,
-          stateVersion: installation.stateVersion,
-        },
-        trigger: 'daily',
-        scheduleSlot,
-        now,
-      });
-      if (result.created) created += 1;
-      if (result.created && await dispatchProductReconciliationRun(result.run.id)) dispatched += 1;
-      else if (result.created) dispatchFailed += 1;
-    }
-    if (installations.length < INSTALLATION_DISCOVERY_PAGE_SIZE) break;
-    cursor = installations[installations.length - 1].storeId;
-  }
-
-  return { created, dispatched, dispatchFailed, redispatched };
 }

@@ -14,6 +14,12 @@ const prismaMock = vi.hoisted(() => ({
     findUnique: vi.fn(),
     findMany: vi.fn(),
   },
+  ikasStoreInstallation: {
+    findUnique: vi.fn(),
+  },
+  productCatalogCoverage: {
+    findFirst: vi.fn(),
+  },
   productReviewSummary: {
     findMany: vi.fn(),
     findUnique: vi.fn(),
@@ -387,6 +393,8 @@ beforeEach(() => {
   prismaMock.widgetSettings.findUnique.mockReset();
   prismaMock.productSnapshot.findUnique.mockReset();
   prismaMock.productSnapshot.findMany.mockReset();
+  prismaMock.ikasStoreInstallation.findUnique.mockReset();
+  prismaMock.productCatalogCoverage.findFirst.mockReset();
   prismaMock.productReviewSummary.findMany.mockReset();
   prismaMock.productReviewSummary.findUnique.mockReset();
   prismaMock.productReviewSummary.create.mockReset();
@@ -787,6 +795,46 @@ describe('/api/public/ratings-by-slug', () => {
     await expect(response.json()).resolves.toEqual({ data: {} });
     expect(prismaMock.productReviewSummary.findMany).not.toHaveBeenCalled();
     expect(prismaMock.review.findMany).not.toHaveBeenCalled();
+  });
+
+  it('accepts unchanged active snapshots only under fresh current-generation coverage', async () => {
+    checkFixedWindowRateLimitMock.mockResolvedValue({ allowed: true });
+    const now = Date.now();
+    prismaMock.productSnapshot.findMany.mockResolvedValue([{
+      slug: 'covered-product',
+      productId: 'product-1',
+      lifecycleState: 'active_verified',
+      lastVerifiedAt: new Date(now - 48 * 60 * 60 * 1000),
+    }]);
+    prismaMock.ikasStoreInstallation.findUnique.mockResolvedValue({
+      authorizedAppId: 'app-1',
+      generation: 3,
+      stateVersion: 7,
+      status: 'active',
+    });
+    prismaMock.productCatalogCoverage.findFirst.mockResolvedValue({ completedAt: new Date(now) });
+    prismaMock.productReviewSummary.findMany.mockResolvedValue([
+      summaryRow({ productId: 'product-1', approvedCount: 2, ratingSum: 10, averageRating: 5 }),
+    ]);
+    const { GET } = await import('@/app/api/public/ratings-by-slug/route');
+
+    const response = await GET(new Request(
+      'https://app.test/api/public/ratings-by-slug?storeId=store-1&slugs=covered-product',
+    ));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      data: { 'covered-product': { avg: '5.0', count: 2 } },
+    });
+    expect(prismaMock.productCatalogCoverage.findFirst).toHaveBeenCalledWith({
+      where: {
+        storeId: 'store-1',
+        authorizedAppId: 'app-1',
+        installationGeneration: 3,
+        installationStateVersion: 7,
+      },
+      select: { completedAt: true },
+    });
   });
 });
 

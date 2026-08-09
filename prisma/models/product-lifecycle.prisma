@@ -12,6 +12,10 @@ model ProductSnapshot {
   conflictDetectedAt          DateTime?
   lastEvidenceSource          String?   @db.VarChar(32)
   lastSeenReconciliationRunId String?
+  absenceFirstObservedAt      DateTime?
+  absenceLastObservedAt       DateTime?
+  absenceObservationCount     Int       @default(0)
+  absenceLastScheduleSlot     String?   @db.VarChar(32)
   lastSyncedAt                DateTime  @default(now())
   createdAt                   DateTime  @default(now())
   updatedAt                   DateTime  @updatedAt
@@ -23,36 +27,92 @@ model ProductSnapshot {
 }
 
 model ProductReconciliationRun {
-  id                       String    @id @default(uuid())
+  id                       String                             @id @default(uuid())
   storeId                  String
-  authorizedAppId          String    @db.VarChar(128)
+  authorizedAppId          String                             @db.VarChar(128)
   installationGeneration   Int
   installationStateVersion Int
-  trigger                  String    @db.VarChar(32)
-  scheduleSlot             String?   @db.VarChar(32)
-  status                   String    @default("pending") @db.VarChar(32)
-  phase                    String    @default("scan") @db.VarChar(32)
-  nextPage                 Int       @default(1)
+  trigger                  String                             @db.VarChar(32)
+  scheduleSlot             String?                            @db.VarChar(32)
+  status                   String                             @default("pending") @db.VarChar(32)
+  phase                    String                             @default("scan") @db.VarChar(32)
+  nextPage                 Int                                @default(1)
   candidateCursor          String?
-  scannedCount             Int       @default(0)
-  verifiedCount            Int       @default(0)
-  activeCount              Int       @default(0)
-  unavailableCount         Int       @default(0)
-  conflictCount            Int       @default(0)
-  reconstructedCount       Int       @default(0)
-  attempts                 Int       @default(0)
-  leaseOwner               String?   @db.VarChar(64)
+  scannedCount             Int                                @default(0)
+  verifiedCount            Int                                @default(0)
+  activeCount              Int                                @default(0)
+  unavailableCount         Int                                @default(0)
+  conflictCount            Int                                @default(0)
+  reconstructedCount       Int                                @default(0)
+  snapshotCreatedCount     Int                                @default(0)
+  snapshotUpdatedCount     Int                                @default(0)
+  expectedProductCount     Int?
+  attempts                 Int                                @default(0)
+  leaseOwner               String?                            @db.VarChar(64)
   leaseExpiresAt           DateTime?
   nextRetryAt              DateTime?
-  lastErrorCode            String?   @db.VarChar(128)
+  lastErrorCode            String?                            @db.VarChar(128)
   startedAt                DateTime?
   finishedAt               DateTime?
-  createdAt                DateTime  @default(now())
-  updatedAt                DateTime  @updatedAt
+  createdAt                DateTime                           @default(now())
+  updatedAt                DateTime                           @updatedAt
+  observations             ProductReconciliationObservation[]
+  catalogCoverage          ProductCatalogCoverage?
 
   @@unique([storeId, installationGeneration, trigger, scheduleSlot])
   @@index([status, nextRetryAt, createdAt])
   @@index([leaseExpiresAt])
   @@index([storeId, createdAt])
   @@index([storeId, installationGeneration, status])
+}
+
+model ProductReconciliationObservation {
+  runId      String
+  storeId    String
+  productId  String
+  evidence   String                   @db.VarChar(16)
+  observedAt DateTime
+  run        ProductReconciliationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@id([runId, productId])
+  @@index([storeId, runId, productId])
+}
+
+model ProductCatalogCoverage {
+  storeId                  String                    @id
+  authorizedAppId          String                    @db.VarChar(128)
+  installationGeneration   Int
+  installationStateVersion Int
+  reconciliationRunId      String?                   @unique
+  productCount             Int
+  completedAt              DateTime
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  reconciliationRun        ProductReconciliationRun? @relation(fields: [reconciliationRunId], references: [id], onDelete: SetNull)
+}
+
+model ProductReconciliationSweep {
+  id                  String    @id @default(uuid())
+  scheduleSlot        String    @unique @db.VarChar(32)
+  status              String    @default("pending") @db.VarChar(32)
+  phase               String    @default("discover") @db.VarChar(32)
+  cursorStoreId       String?
+  discoveredCount     Int       @default(0)
+  dispatchedCount     Int       @default(0)
+  dispatchFailedCount Int       @default(0)
+  retainedRunCount    Int       @default(0)
+  retainedSweepCount  Int       @default(0)
+  attempts            Int       @default(0)
+  leaseOwner          String?   @db.VarChar(64)
+  leaseExpiresAt      DateTime?
+  nextRetryAt         DateTime?
+  lastErrorCode       String?   @db.VarChar(128)
+  startedAt           DateTime?
+  finishedAt          DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([status, nextRetryAt, createdAt])
+  @@index([leaseExpiresAt])
+  @@index([finishedAt])
 }

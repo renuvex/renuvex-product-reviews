@@ -3,8 +3,8 @@ type: database
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-08
-last_verified: 2026-08-08
+updated: 2026-08-09
+last_verified: 2026-08-09
 confidence: high
 tags:
   - database
@@ -45,6 +45,8 @@ source_files:
   - "prisma/migrations/20260715120000_add_review_email_batch_envelope_v32/migration.sql"
   - "prisma/migrations/20260802170000_add_admin_review_list_indexes/migration.sql"
   - "prisma/migrations/20260803120000_add_product_lifecycle_evidence/migration.sql"
+  - "prisma/migrations/20260809120000_harden_product_lifecycle_evidence/migration.sql"
+  - "prisma/migrations/20260809130000_add_product_reconciliation_scale/migration.sql"
   - "src/lib/review-media.ts"
   - "src/lib/review-summary.ts"
   - "src/lib/cleanup-orphan-images.ts"
@@ -60,9 +62,9 @@ the migration files that introduced the touched model. `prisma/schema.prisma`
 is the generator/datasource entrypoint. Current high-risk areas are review
 media, AWS image pending/variant fields, Mux media jobs, summary read models,
 two-phase orphan cleanup, and `ScheduledJobRunLock` scheduler idempotency.
-Production migrations must remain expand/contract safe. Product lifecycle rows
-are current evidence, but their store-erasure and terminal-run retention closure
-is still open.
+Production migrations must remain expand/contract safe. The lifecycle closure
+source adds generation-fenced erasure and bounded terminal retention, but the
+new migrations are not production-effective until separately deployed.
 
 ## Summary
 PostgreSQL via Prisma. Datamodel source of truth:
@@ -325,6 +327,9 @@ the row is retained as a tombstone when current product availability disappears.
 | `unavailableAt`, `conflictDetectedAt` | DateTime? | Tombstone/conflict transition evidence |
 | `lastEvidenceSource` | String? | Fixed internal source label without provider payload |
 | `lastSeenReconciliationRunId` | String? | Marks ids observed by a complete-run scan page |
+| `absenceFirstObservedAt`, `absenceLastObservedAt` | DateTime? | First/latest qualifying daily exact-empty evidence |
+| `absenceObservationCount` | Int | Count of distinct qualifying daily slots |
+| `absenceLastScheduleSlot` | String? | Monotonic daily slot fence; install/manual empty does not advance it |
 | `lastSyncedAt` | DateTime | Last local sync time |
 
 Indexes:
@@ -334,7 +339,8 @@ Indexes:
 - `[storeId, lastSeenReconciliationRunId, productId]`
 
 Maintained by exact product-webhook reads and bounded install/manual/daily
-reconciliation. Missing products are never hard-deleted. See
+reconciliation. Explicit provider deletion is immediate; exact-empty requires
+two daily slots at least 24 hours apart. Missing products are never hard-deleted. See
 [[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]]. `unavailableAt` is the
 existing first-unavailable retention anchor; do not add a duplicate
 `missingSince`/`deletedAt` field without a distinct proven requirement.
@@ -350,10 +356,35 @@ completion timestamps.
 State and phase values are protected by DB CHECK constraints. RLS is enabled and
 the hosted Data API roles retain no direct table privileges. Daily runs are
 unique per store/generation/trigger/slot. Reinstall atomically closes all older
-nonterminal runs as `stale_ignored`. Terminal runs currently have no bounded
-retention policy, and current store erasure does not delete this table or
-`ProductSnapshot`; see
-[[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]].
+nonterminal runs as `stale_ignored`. Terminal runs use 42-day bounded retention,
+with the latest successful run for each active exact installation generation
+protected. Store erasure removes runs and snapshots through the existing
+generation fence; see [[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]].
+
+### `ProductReconciliationObservation`
+
+Temporary per-run scan evidence keyed by composite `(runId, productId)`. The
+row stores only `storeId`, `evidence=present|deleted`, and `observedAt`.
+Cross-page duplicate insertion fails the run. The working set is deleted
+atomically when the run completes, becomes stale, or exhausts; it is not kept as
+a 42-day audit log. Terminal deletion produces normal PostgreSQL dead tuples,
+so vacuum/autovacuum remains part of the operating cost.
+
+### `ProductCatalogCoverage`
+
+One row per store records the exact authorized app, installation generation and
+state version, completed run, product count, and completion time of the latest
+full catalog proof. The current generation's coverage supplies the 36-hour
+freshness boundary, allowing unchanged active products to avoid daily snapshot
+updates.
+
+### `ProductReconciliationSweep`
+
+DB-owned global installation-discovery cursor and retention state. A sweep is
+unique per daily schedule slot and persists status/phase, `cursorStoreId`,
+counters, lease, retry, fixed error, and completion timestamps. One invocation
+discovers at most 50 active installations. Terminal sweeps use 42-day bounded
+retention while the latest global successful sweep is protected.
 
 ### `PendingReviewImage`
 Provider-agnostic registry of uploads not yet attached to a `Review`. The model name is legacy, but current review-image source writes AWS S3 upload intents. See [[ADR_0012_Pending_Upload_Registry]] and [[ADR_0034_AWS_Review_Image_Migration]].

@@ -78,7 +78,10 @@ describe('admin product sync route', () => {
       fence: principal,
       trigger: 'manual',
     });
-    expect(mocks.dispatch).toHaveBeenCalledWith('11111111-1111-4111-8111-111111111111');
+    expect(mocks.dispatch).toHaveBeenCalledWith({
+      run: { id: '11111111-1111-4111-8111-111111111111', status: 'pending' },
+      reason: 'initial',
+    });
   });
 
   it('does not claim acceptance when QStash publish fails', async () => {

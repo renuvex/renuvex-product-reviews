@@ -179,6 +179,20 @@ function createErasureHarness(input: {
     reviewEmailBatch: { findMany: vi.fn().mockResolvedValue([]), deleteMany: vi.fn() },
     reviewEmailEvent: { deleteMany: vi.fn() },
     ikasOrderSnapshot: { findMany: vi.fn().mockResolvedValue([]), deleteMany: vi.fn() },
+    productReconciliationObservation: {
+      findMany: vi.fn().mockResolvedValue([]),
+      deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
+    },
+    productReconciliationRun: {
+      findMany: vi.fn().mockResolvedValue([]),
+      deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
+    },
+    productCatalogCoverage: deleteModel(0),
+    productSnapshot: {
+      findMany: vi.fn().mockResolvedValue([]),
+      updateMany: vi.fn().mockResolvedValue({ count: 0 }),
+      deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
+    },
     reviewEmailSettings: deleteModel(1),
     reviewEmailUnsubscribeToken: deleteModel(1),
     reviewEmailSuppression: deleteModel(1),

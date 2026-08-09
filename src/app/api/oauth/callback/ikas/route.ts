@@ -276,7 +276,7 @@ export async function GET(request: NextRequest) {
           fence: installationFence,
           trigger: 'install',
         });
-        if (!(await dispatchProductReconciliationRun(run.id))) {
+        if (!(await dispatchProductReconciliationRun({ run, reason: 'initial' }))) {
           throw new Error('product_reconciliation_dispatch_failed');
         }
       } catch {

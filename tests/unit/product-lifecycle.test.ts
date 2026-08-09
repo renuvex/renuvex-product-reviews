@@ -28,8 +28,13 @@ function current(input: Partial<CurrentProductEvidence> = {}): CurrentProductEvi
     name: 'Old name',
     providerCreatedAt: new Date('2026-01-01T00:00:00.000Z'),
     ikasUpdatedAt: new Date('2026-08-02T11:00:00.000Z'),
+    lastVerifiedAt: new Date('2026-08-02T12:00:00.000Z'),
     unavailableAt: null,
     conflictDetectedAt: null,
+    absenceFirstObservedAt: null,
+    absenceLastObservedAt: null,
+    absenceObservationCount: 0,
+    absenceLastScheduleSlot: null,
     ...input,
   };
 }
@@ -69,14 +74,76 @@ describe('product lifecycle evidence transitions', () => {
     expect(result.lastVerifiedAt).toBe(NOW);
   });
 
-  it('turns an exact missing or deleted result into a tombstone', () => {
-    const missing = decideProductLifecycleWrite({
+  it('keeps one exact-empty daily observation unknown and confirms absence on a later daily slot', () => {
+    const firstObservedAt = new Date('2026-08-03T03:00:00.000Z');
+    const first = decideProductLifecycleWrite({
       current: current(),
       evidence: null,
       productId: 'product-1',
       source: 'reconciliation_exact',
-      now: NOW,
+      now: firstObservedAt,
+      reconciliationTrigger: 'daily',
+      scheduleSlot: '2026-08-03',
     });
+    const secondObservedAt = new Date('2026-08-04T03:00:00.000Z');
+    const second = decideProductLifecycleWrite({
+      current: current(first),
+      evidence: null,
+      productId: 'product-1',
+      source: 'reconciliation_exact',
+      now: secondObservedAt,
+      reconciliationTrigger: 'daily',
+      scheduleSlot: '2026-08-04',
+    });
+
+    expect(first).toMatchObject({
+      lifecycleState: 'unknown',
+      unavailableAt: null,
+      absenceObservationCount: 1,
+      absenceLastScheduleSlot: '2026-08-03',
+    });
+    expect(second).toMatchObject({
+      lifecycleState: 'unavailable_verified',
+      unavailableAt: secondObservedAt,
+      absenceObservationCount: 2,
+      absenceLastScheduleSlot: '2026-08-04',
+    });
+  });
+
+  it('does not count replayed or non-daily exact-empty evidence toward deletion', () => {
+    const firstObservedAt = new Date('2026-08-03T03:00:00.000Z');
+    const first = decideProductLifecycleWrite({
+      current: current(),
+      evidence: null,
+      productId: 'product-1',
+      source: 'reconciliation_exact',
+      now: firstObservedAt,
+      reconciliationTrigger: 'daily',
+      scheduleSlot: '2026-08-03',
+    });
+    const replay = decideProductLifecycleWrite({
+      current: current(first),
+      evidence: null,
+      productId: 'product-1',
+      source: 'reconciliation_exact',
+      now: new Date('2026-08-04T04:00:00.000Z'),
+      reconciliationTrigger: 'daily',
+      scheduleSlot: '2026-08-03',
+    });
+    const manual = decideProductLifecycleWrite({
+      current: current(first),
+      evidence: null,
+      productId: 'product-1',
+      source: 'reconciliation_exact',
+      now: new Date('2026-08-05T04:00:00.000Z'),
+      reconciliationTrigger: 'manual',
+    });
+
+    expect(replay).toMatchObject({ lifecycleState: 'unknown', absenceObservationCount: 1 });
+    expect(manual).toMatchObject({ lifecycleState: 'unknown', absenceObservationCount: 1 });
+  });
+
+  it('turns explicit provider deleted evidence directly into a tombstone', () => {
     const deleted = decideProductLifecycleWrite({
       current: current(),
       evidence: evidence({ deleted: true }),
@@ -85,7 +152,6 @@ describe('product lifecycle evidence transitions', () => {
       now: NOW,
     });
 
-    expect(missing).toMatchObject({ lifecycleState: 'unavailable_verified', unavailableAt: NOW });
     expect(deleted).toMatchObject({ lifecycleState: 'unavailable_verified', unavailableAt: NOW });
   });
 
@@ -152,5 +218,20 @@ describe('safe slug resolution', () => {
       lastVerifiedAt: new Date(NOW.getTime() - 36 * 60 * 60 * 1000),
     }, NOW)).toBe(true);
     expect(isFreshActiveProduct({ lifecycleState: 'unknown', lastVerifiedAt: NOW }, NOW)).toBe(false);
+  });
+
+  it('uses current catalog coverage without rewriting unchanged active snapshots', () => {
+    const staleSnapshot = new Date(NOW.getTime() - 48 * 60 * 60 * 1000);
+
+    expect(isFreshActiveProduct({
+      lifecycleState: 'active_verified',
+      lastVerifiedAt: staleSnapshot,
+    }, NOW, NOW)).toBe(true);
+    expect(resolveSafeSlugProductIds([{
+      slug: 'covered-product',
+      productId: 'product-1',
+      lifecycleState: 'active_verified',
+      lastVerifiedAt: staleSnapshot,
+    }], NOW, NOW)).toEqual({ 'covered-product': 'product-1' });
   });
 });

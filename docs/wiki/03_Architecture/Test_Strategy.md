@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-28
-updated: 2026-08-08
-last_verified: 2026-08-08
+updated: 2026-08-09
+last_verified: 2026-08-09
 confidence: high
 tags:
   - testing
@@ -28,6 +28,7 @@ source_files:
   - ".github/workflows/widget-smoke.yml"
   - ".github/workflows/media-cross-browser.yml"
   - ".github/workflows/database-compatibility.yml"
+  - ".github/workflows/product-lifecycle-scale.yml"
   - ".github/pull_request_template.md"
   - "scripts/check-generated-artifacts.mjs"
   - "scripts/run-ci-build.mjs"
@@ -45,6 +46,7 @@ source_files:
   - "scripts/verify-deployed-jsonld.mjs"
   - "scripts/verify-supabase-data-api-surface.mjs"
   - "scripts/verify-product-lifecycle.ts"
+  - "scripts/benchmark-product-lifecycle-scale.ts"
   - "tests/unit/supabase-data-api-surface-audit.test.ts"
   - "tests/integration/supabase-data-api-surface.test.ts"
   - "tests/widget-harness.ts"
@@ -62,6 +64,10 @@ source_files:
   - "tests/unit/product-lifecycle.test.ts"
   - "tests/unit/product-reconciliation.test.ts"
   - "tests/unit/product-reconciliation-route.test.ts"
+  - "tests/unit/product-reconciliation-sweep.test.ts"
+  - "tests/unit/product-reconciliation-sweep-route.test.ts"
+  - "tests/unit/product-reconciliation-dispatcher.test.ts"
+  - "tests/unit/product-lifecycle-retention.test.ts"
   - "tests/unit/review-email-erasure.test.ts"
   - "tests/unit/ikas-installation-lifecycle.test.ts"
   - "tests/unit/review-email-batch-jobs.test.ts"
@@ -215,7 +221,8 @@ order.
 | Unit/API/theme state | `pnpm test:unit` | Public API route behavior, product review summary read-model helpers, review GET filters, review POST validation/rate-limit/profanity/image-policy/approval branches, fixed GET/POST public-error sanitization, strict HS256/claim/header admin auth, exact active installation/token authorization, token-refresh row-revision compare-and-set, aggregate verifier fail-closed shapes, explicit anonymous/beacon/no-CORS policy isolation, legacy review-request exact-origin ordering, review-center same-origin matching, storefront theme stable/pending plus verified/provider-unavailable/legacy-unverifiable fail-closed gates, surface test contracts, popover registry lifecycle contract, stable widget asset cache headers, and the overlay shared-surface invariant (scroll-lock / focus-trap primitives live only in their shared modules — ADR_0025). Vitest runs these unit files with one worker. Heavy route modules in the feature-disabled, legacy review-request, and admin-settings suites are imported during file collection rather than inside the timed assertion, so module transform load cannot create a false timeout and the default bounded timeout remains sufficient instead of being widened enough to hide a real hang. |
 | Review-center browser | `pnpm test:review-center` | Isolated `reviews.renuvex.app`-style flow with mocked network: fragment token exchange/removal, session item reads, independent Product A submit, Product B continuation/skip, and terminal batch state. It does not send email or call AWS/Mux. |
 | Review-email DB guarantees | `pnpm test:integration:review-email` | Test against an explicitly supplied local disposable PostgreSQL DB. It refuses non-local hosts and requires `DATABASE_URL` to equal `REVIEW_EMAIL_INTEGRATION_DATABASE_URL`; it proves install/DSR/retention guarantees plus batch fingerprint/live-group races, product membership uniqueness, job target checks, cross-store composite FKs, provider-neutral event dedupe, attempt evidence retention, DSR/event lock ordering, journal replay equivalence, and disable/re-enable behavior around committed versus uncommitted attempts. It also proves old JWT rejection after uninstall/reinstall, exact-token reauthorization semantics, unchanged-refresh-token row-revision CAS, and that an uninstall winning the installation lock prevents a stale final admin write. The uninstall suite additionally proves activation atomically stales nonterminal older runs, an exhausted old generation cannot delete a reinstalled token/review, concurrent duplicate app-deleted deliveries share one run, and restore replay cannot cross a newer generation/activation fence. Exact-identity coverage includes same-folded/different-exact collision isolation, retained-key lookup, real retention detaching an unsubscribe token from its attempt, old-link suppression without ciphertext, normal/journal DSR deletion, and legacy progress/payload compatibility. Migrations must be applied first. GitHub runs migration status, migrations-to-database diff, migrations-to-multi-file-datamodel diff, Data API/RLS checks, and the integration suite on disposable PostgreSQL 17 for every PR and main push; PostgreSQL 16 is the scheduled and database-path N-1 compatibility gate. Both jobs use a shadow database distinct from the integration database and set Prisma's disposable-test pool explicitly to 10 connections because the lock-order tests intentionally hold several concurrent transactions and the CPU-derived Prisma v6 default can be only 3 on a hosted runner. Neither job can use a non-local database URL. |
-| Product lifecycle evidence | Focused lifecycle Vitest files plus `pnpm test:integration:review-email` | Pure tests cover transition/freshness, same-id conflict, safe slug resolution, malformed provider pagination, complete-scan-before-unavailable, signed opaque continuation, and reinstall stale fencing. Disposable PostgreSQL proves tombstone/conflict persistence, same-slug/new-id ownership isolation, and transactional stale closure. PG16/17 database jobs also run `pnpm verify:product-lifecycle --expect=expanded`. The later live `--expect=ready` gate is read-only and is not replaced by mocked/unit tests. |
+| Product lifecycle evidence | Focused lifecycle Vitest files plus `pnpm test:integration:review-email` | Pure tests cover two daily exact-empty slots separated by at least 24 hours, explicit deletion, sticky conflict, safe slug resolution, malformed/duplicate provider pages, delayed retry, truthful publish failure, opaque run/sweep continuations, terminal observation cleanup, bounded 42-day retention, and reinstall stale fencing. Disposable PostgreSQL proves schema/RLS/default-grants, changed-only snapshot persistence under current-generation coverage, one global nonterminal sweep, tombstone/conflict persistence, same-slug/new-id isolation, and transactional stale closure/observation deletion. PG16/17 database jobs run `pnpm verify:product-lifecycle --expect=expanded`; a live `--expect=ready` remains a separate post-deploy gate. |
+| Product lifecycle scale | `pnpm benchmark:product-lifecycle:scale` and manual `.github/workflows/product-lifecycle-scale.yml` | Refuses non-local PostgreSQL and caps input at 5,000 installations x 500 products. It seeds 2.5 million snapshots, models scan observations and terminalization, asserts zero unchanged snapshot updates, terminal observation removal, exact coverage count, bounded message/time arithmetic, and records relation bytes, WAL, dead tuples, transaction duration, and representative `EXPLAIN (ANALYZE, BUFFERS)` output. The workflow uploads a sanitized report. This is synthetic architecture evidence; it does not call Ikas/QStash, prove provider quotas, or replace representative managed PostgreSQL/live convergence evidence. |
 
 The full `node scripts/wiki-audit.mjs` command is blocking when it reports an
 error. `--changed-source-check` is deliberately advisory: it reads uncommitted

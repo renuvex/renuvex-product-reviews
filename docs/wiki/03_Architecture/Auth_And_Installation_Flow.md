@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-02
-last_verified: 2026-08-02
+updated: 2026-08-09
+last_verified: 2026-08-09
 confidence: high
 tags:
   - auth
@@ -25,6 +25,8 @@ source_files:
   - "scripts/verify-ikas-installation-auth.mjs"
   - "src/lib/session.ts"
   - "src/lib/storefront-scripts.ts"
+  - "src/lib/product-reconciliation.ts"
+  - "src/lib/product-reconciliation-dispatcher.ts"
   - "src/lib/ikas-client/v1-graphql-requests.ts"
   - "src/helpers/api-helpers.ts"
   - "src/helpers/token-helpers.ts"
@@ -103,7 +105,8 @@ OAuth callback responses never place that bearer credential in a URL.
        - when REVIEW_EMAIL_ENABLED=true AND merchant ReviewEmailSettings.enabled=true:
          separately register order created/updated + app-deleted webhooks;
          update verified/error state through the same installation fence and disable/cancel unsent work on failure
-       - after(response): syncAllProductsForStore → ProductSnapshot backfill (non-blocking)
+       - after(response): create/reuse an installation-fenced product
+         reconciliation run and dispatch only its opaque id through QStash
        - 303 with no-store/no-referrer directly to the server-built
          <ikasAdmin>/authorized-app/<id> target; no JWT/query handoff
        │
@@ -240,7 +243,14 @@ Source files:
   never a bearer token in a URL.
 
 ## Notes
-- **Product snapshot backfill is non-blocking.** The callback awaits product webhook registration (one `saveWebhooks` mutation) but runs the full `ProductSnapshot` backfill (`syncAllProductsForStore`) via Next.js `after()`, *after* the 302 response is sent. Install latency stays independent of catalog size; a backfill cut short by the serverless function timeout is recovered by product webhooks or `POST /api/admin/sync-products`. See [[ADR_0015_Canonical_Product_Identity]].
+- **Product reconciliation dispatch is non-blocking.** The callback awaits
+  product webhook registration, then uses Next.js `after()` to create/reuse an
+  installation-fenced run and publish only its opaque id. It never scans the
+  catalog inside the callback. A publish failure is sanitized and the pending DB
+  run remains recoverable by scheduled sweep maintenance. Manual
+  `POST /api/admin/sync-products` is stricter: it returns `202` only after QStash
+  accepts publish, otherwise fixed `503 product_reconciliation_dispatch_failed`.
+  See [[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]].
 - **Review-email webhook registration is fail-closed and feature-gated.** Product registration remains independent. OAuth attempts order/uninstall registration only when both the global feature and merchant setting are enabled. Registration state changes use the installation fence; failure records a sanitized error, forces `ReviewEmailSettings.enabled=false`, and cancels unsent work. The source is not deployed, so live ikas acceptance remains a rollout test. See [[ADR_0036_Review_Request_Email_Architecture]].
 - **Embedded vs standalone**: manual store-name entry can start authorization
   from a browser tab, but successful installation returns to ikas Admin.

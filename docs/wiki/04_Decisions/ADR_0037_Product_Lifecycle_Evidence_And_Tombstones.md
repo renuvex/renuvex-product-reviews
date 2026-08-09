@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-08-03
-updated: 2026-08-08
-last_verified: 2026-08-08
+updated: 2026-08-09
+last_verified: 2026-08-09
 confidence: high
 tags:
   - adr
@@ -26,7 +26,10 @@ source_files:
   - "src/lib/product-snapshots.ts"
   - "src/lib/product-reconciliation.ts"
   - "src/lib/product-reconciliation-dispatcher.ts"
+  - "src/lib/product-reconciliation-sweep.ts"
+  - "src/lib/product-lifecycle-retention.ts"
   - "src/app/api/internal/product-reconciliation/route.ts"
+  - "src/app/api/internal/product-reconciliation-sweep/route.ts"
   - "src/app/api/public/ratings-by-slug/route.ts"
   - "scripts/verify-product-lifecycle.ts"
 ---
@@ -44,25 +47,34 @@ sticky identity conflict and is never reactivated automatically. The current
 verifier exposes only aggregate conflict counts; alerting and an audited
 operator-resolution path remain a Release B gate.
 
-Release A's database/backend is merged, deployed, and ready for the current
-active installation. End-to-end storefront rollout remains open because the
-live Worker still caches `ratings-by-slug`; current source already bypasses
-that cache but has not been deployed. Release B consumer enforcement is not
-implemented or deployed. Readiness proves current convergence, not 5,000- or
-100,000-store capacity. Follow the canonical closure matrix in
-[[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]].
+The original Release A database/backend is merged and deployed for the current
+test installation. The 2026-08-09 closure source adds two-step absence
+evidence, bounded global discovery, changed-only snapshot persistence,
+generation-fenced erasure, and 42-day terminal run/sweep retention. That newer
+source is not yet merged or deployed. End-to-end storefront rollout also
+remains open because the live Worker still caches `ratings-by-slug`. Release B
+consumer enforcement is not implemented or deployed. Local scale evidence is
+not production or provider-capacity evidence. Follow the canonical closure
+matrix in [[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]].
 
 ## Status
 
-Accepted architecture; rollout closure remains conditional. Release A's
-database/backend was merged and deployed at commit
+Accepted architecture; rollout closure remains conditional. The original
+Release A database/backend was merged and deployed at commit
 `6e6414989b45dd443058e252948585a34f30ed2e`; the additive 62nd migration,
 `--expect=expanded`, bounded reconciliation, and `--expect=ready` all passed on
 2026-08-03 for one active installation. A 2026-08-08 read-only edge check still
 observed a Worker `MISS` followed by `HIT` for `ratings-by-slug`, and the newest
-serving Worker deployment predates the merge. Release B is intentionally
-separate and remains unimplemented. The open gates do not invalidate the
-evidence model; they prevent claiming full live cutover or scale readiness.
+serving Worker deployment predates the merge.
+
+The 2026-08-09 closure implementation is on a feature branch and expands the
+source migration set to 64. It passed disposable PostgreSQL 16/17 migration,
+schema-diff, RLS/default-grant, verifier, and integration checks. A local
+PostgreSQL 17 benchmark also passed the 5,000-installation by 500-product model,
+but representative managed PostgreSQL, live QStash/provider quotas, production
+`--expect=expanded`, and production convergence remain unproven. Release B is
+intentionally separate and remains unimplemented. These boundaries prevent a
+full live or Tam GO claim.
 
 ## Context
 
@@ -89,8 +101,9 @@ records one of four evidence states:
 
 - `unknown`: current provider identity has not been proven;
 - `active_verified`: an exact provider result confirmed the id and is fresh;
-- `unavailable_verified`: a complete scan plus exact lookup, or an exact
-  webhook-triggered lookup, confirmed absence/deletion;
+- `unavailable_verified`: explicit provider `deleted=true`, or two daily
+  exact-empty observations in distinct schedule slots at least 24 hours apart,
+  confirmed unavailability;
 - `identity_conflict`: a tombstoned id later appeared again.
 
 `active_verified` evidence is fresh for 36 hours. This is a Renuvex operating
@@ -109,17 +122,21 @@ but cannot create or reactivate product evidence. The backend performs an exact
 `listProduct(id.eq)` read and writes evidence only after the active installation
 generation is rechecked in the final transaction.
 
-Daily maintenance creates or resumes one bounded `ProductReconciliationRun` per
-active installation. A signed QStash continuation accepts only an opaque run id.
-Each invocation performs at most one 200-item catalog page or one 50-id exact
-verification batch. Missing `hasNext`, malformed pagination, provider failure,
-or partial scans retry without producing unavailable evidence.
+Daily maintenance creates or resumes a DB-backed global discovery sweep. Each
+sweep continuation discovers at most 50 active installations and persists its
+cursor before continuing. Per-installation continuations still accept only an
+opaque run id and process at most one 200-item catalog page or one 50-id exact
+verification batch. Missing `hasNext`, malformed pagination, duplicate product
+ids anywhere in the run, provider failure, or partial scans retry without
+producing unavailable evidence.
 
 After the final scan page, references missing from an older hard-delete are
 reconstructed as `unknown` from review, summary, request, pending image, and
 video session product ids. Only candidates not seen in the complete scan are
-verified exactly. Installation generation changes atomically close older runs
-as `stale_ignored`.
+verified exactly. A single daily exact-empty observation leaves the snapshot
+`unknown`; install/manual empty results do not advance the daily absence count.
+Installation generation changes atomically close older runs as
+`stale_ignored`.
 
 ### Slug fallback
 
@@ -142,37 +159,41 @@ Tombstones are retained product-identity evidence, not a replacement copy of
 slug resolution, deletion, and sticky identity conflicts. Static storage is
 not the current cost driver.
 
-The 2026-08-03 read-only audit found four limits outside the original Release A
-acceptance gate:
+The 2026-08-03 audit found four concrete limits in the deployed Release A:
+erasure omitted lifecycle rows, terminal runs had no retention, global tenant
+discovery was one unbounded invocation, and unchanged products were rewritten
+daily. The 2026-08-09 closure source addresses each limit without changing the
+canonical identity or deleting tombstones:
 
-- store erasure does not yet delete `ProductSnapshot` or
-  `ProductReconciliationRun`; 31 unreferenced unknown rows remained for a store
-  with no installation;
-- completed daily reconciliation runs have no bounded retention policy;
-- active-installation discovery pages through every store in one maintenance
-  invocation even though each individual continuation is bounded;
-- active verification executes one row write per product and changes indexed
-  evidence fields.
+- store erasure removes observations, runs, coverage, and snapshots in
+  generation-fenced batches of at most 100;
+- terminal runs and sweeps are retained for 42 days, while the latest successful
+  run for every active installation and the latest successful global sweep are
+  protected;
+- global discovery persists a sweep cursor and processes at most 50
+  installations per invocation;
+- per-run observations are a temporary nonterminal working set and are removed
+  atomically on completion, stale closure, or exhaustion;
+- unchanged active products receive no `ProductSnapshot` update; freshness is
+  represented by current-generation `ProductCatalogCoverage`;
+- QStash flow control starts at one message per second and parallelism four;
+  deduplication includes the durable progress and lease/retry epoch so a crashed
+  claim can schedule a distinct post-lease recovery message.
 
-These findings do not invalidate canonical identity or tombstones. They make the
-current orchestration/write path NO-GO for a 5,000- or 100,000-store capacity
-claim. See [[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]] for the
-measured footprint, projections, and closure matrix.
+Tombstone and conflict snapshots do not use the 42-day operational-log policy.
+They remain until generation-fenced store erasure. Observation deletion creates
+dead tuples that PostgreSQL vacuum must reclaim; the implementation therefore
+reduces durable growth but does not claim zero WAL or vacuum cost.
 
-The independent audit also made the rollout sequence explicit:
-
-- deploy and prove the current Worker no-store behavior;
-- make manual sync return `202` only after QStash publish succeeds;
-- put Worker dry-run and unit checks in a required Worker-change CI gate;
-- add lifecycle-table erasure and bounded terminal-run retention;
-- before Release B, close provider-absence consistency, whole-scan integrity,
-  delayed retry, conflict operations, and every consumer/media/email/admin
-  lifecycle gate;
-- before 5,000 stores, persist global discovery progress, add backpressure,
-  reduce measured write amplification, and load-test under provider quotas.
-
-These are closure gates, not permission to add a new scheduler, cache, database,
-or provider without separate evidence.
+The local PostgreSQL 17 5,000 x 500 benchmark recorded 2.5 million snapshots,
+20,103 stable-catalog messages, 5.584 hours at one message per second, zero
+unchanged snapshot updates after executing the production changed-only helper
+for every synthetic product, and zero observations after terminalization. The
+helper pass took 130,609 ms; peak observations were 2.5 million and terminal
+deletion left 2.5 million dead tuples for vacuum reuse. This is synthetic local
+evidence. It excludes exact-candidate backlog, retries, provider quotas, and
+managed-service effects, so the managed 5K Scale GO and any 100,000-store claim
+remain open.
 
 ## Two-release gate
 
@@ -201,14 +222,16 @@ close at its stated stage.
 - Provider uncertainty hides slug-only badges instead of guessing.
 - Missed product webhooks converge through bounded reconciliation.
 - Reappearing ids require a future explicit evidence/operator process.
-- Release A adds one migration and QStash work, but no new scheduler, vendor, or
+- The original Release A added one migration; the closure source adds two
+  additive migrations and reuses QStash without a new scheduler, vendor, or
   environment variable.
-- The current small footprint is accepted, but daily run retention and
-  per-product updates must not be treated as an unbounded production design.
+- Cursor sweeps, changed-only persistence, transient observations, and bounded
+  retention replace the measured unbounded discovery/write path.
 - No direct SQL cleanup is authorized for lifecycle rows discovered outside an
   installation; recovery follows the source-owned erasure workflow.
-- A successful source/DB verifier cannot substitute for live edge headers,
-  QStash delivery evidence, conflict operations, or scale measurements.
+- A successful source/DB verifier or local scale benchmark cannot substitute for
+  live edge headers, QStash/provider delivery evidence, conflict operations,
+  managed PostgreSQL measurements, or production convergence.
 
 ## Rollback
 

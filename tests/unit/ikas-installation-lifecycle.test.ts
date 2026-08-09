@@ -49,7 +49,11 @@ describe('ikas installation lifecycle fence', () => {
         updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       productReconciliationRun: {
+        findMany: vi.fn().mockResolvedValue([{ id: 'run-stale' }]),
         updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+      productReconciliationObservation: {
+        deleteMany: vi.fn().mockResolvedValue({ count: 2 }),
       },
       ikasStoreInstallation: {
         upsert: vi.fn().mockResolvedValue({
@@ -92,6 +96,9 @@ describe('ikas installation lifecycle fence', () => {
         lastErrorCode: null,
         finishedAt: new Date('2026-07-10T12:00:00.000Z'),
       },
+    });
+    expect(tx.productReconciliationObservation.deleteMany).toHaveBeenCalledWith({
+      where: { runId: { in: ['run-stale'] } },
     });
     expect(tx.authToken.deleteMany).toHaveBeenCalledWith({ where: { merchantId: 'store-1' } });
     expect(tx.ikasStoreInstallation.upsert).toHaveBeenCalledWith(
