@@ -24,7 +24,7 @@ source_files:
   - "src/widget/loader.js"
   - "src/widget/surfaces/listing-badge.surface.js"
   - "src/widget/listing-badges/index.js"
-  - "src/widget/listing-badges/collect.js"
+  - "src/widget/placement/capability.js"
   - "src/widget/listing-badges/inject.js"
   - "src/widget/core/badge.js"
   - "src/widget/core/helpers.js"

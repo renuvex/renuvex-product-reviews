@@ -16,7 +16,7 @@ export var ratingBadgeSurface = {
   },
   mount: function (ctx) {
     return loadRatingBadgeModule().then(function (mod) {
-      return mod.renderRatingBadge(ctx.product.id, ctx.product.name);
+      return mod.renderRatingBadge(ctx.product.id, ctx.product.name, ctx.product.epoch);
     });
   },
 };

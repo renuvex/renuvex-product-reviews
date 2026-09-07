@@ -3,8 +3,8 @@ type: ikas
 project: renuvex-product-reviews
 status: active
 created: 2026-05-16
-updated: 2026-06-06
-last_verified: 2026-06-06
+updated: 2026-08-10
+last_verified: 2026-08-10
 confidence: high
 tags:
   - ikas
@@ -18,11 +18,14 @@ related:
   - "[[Widget_Architecture]]"
   - "[[ADR_0015_Canonical_Product_Identity]]"
   - "[[Ikas_Lifecycle_Mount_Questions]]"
+  - "[[ADR_0038_Runtime_Attested_Storefront_Placement]]"
 source_files:
   - "src/widget/core/storefront-context.js"
+  - "src/widget/core/context-epoch.js"
   - "src/widget/loader.js"
   - "src/widget/events.js"
-  - "src/widget/listing-badges/collect.js"
+  - "src/widget/placement/capability.js"
+  - "src/widget/listing-badges/index.js"
   - "src/widget/listing-badges/ratings.js"
   - "src/widget/reviews-section/bootstrap.js"
 ---
@@ -33,7 +36,7 @@ source_files:
 
 ikas Storefront Events is the official ikas-supported mechanism for receiving page and product context inside a storefront script. It is exposed globally as `window.IkasEvents` on every ikas store with no extra setup.
 
-Per direct ikas developer feedback (2026-05-16, see [[Ikas_Storefront_Script_Capabilities]]), this is the **recommended source of page/product context** — ikas does NOT currently provide official stable ids or `data-*` attributes for page areas. This project should treat Storefront Events as the primary context source and DOM heuristics as a temporary fallback only.
+Per direct ikas developer feedback (2026-05-16, see [[Ikas_Storefront_Script_Capabilities]]), this is the **recommended source of page/product context**. It is not a placement API: ikas does not currently provide official stable ids or `data-*` attributes for page areas. Renuvex therefore keeps event identity and DOM placement proof as separate contracts.
 
 Per direct ikas developer feedback on 2026-06-06 (see [[Ikas_Lifecycle_Mount_Questions]]), these events are analytics-oriented context events. They do **not** guarantee that the destination page DOM, theme sections, or merchant custom HTML blocks have been committed when `PAGE_VIEW` / `PRODUCT_VIEW` fires. ikas also provides no official router subscription beyond these events today. Storefront widgets that inject into host DOM must therefore combine events with DOM observation and stale async guards.
 
@@ -139,6 +142,11 @@ Key conclusions:
   payloads in the dev-store runtime check. Listing/search badges should use this
   as the stable ikas product id and treat slug as a display/DOM-matching field
   only. See [[ADR_0015_Canonical_Product_Identity]].
+- **Lazy/infinite membership is not guaranteed:** the verified event proves the
+  product set carried by that event. Neither the public docs nor the direct ikas
+  answer promises that every subsequently appended card triggers a refreshed
+  event. ADR 0038 therefore uses current-epoch event identity when present and a
+  lifecycle-safe slug resolver only after strict card placement attestation.
 
 ## Official JavaScript Example
 
@@ -240,9 +248,9 @@ This matches the current project pattern: the widget reads `publicApiKey` from i
 ## Relevance To This Project
 
 - The widget subscribes to `IkasEvents` for `PRODUCT_VIEW`, `VIEW_LISTING`, `VIEW_SEARCH_RESULTS`, and `PAGE_VIEW` in [src/widget/core/storefront-context.js](src/widget/core/storefront-context.js) — the single subscription point since ADR_0013 Phase 1 (the old `events.js` subscription was moved there).
-- Runtime audit (2026-05-17) confirmed `VIEW_LISTING` is emitted on category pages and carries `productDetails[]`; search pages emit `VIEW_SEARCH_RESULTS` with the same product id/name/slug shape. The widget uses those product ids for canonical listing/search badge reads.
+- Runtime audit (2026-05-17) confirmed `VIEW_LISTING` is emitted on category pages and carries `productDetails[]`; search pages emit `VIEW_SEARCH_RESULTS` with the same product id/name/slug shape. The widget uses matching current-epoch product ids for canonical reads, but does not treat an old event map as authority after navigation.
 - The official docs confirm `PAGE_VIEW` and `PRODUCT_VIEW`, which the widget depends on for product detection and listing-badge rendering. ikas confirmed these are not DOM-ready signals; review injection must still wait for the explicit mount when it arrives after the event.
-- `PAGE_VIEW` + `IKAS_PAGE_TYPE` should be the canonical way to know the current page type, replacing URL/DOM heuristics in [bootstrap.js](src/widget/reviews-section/bootstrap.js).
+- `PAGE_VIEW` + `IKAS_PAGE_TYPE` is the primary page-context signal. A monotonic context epoch coalesces the history/event chain for one logical transition and invalidates observers, event maps, modal context, and asynchronous rating responses without pretending that the event means DOM-ready.
 - `PRODUCT_VIEW.data.productDetail.id` is the official, supported product identity source — preferred over the `__NEXT_DATA__` / URL regex fallbacks in `getProductFromPage()`.
 - For the modular loader architecture ([[Yotpo_Style_Widget_Modular_Architecture]]), Storefront Events is the page/product context layer; the loader subscribes once and routes events to widget modules.
 

@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-27
-updated: 2026-07-01
-last_verified: 2026-07-01
+updated: 2026-08-10
+last_verified: 2026-08-10
 confidence: high
 tags:
   - adr
@@ -18,6 +18,7 @@ related:
   - "[[ADR_0017_Badge_Architecture]]"
   - "[[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]]"
   - "[[ADR_0022_Placement_Allowlist_And_Lazy_Resync]]"
+  - "[[ADR_0038_Runtime_Attested_Storefront_Placement]]"
   - "[[ADR_0026_Product_Review_Summary_Read_Model]]"
   - "[[Widget_Architecture]]"
   - "[[CSS_Variable_Surface]]"
@@ -73,6 +74,14 @@ Today the answers are scattered across `bootstrap.js`, `render.js`, `rating-badg
 
 ## Decision
 
+Placement amendment (2026-08-10): ADR 0038 supersedes the legacy boolean as
+automatic-placement authority. Layer 3 now checks the versioned
+`placementPolicy`, obtains an exact proof from the selected placement provider,
+and revalidates that proof after async reads. `autoPlacementEnabled` remains in
+the payload only as a permanently false old-runtime cutover field. The lazy
+surface, merchant enablement, and explicit-mount layers in this ADR remain
+unchanged.
+
 Every widget surface follows the same three-layer gating model. The layers are ordered from "always runs" to "actually renders":
 
 ### Layer 1 — Always-load bootstrap
@@ -90,17 +99,17 @@ Every widget surface follows the same three-layer gating model. The layers are o
 - Once the entry chunk loads, the FIRST async step inside the entry function is `await fetchSettings()` (cached in browser).
 - After settings are in hand, the entry function checks gates in this order:
   1. `widgets.<id>.enabled === false` → early return. No heavy work, no further chunk loads, no API calls.
-  2. `isAutoPlacementEnabled()` (ADR_0022) → early return if this widget needs DOM-heuristic placement. Reviews section is opt-in via `<div data-renuvex-widget="reviews">` so it does not gate here; badges and any future auto-placed surface MUST gate here.
+  2. `isAutoPlacementEnabled()` plus a surface-specific strict proof (ADR 0038) → early return before data reads if automatic placement is disabled, unsupported, ambiguous, or has no exact target. Reviews are opt-in via `<div data-renuvex-widget="reviews">` and use a separate mount contract.
   3. `isReviewsMountEnabled()` / explicit mount selector → for opt-in surfaces, this is the final "is there a place to render?" gate. Reviews use `findReviewsMount()` (defended by `isReviewsMountEnabled()`); future opt-in widgets follow the same pattern.
 
 ### What gets saved by each layer
 
-| Surface | Disabled in admin (`enabled=false`) | Unsupported theme (`autoPlacementEnabled=false`) | No mount (opt-in surfaces only) |
+| Surface | Disabled in admin (`enabled=false`) | Disabled/unsupported placement policy or missing strict proof | No mount (opt-in surfaces only) |
 |---|---|---|---|
 | Review section (PDP) | render.js chunk, BIG content chunk (~158 KB), `/api/public/reviews` request, Shadow DOM creation | n/a (review section is opt-in, not auto-placed) | bootstrap returns before reviews/photoStrip fetch and render chunk load |
 | PDP rating badge | `/api/public/ratings` request, title selector queries, badge mount | Same as disabled (ADR_0022 gate is at the rating-badge entry and inject layers) | n/a (auto-placed) |
 | Structured data | `/api/public/ratings` request, JSON-LD inject, visible-surface wait | Can still render if an explicit review mount renders visible rating content; without a visible/expected rating surface it returns early | no JSON-LD unless another visible/expected rating surface exists |
-| Listing badges | `/api/public/ratings` request, `collectProductTargets()` DOM walk, all badge placeholders + slots | Same as disabled (ADR_0022 top-level gate added 2026-05-27) | n/a (auto-placed) |
+| Listing badges | `/api/public/ratings` request, strict proof scan, and badge slots | Same as disabled; no rating request or DOM mutation | n/a (auto-placed) |
 | Modal badge (quick-view) | Same path as listing badge | Same | n/a |
 
 The "wasted" cost when a widget is disabled is the Layer 2 entry chunk download (~10-15 KB), which is small and cached. The big wins — BIG content chunk, API calls, DOM probes — all live in Layer 3 and are reliably gated.
@@ -166,7 +175,7 @@ When adding a new widget surface, follow this checklist:
    }
    ```
 
-5. **Add the widget id to backend `WidgetDef`** (admin surface registry) and to `getWidgetDefaults` / `sanitizeSettings` in `src/lib/widget-settings.ts` so admin can toggle enable + per-widget options. The `runtime.autoPlacementEnabled` flag is automatically propagated by `buildPublicThemeRuntime` (no per-widget runtime flag needed unless the widget has bespoke capability requirements).
+5. **Add the widget id to the backend catalog and settings contract** so admin can toggle enable + per-widget options. An auto-placed widget must also name its placement surface and consume ADR 0038 policy/proof; do not add another public boolean unless the domain genuinely requires a separate capability.
 
 6. **Use Shadow DOM for self-contained surfaces** (review-section-style isolated UI per ADR_0021) or light DOM for inline surfaces (badge-style typography-inheriting per ADR_0017). Decide based on whether the surface needs theme typography inherit or full CSS isolation.
 
@@ -196,7 +205,7 @@ When adding a new widget surface, follow this checklist:
 ## Consequences
 - New widget addition has a single, written checklist. The cost of adding FAQ / carousel / popup / Q&A drops to "follow the checklist" instead of "rediscover the pattern."
 - Disabled widgets save the BIG chunks and API requests (Layer 3); the small Layer 2 entry chunk waste is an accepted architectural cost.
-- ADR_0022 (placement allowlist) is the canonical capability layer for auto-placed widgets. ADR_0023 ties it into the lifecycle.
+- ADR 0038 is the canonical placement authority for auto-placed widgets. ADR 0023 still owns the general lazy-load/settings/mount lifecycle.
 - The listing badge surface is brought into compliance: a top-level `isAutoPlacementEnabled()` gate is added in `listing-badges/index.js renderListingBadges()` so the DOM walk + `/api/public/ratings` request do not fire on unsupported themes. Previously the gate was at `reserveBadgeSlots`/`injectBadges` only (inject.js), which let the heavy work run before the gate fired.
 - Future widgets that use Shadow DOM (ADR_0021) get the full CSS isolation benefit for free; future light-DOM widgets follow the badge defensive-CSS playbook from the 2026-05-27 audit.
 - Per-widget telemetry on gate decisions (planned breadcrumb) gives production visibility into which widgets are most often disabled or unsupported, informing roadmap.

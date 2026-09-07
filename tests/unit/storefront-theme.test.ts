@@ -82,6 +82,26 @@ describe('storefront theme state parsing', () => {
 });
 
 describe('public theme runtime gates', () => {
+  it('retires the legacy placement boolean for every v1 policy mode', () => {
+    const provider = buildPublicThemeRuntime(metadata());
+    const runtime = buildPublicThemeRuntime(metadata({
+      themeAdapterKey: 'generic',
+      adapterSource: 'generic_unknown',
+      adapterMatchedBy: 'none',
+      evidenceStatus: 'provider_unavailable',
+    }));
+    const disabled = buildPublicThemeRuntime(null);
+
+    expect([provider, runtime, disabled].map((value) => ({
+      mode: value.placementPolicy.mode,
+      legacy: value.autoPlacementEnabled,
+    }))).toEqual([
+      { mode: 'provider_verified', legacy: false },
+      { mode: 'runtime_attestation', legacy: false },
+      { mode: 'disabled', legacy: false },
+    ]);
+  });
+
   it('opens auto-placement only for stable theme-id matched non-generic adapters', () => {
     expect(buildPublicThemeRuntime({
       schemaVersion: 2,
@@ -96,7 +116,8 @@ describe('public theme runtime gates', () => {
     })).toEqual({
       themeAdapterKey: 'ozy',
       themeAdapterSource: 'auto',
-      autoPlacementEnabled: true,
+      placementPolicy: { version: 1, mode: 'provider_verified' },
+      autoPlacementEnabled: false,
       reviewsMountEnabled: true,
     });
   });
@@ -122,8 +143,32 @@ describe('public theme runtime gates', () => {
     })).toEqual({
       themeAdapterKey: 'generic',
       themeAdapterSource: 'generic_unknown',
+      placementPolicy: { version: 1, mode: 'runtime_attestation' },
       autoPlacementEnabled: false,
       reviewsMountEnabled: true,
+    });
+  });
+
+  it('uses runtime attestation while a changed provider theme is pending verification', () => {
+    expect(buildPublicThemeRuntime({
+      schemaVersion: 2,
+      syncStatus: 'pending_verification',
+      stable: metadata(),
+      pending: metadata({
+        activeThemeId: 'unknown-theme-id',
+        themeAdapterKey: 'generic',
+        adapterSource: 'generic_unknown',
+        adapterMatchedBy: 'none',
+      }),
+      lastCheckedAt: '2026-08-09T20:00:00.000Z',
+      lastChangedAt: '2026-08-09T20:00:00.000Z',
+      verificationDueAt: '2026-08-09T20:05:00.000Z',
+      verifiedAt: '2026-08-09T19:00:00.000Z',
+      reason: 'lazy_storefront',
+    })).toMatchObject({
+      themeAdapterKey: 'ozy',
+      placementPolicy: { version: 1, mode: 'runtime_attestation' },
+      autoPlacementEnabled: false,
     });
   });
 
@@ -133,6 +178,7 @@ describe('public theme runtime gates', () => {
     expect(buildPublicThemeRuntime(legacyMetadata)).toEqual({
       themeAdapterKey: 'ozy',
       themeAdapterSource: 'auto',
+      placementPolicy: { version: 1, mode: 'runtime_attestation' },
       autoPlacementEnabled: false,
       reviewsMountEnabled: true,
     });
@@ -140,8 +186,9 @@ describe('public theme runtime gates', () => {
 
   it('fails closed when no theme metadata exists', () => {
     expect(buildPublicThemeRuntime(null)).toEqual({
-      themeAdapterKey: 'ozy',
-      themeAdapterSource: 'legacy_fallback',
+      themeAdapterKey: 'generic',
+      themeAdapterSource: 'generic_unknown',
+      placementPolicy: { version: 1, mode: 'disabled' },
       autoPlacementEnabled: false,
       reviewsMountEnabled: false,
     });
@@ -214,6 +261,7 @@ describe('storefront theme state transitions', () => {
     expect(buildPublicThemeRuntime(resolved)).toEqual({
       themeAdapterKey: 'generic',
       themeAdapterSource: 'generic_unknown',
+      placementPolicy: { version: 1, mode: 'runtime_attestation' },
       autoPlacementEnabled: false,
       reviewsMountEnabled: true,
     });
@@ -258,6 +306,9 @@ describe('storefront theme state transitions', () => {
     expect(promoted.stable?.activeThemeName).toBe('Ozy 2');
     expect(promoted.stable?.themeAdapterKey).toBe('ozy');
     expect(promoted.stable?.adapterMatchedBy).toBe('theme_id');
-    expect(buildPublicThemeRuntime(promoted).autoPlacementEnabled).toBe(true);
+    expect(buildPublicThemeRuntime(promoted)).toMatchObject({
+      placementPolicy: { version: 1, mode: 'provider_verified' },
+      autoPlacementEnabled: false,
+    });
   });
 });

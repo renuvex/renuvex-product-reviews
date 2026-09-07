@@ -19,7 +19,7 @@ source_files:
   - "tests/widget-network-smoke.spec.ts"
   - "src/widget/loader.js"
   - "src/widget/observer.js"
-  - "src/widget/listing-badges/fallback-candidates.js"
+  - "src/widget/placement/capability.js"
   - "src/widget/surfaces/listing-badge.surface.js"
   - "public/widget-runtime/build-manifest.json"
 ---

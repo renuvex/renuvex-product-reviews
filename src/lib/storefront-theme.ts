@@ -4,6 +4,10 @@ export type ThemeAdapterMatchedBy = 'theme_id' | 'theme_name_fallback' | 'legacy
 export type ThemeEvidenceStatus = 'verified' | 'provider_unavailable' | 'legacy_unverifiable';
 export type StorefrontThemeSyncReason = 'install' | 'manual' | 'dashboard_open' | 'settings_save' | 'cron' | 'verification' | 'lazy_storefront';
 export type StorefrontThemeSyncStatus = 'stable' | 'pending_verification';
+export type PlacementPolicy = {
+  version: 1;
+  mode: 'provider_verified' | 'runtime_attestation' | 'disabled';
+};
 
 export type StorefrontThemeMetadata = {
   activeStorefrontId: string | null;
@@ -35,11 +39,10 @@ export type StorefrontThemeState = {
 export type PublicThemeRuntime = {
   themeAdapterKey: ThemeAdapterKey;
   themeAdapterSource: ThemeAdapterSource;
-  // ADR_0022: Placement allowlist + reviews mount kill-switch.
-  // autoPlacementEnabled gates DOM-heuristic surfaces (PDP / listing / modal
-  // badges). True only when the active theme is matched by a stable ikas
-  // themeId AND that id maps to a non-generic adapter (theme names are
-  // merchant-editable, so name-based fallbacks NEVER unlock placement).
+  placementPolicy: PlacementPolicy;
+  // Legacy runtimes use broad DOM fallbacks. Once placementPolicy is present,
+  // auto-placement is intentionally retired for those runtimes and remains
+  // false in every policy mode. New runtimes use placementPolicy exclusively.
   // reviewsMountEnabled gates the explicit-mount review section. The review
   // section is opt-in via <div data-renuvex-widget="reviews"> AND
   // shadow-isolated (ADR_0021), so it stays true for v1 — the flag exists as
@@ -78,12 +81,13 @@ type ActiveThemeMatch = {
 };
 
 const FALLBACK_RUNTIME: PublicThemeRuntime = {
-  themeAdapterKey: 'ozy',
-  themeAdapterSource: 'legacy_fallback',
+  themeAdapterKey: 'generic',
+  themeAdapterSource: 'generic_unknown',
   // No metadata → fail closed on BOTH surfaces. Without a known active theme
   // we cannot safely auto-place badges, and we have no evidence the merchant
   // intended any specific review-section behavior either.
   autoPlacementEnabled: false,
+  placementPolicy: { version: 1, mode: 'disabled' },
   reviewsMountEnabled: false,
 };
 
@@ -388,26 +392,34 @@ export function isPendingStorefrontThemeDue(value: unknown, now = new Date()) {
 }
 
 export function buildPublicThemeRuntime(value: unknown): PublicThemeRuntime {
-  const metadata = getPublicStorefrontThemeMetadata(value);
+  const state = parseStorefrontThemeState(value);
+  const metadata = state?.stable || state?.pending || null;
   if (!metadata) return FALLBACK_RUNTIME;
 
   const themeAdapterKey: ThemeAdapterKey = metadata.themeAdapterKey === 'generic' ? 'generic' : 'ozy';
   const themeAdapterSource: ThemeAdapterSource =
     metadata.adapterSource === 'auto' || metadata.adapterSource === 'generic_unknown' ? metadata.adapterSource : 'legacy_fallback';
 
-  // ADR_0022: Auto-placement unlock requires stable theme_id match AND a
-  // non-generic adapter. theme_name_fallback / legacy_fallback paths keep
-  // their adapter-selection role but never unlock placement (merchant-editable
-  // theme names cannot grant placement privileges).
-  const autoPlacementEnabled =
+  const providerVerified =
+    state?.syncStatus === 'stable' &&
     metadata.evidenceStatus === 'verified' &&
     metadata.adapterMatchedBy === 'theme_id' &&
     themeAdapterKey !== 'generic';
+  const placementPolicy: PlacementPolicy = {
+    version: 1,
+    mode: providerVerified ? 'provider_verified' : 'runtime_attestation',
+  };
   // Review section is opt-in via explicit DOM mount AND shadow-isolated, so
   // it is structurally safe on any theme. The flag stays true as long as we
   // have any active-theme metadata; the FALLBACK_RUNTIME (no metadata) path
   // keeps it false. Backend per-merchant overrides can flip this later.
   const reviewsMountEnabled = true;
 
-  return { themeAdapterKey, themeAdapterSource, autoPlacementEnabled, reviewsMountEnabled };
+  return {
+    themeAdapterKey,
+    themeAdapterSource,
+    placementPolicy,
+    autoPlacementEnabled: false,
+    reviewsMountEnabled,
+  };
 }

@@ -1,0 +1,429 @@
+import { expect, test } from '@playwright/test';
+import {
+  MERCHANT_ORIGIN,
+  LEGACY_PLACEMENT_RUNTIME_ENTRY,
+  PRODUCT_NAME,
+  PUBLIC_KEY,
+  countListingBadges,
+  countUrls,
+  hasPdpBadge,
+  settingsResponse,
+  setupProductListingFallbackPage,
+  setupWidgetRoutes,
+  widgetErrors,
+} from './widget-harness';
+
+test('provider-verified placement requires an exact Ozy PDP target', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: false,
+    productMarkup: '<section class="product-detail"><h1>Premium</h1></section>',
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/premium`);
+  await page.waitForTimeout(800);
+
+  expect(await hasPdpBadge(page)).toBe(false);
+  expect(countUrls(log, '/api/public/ratings')).toBe(0);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('runtime attestation enables the exact Ozy PDP target without provider adapter identity', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: false,
+    runtime: {
+      themeAdapterKey: 'generic',
+      placementPolicy: { version: 1, mode: 'runtime_attestation' },
+    },
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/premium`);
+  await expect.poll(() => hasPdpBadge(page)).toBe(true);
+
+  expect(countUrls(log, '/api/public/ratings')).toBe(1);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('unknown or missing placement policy stays fail-closed even when legacy boolean is true', async ({ page }) => {
+  const legacyPayload = settingsResponse({}) as {
+    runtime: Record<string, unknown>;
+  };
+  delete legacyPayload.runtime.placementPolicy;
+  legacyPayload.runtime.autoPlacementEnabled = true;
+
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: false,
+    settingsPayload: legacyPayload,
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/premium`);
+  await page.waitForTimeout(800);
+
+  expect(await hasPdpBadge(page)).toBe(false);
+  expect(countUrls(log, '/api/public/ratings')).toBe(0);
+});
+
+test('an unknown placement policy version cannot fall back to the legacy boolean', async ({ page }) => {
+  const payload = settingsResponse({}) as { runtime: Record<string, unknown> };
+  payload.runtime.placementPolicy = { version: 2, mode: 'provider_verified' };
+  payload.runtime.autoPlacementEnabled = true;
+  const log = await setupWidgetRoutes(page, { mountReviews: false, settingsPayload: payload });
+  await page.goto(`${MERCHANT_ORIGIN}/premium`);
+  await page.waitForTimeout(800);
+
+  expect(await hasPdpBadge(page)).toBe(false);
+  expect(countUrls(log, '/api/public/ratings')).toBe(0);
+});
+
+test('PDP attestation waits for slow DOM insertion without a two-second correctness cutoff', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: false,
+    productMarkup: `<section id="late-product"><h1>Loading</h1></section>
+      <script>
+        setTimeout(function () {
+          var section = document.getElementById('late-product');
+          section.className = 'product-detail product-name-main';
+          section.querySelector('h1').className = 'product-name';
+          section.querySelector('h1').textContent = ${JSON.stringify(PRODUCT_NAME)};
+        }, 2300);
+      </script>`,
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/premium`);
+  await expect.poll(() => hasPdpBadge(page), { timeout: 7000 }).toBe(true);
+
+  expect(countUrls(log, '/api/public/ratings')).toBe(1);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('PDP attestation reacts when an existing title gains its strict selector', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: false,
+    productMarkup: `<section class="product-detail"><h1 id="late-title">${PRODUCT_NAME}</h1></section>
+      <script>
+        setTimeout(function () {
+          document.getElementById('late-title').className = 'product-name';
+        }, 2300);
+      </script>`,
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/premium`);
+  await expect.poll(() => hasPdpBadge(page), { timeout: 7000 }).toBe(true);
+
+  expect(countUrls(log, '/api/public/ratings')).toBe(1);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('a rating response cannot inject after storefront navigation invalidates its proof', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: false,
+    ratingDelayMs: 700,
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/premium`);
+  await expect.poll(() => countUrls(log, '/api/public/ratings')).toBe(1);
+  await page.evaluate(() => history.pushState({}, '', '/another-product'));
+  await page.waitForTimeout(900);
+
+  expect(await hasPdpBadge(page)).toBe(false);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('rapid A to B to A navigation can mount the current A proof', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: false,
+    ratingDelayMs: 700,
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/premium`);
+  await expect.poll(() => countUrls(log, '/api/public/ratings')).toBe(1);
+  await page.evaluate(() => {
+    const emit = (window as Window & { __renuvexEmitIkasEvent?: (event: unknown) => void }).__renuvexEmitIkasEvent;
+    history.pushState({}, '', '/linen');
+    emit?.({ type: 'PRODUCT_VIEW', data: { productDetail: { id: 'product-2', name: 'Linen' } } });
+    history.pushState({}, '', '/premium');
+    emit?.({ type: 'PRODUCT_VIEW', data: { productDetail: { id: 'product-1', name: 'Premium' } } });
+  });
+
+  await expect.poll(() => hasPdpBadge(page), { timeout: 5000 }).toBe(true);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('strict Ozy listing placement does not require product media', async ({ page }) => {
+  const log = await setupProductListingFallbackPage(page, {
+    listingMarkup: `<section class="category-products-main">
+      <article><a href="/premium-shorts"><h2 class="product-name">Premium Shorts</h2></a></article>
+      <article><a href="/linen-shirt"><h2 class="product-name">Linen Shirt</h2></a></article>
+    </section>`,
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await expect.poll(() => countListingBadges(page), { timeout: 6000 }).toBe(2);
+
+  expect(countUrls(log, '/api/public/ratings-by-slug')).toBe(1);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('a recycled product card cannot receive the previous slug rating response', async ({ page }) => {
+  const log = await setupProductListingFallbackPage(page, { ratingDelayMs: 700 });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await expect.poll(() => countUrls(log, '/api/public/ratings-by-slug'), { timeout: 6000 }).toBe(1);
+  await page.evaluate(() => {
+    const first = document.querySelector('.category-products-main article');
+    const link = first?.querySelector('a');
+    const title = first?.querySelector('.product-name');
+    link?.setAttribute('href', '/new-arrival');
+    if (title) title.textContent = 'New Arrival';
+  });
+  await page.waitForTimeout(1800);
+
+  expect(await page.locator('.category-products-main article').first().locator('[data-renuvex-slot="listing-rating"]').count()).toBe(0);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('a changed current-event product id invalidates an in-flight listing proof', async ({ page }) => {
+  const log = await setupProductListingFallbackPage(page, {
+    ratingDelayMs: 700,
+    ikasEvents: [
+      { type: 'PAGE_VIEW', data: { pageType: 'CATEGORY' } },
+      {
+        type: 'VIEW_LISTING',
+        data: {
+          productDetails: [
+            { id: 'product-1', name: 'Premium Shorts', slug: 'premium-shorts' },
+            { id: 'product-2', name: 'Linen Shirt', slug: 'linen-shirt' },
+          ],
+        },
+      },
+    ],
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await expect.poll(() => countUrls(log, '/api/public/ratings?'), { timeout: 6000 }).toBeGreaterThanOrEqual(1);
+  await page.evaluate(() => {
+    const emit = (window as Window & { __renuvexEmitIkasEvent?: (event: unknown) => void }).__renuvexEmitIkasEvent;
+    emit?.({
+      type: 'VIEW_LISTING',
+      data: {
+        productDetails: [
+          { id: 'replacement-product', name: 'Premium Shorts', slug: 'premium-shorts' },
+          { id: 'product-2', name: 'Linen Shirt', slug: 'linen-shirt' },
+        ],
+      },
+    });
+  });
+  await page.waitForTimeout(1800);
+
+  expect(await page.locator('.category-products-main article').first().locator('[data-renuvex-slot="listing-rating"]').count()).toBe(0);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('legacy class-substring listing containers are not placement authority', async ({ page }) => {
+  const log = await setupProductListingFallbackPage(page, {
+    listingMarkup: `<section class="merchant-product-list-grid">
+      <a href="/premium-shorts"><h2 class="product-name">Premium Shorts</h2></a>
+      <a href="/linen-shirt"><h2 class="product-name">Linen Shirt</h2></a>
+    </section>`,
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await page.waitForTimeout(2600);
+
+  expect(await countListingBadges(page)).toBe(0);
+  expect(countUrls(log, '/api/public/ratings-by-slug')).toBe(0);
+});
+
+test('quick-view modal identity comes only from an attested product-card click', async ({ page }) => {
+  await setupProductListingFallbackPage(page, {
+    listingMarkup: `<section class="category-products-main">
+      <article><a id="trusted-card" href="/premium-shorts" onclick="event.preventDefault();setTimeout(function(){document.body.insertAdjacentHTML('beforeend','<div class=&quot;add-to-basket-modal&quot;><h1 class=&quot;product-name&quot;>Premium Shorts</h1></div>')},0)"><h2 class="product-name">Premium Shorts</h2></a></article>
+      <article><a href="/linen-shirt"><h2 class="product-name">Linen Shirt</h2></a></article>
+    </section>`,
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await expect.poll(() => countListingBadges(page), { timeout: 6000 }).toBe(2);
+  await page.click('#trusted-card');
+
+  await expect.poll(() => page.locator('.add-to-basket-modal [data-renuvex-slot="listing-rating"]').count()).toBe(1);
+});
+
+test('closing a modal invalidates its click context before another modal appears', async ({ page }) => {
+  await setupProductListingFallbackPage(page, {
+    listingMarkup: `<section class="category-products-main">
+      <article><a id="trusted-card" href="/premium-shorts" onclick="event.preventDefault();setTimeout(function(){document.body.insertAdjacentHTML('beforeend','<div class=&quot;add-to-basket-modal&quot;><h1 class=&quot;product-name&quot;>Premium Shorts</h1></div>')},0)"><h2 class="product-name">Premium Shorts</h2></a></article>
+      <article><a href="/linen-shirt"><h2 class="product-name">Linen Shirt</h2></a></article>
+    </section>`,
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await expect.poll(() => countListingBadges(page), { timeout: 6000 }).toBe(2);
+  await page.click('#trusted-card');
+  await expect.poll(() => page.locator('.add-to-basket-modal [data-renuvex-slot="listing-rating"]').count()).toBe(1);
+
+  await page.evaluate(() => {
+    document.querySelector('.add-to-basket-modal')?.remove();
+  });
+  await page.waitForTimeout(400);
+  await page.evaluate(() => {
+    document.body.insertAdjacentHTML('beforeend', '<div class="add-to-basket-modal"><h1 class="product-name">Premium Shorts</h1></div>');
+  });
+  await page.waitForTimeout(800);
+
+  expect(await page.locator('.add-to-basket-modal [data-renuvex-slot="listing-rating"]').count()).toBe(0);
+});
+
+test('a modal hidden before its delayed rating response cannot receive a badge', async ({ page }) => {
+  await setupProductListingFallbackPage(page, {
+    ratingDelayMs: 700,
+    listingMarkup: `<section class="category-products-main">
+      <article><a id="trusted-card" href="/premium-shorts" onclick="event.preventDefault();setTimeout(function(){document.body.insertAdjacentHTML('beforeend','<div class=&quot;add-to-basket-modal&quot;><h1 class=&quot;product-name&quot;>Premium Shorts</h1></div>');setTimeout(function(){var modal=document.querySelector('.add-to-basket-modal');if(modal)modal.style.display='none'},100)},0)"><h2 class="product-name">Premium Shorts</h2></a></article>
+      <article><a href="/linen-shirt"><h2 class="product-name">Linen Shirt</h2></a></article>
+    </section>`,
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await expect.poll(() => countListingBadges(page), { timeout: 6000 }).toBe(2);
+  await page.click('#trusted-card');
+  await page.waitForTimeout(1200);
+
+  expect(await page.locator('.add-to-basket-modal [data-renuvex-slot="listing-rating"]').count()).toBe(0);
+});
+
+test('an untrusted product-like click cannot authorize modal placement by matching title text', async ({ page }) => {
+  await setupProductListingFallbackPage(page, {
+    listingMarkup: `<a id="untrusted-card" href="/premium-shorts" onclick="event.preventDefault();setTimeout(function(){document.body.insertAdjacentHTML('beforeend','<div class=&quot;add-to-basket-modal&quot;><h1 class=&quot;product-name&quot;>Premium Shorts</h1></div>')},0)">Open product</a>
+      <section class="category-products-main">
+        <article><a href="/linen-shirt"><h2 class="product-name">Linen Shirt</h2></a></article>
+      </section>`,
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await expect.poll(() => countListingBadges(page), { timeout: 6000 }).toBe(1);
+  await page.click('#untrusted-card');
+  await page.waitForTimeout(800);
+
+  expect(await page.locator('.add-to-basket-modal [data-renuvex-slot="listing-rating"]').count()).toBe(0);
+});
+
+test('network-error stale settings preserve widget data but disable placement authority', async ({ page }) => {
+  const payload = settingsResponse({});
+  await page.addInitScript(({ key, value }) => {
+    sessionStorage.setItem(key, value);
+  }, {
+    key: `renuvex_pr_settings_v2_${PUBLIC_KEY}`,
+    value: JSON.stringify({ t: Date.now() - (6 * 60 * 1000), v: payload }),
+  });
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: false,
+    settingsAbort: 'failed',
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/premium`);
+  await page.waitForTimeout(900);
+
+  expect(await hasPdpBadge(page)).toBe(false);
+  expect(countUrls(log, '/api/public/ratings')).toBe(0);
+});
+
+test('fresh v2 settings remain usable without a network refetch', async ({ page }) => {
+  const payload = settingsResponse({});
+  await page.addInitScript(({ key, value }) => {
+    sessionStorage.setItem(key, value);
+  }, {
+    key: `renuvex_pr_settings_v2_${PUBLIC_KEY}`,
+    value: JSON.stringify({ t: Date.now() - (4 * 60 * 1000), v: payload }),
+  });
+  const log = await setupWidgetRoutes(page, { mountReviews: false, settingsAbort: 'failed' });
+  await page.goto(`${MERCHANT_ORIGIN}/premium`);
+  await expect.poll(() => hasPdpBadge(page)).toBe(true);
+
+  expect(countUrls(log, '/api/public/settings')).toBe(0);
+  expect(countUrls(log, '/api/public/ratings')).toBe(1);
+});
+
+test('expired v2 settings cannot authorize placement during a network failure', async ({ page }) => {
+  const payload = settingsResponse({});
+  await page.addInitScript(({ key, value }) => {
+    sessionStorage.setItem(key, value);
+  }, {
+    key: `renuvex_pr_settings_v2_${PUBLIC_KEY}`,
+    value: JSON.stringify({ t: Date.now() - (25 * 60 * 60 * 1000), v: payload }),
+  });
+  const log = await setupWidgetRoutes(page, { mountReviews: false, settingsAbort: 'failed' });
+  await page.goto(`${MERCHANT_ORIGIN}/premium`);
+  await page.waitForTimeout(900);
+
+  expect(await hasPdpBadge(page)).toBe(false);
+  expect(countUrls(log, '/api/public/ratings')).toBe(0);
+});
+
+test('the retained legacy runtime is safe-disabled by a new backend payload', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: false,
+    widgetRuntimeEntry: LEGACY_PLACEMENT_RUNTIME_ENTRY,
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/premium`);
+  await page.waitForTimeout(1000);
+
+  expect(await hasPdpBadge(page)).toBe(false);
+  expect(countUrls(log, '/api/public/ratings')).toBe(0);
+});
+
+test('the retained legacy runtime can keep a fresh pre-cutover true cache entry', async ({ page }) => {
+  const payload = settingsResponse({}) as { runtime: Record<string, unknown> };
+  payload.runtime.autoPlacementEnabled = true;
+  await page.addInitScript(({ key, value }) => {
+    sessionStorage.setItem(key, value);
+  }, {
+    key: `renuvex_pr_settings_${PUBLIC_KEY}`,
+    value: JSON.stringify({ t: Date.now() - (4 * 60 * 1000), v: payload }),
+  });
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: false,
+    settingsAbort: 'failed',
+    widgetRuntimeEntry: LEGACY_PLACEMENT_RUNTIME_ENTRY,
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/premium`);
+  await expect.poll(() => hasPdpBadge(page), { timeout: 5000 }).toBe(true);
+
+  expect(countUrls(log, '/api/public/settings')).toBe(0);
+  expect(countUrls(log, '/api/public/ratings')).toBe(1);
+});
+
+test('the retained legacy runtime documents its bounded stale-cache cutover risk', async ({ page }) => {
+  const payload = settingsResponse({}) as { runtime: Record<string, unknown> };
+  payload.runtime.autoPlacementEnabled = true;
+  await page.addInitScript(({ key, value }) => {
+    sessionStorage.setItem(key, value);
+  }, {
+    key: `renuvex_pr_settings_${PUBLIC_KEY}`,
+    value: JSON.stringify({ t: Date.now() - (6 * 60 * 1000), v: payload }),
+  });
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: false,
+    settingsAbort: 'failed',
+    widgetRuntimeEntry: LEGACY_PLACEMENT_RUNTIME_ENTRY,
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/premium`);
+  await expect.poll(() => hasPdpBadge(page), { timeout: 5000 }).toBe(true);
+
+  expect(countUrls(log, '/api/public/ratings')).toBe(1);
+});
+
+test('the retained legacy runtime rejects settings older than its stale window', async ({ page }) => {
+  const payload = settingsResponse({}) as { runtime: Record<string, unknown> };
+  payload.runtime.autoPlacementEnabled = true;
+  await page.addInitScript(({ key, value }) => {
+    sessionStorage.setItem(key, value);
+  }, {
+    key: `renuvex_pr_settings_${PUBLIC_KEY}`,
+    value: JSON.stringify({ t: Date.now() - (25 * 60 * 60 * 1000), v: payload }),
+  });
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: false,
+    settingsAbort: 'failed',
+    widgetRuntimeEntry: LEGACY_PLACEMENT_RUNTIME_ENTRY,
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/premium`);
+  await page.waitForTimeout(1000);
+
+  expect(await hasPdpBadge(page)).toBe(false);
+  expect(countUrls(log, '/api/public/ratings')).toBe(0);
+});
+
+test('the first valid v1 policy removes the legacy settings cache key', async ({ page }) => {
+  await page.addInitScript((key) => {
+    sessionStorage.setItem(key, JSON.stringify({ t: Date.now(), v: { runtime: { autoPlacementEnabled: true } } }));
+  }, `renuvex_pr_settings_${PUBLIC_KEY}`);
+  await setupWidgetRoutes(page, { mountReviews: false });
+  await page.goto(`${MERCHANT_ORIGIN}/premium`);
+  await expect.poll(() => hasPdpBadge(page)).toBe(true);
+
+  const legacyValue = await page.evaluate((key) => sessionStorage.getItem(key), `renuvex_pr_settings_${PUBLIC_KEY}`);
+  expect(legacyValue).toBeNull();
+});

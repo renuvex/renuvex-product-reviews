@@ -528,7 +528,8 @@ describe('/api/public/settings', () => {
     expect(body.runtime).toEqual({
       themeAdapterKey: 'ozy',
       themeAdapterSource: 'auto',
-      autoPlacementEnabled: true,
+      placementPolicy: { version: 1, mode: 'provider_verified' },
+      autoPlacementEnabled: false,
       reviewsMountEnabled: true,
       themeSyncDue: false,
     });
@@ -552,6 +553,8 @@ describe('/api/public/settings', () => {
 
     expect(response.status).toBe(200);
     expect(body.runtime.themeSyncDue).toBe(true);
+    expect(body.runtime.placementPolicy).toEqual({ version: 1, mode: 'provider_verified' });
+    expect(body.runtime.autoPlacementEnabled).toBe(false);
     expect(afterMock).not.toHaveBeenCalled();
     expect(getByMerchantIdMock).not.toHaveBeenCalled();
     expect(syncStorefrontThemeForTokenMock).not.toHaveBeenCalled();

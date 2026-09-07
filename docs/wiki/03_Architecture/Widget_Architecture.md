@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-09
-last_verified: 2026-08-09
+updated: 2026-08-10
+last_verified: 2026-08-10
 confidence: high
 tags:
   - widget
@@ -16,6 +16,7 @@ related:
   - "[[ADR_0002_Widget_Injection_Strategy]]"
   - "[[ADR_0006_Trusted_Review_Image_URL_Policy]]"
   - "[[ADR_0013_Modular_Widget_Loader_Architecture]]"
+  - "[[ADR_0038_Runtime_Attested_Storefront_Placement]]"
   - "[[Bug_Lightbox_Tablet_Viewport_And_Scroll]]"
   - "[[Bug_Cloud_Name_Silent_Image_Filter]]"
   - "[[Bug_Review_Widget_SPA_Health_Probe_False_Positive]]"
@@ -31,6 +32,7 @@ source_files:
   - "vitest.config.ts"
   - "tests/widget-harness.ts"
   - "tests/widget-network-smoke.spec.ts"
+  - "tests/widget-placement-capability.spec.ts"
   - "tests/widget-runtime-smoke.spec.ts"
   - "tests/widget-interaction-smoke.spec.ts"
   - "tests/admin-preview-smoke.spec.ts"
@@ -43,6 +45,7 @@ source_files:
   - "tests/unit/widget-popover-registry.test.ts"
   - "tests/unit/widget-health.test.ts"
   - "tests/unit/widget-asset-cache.test.ts"
+  - "tests/unit/widget-placement-boundaries.test.ts"
   - ".github/workflows/widget-smoke.yml"
   - "src/widget/classic-loader.js"
   - "src/widget/index.js"
@@ -52,10 +55,11 @@ source_files:
   - "src/widget/core/config.js"
   - "src/widget/core/origins.js"
   - "src/widget/core/storefront-context.js"
+  - "src/widget/core/context-epoch.js"
   - "src/widget/core/registry.js"
   - "src/widget/core/settings.js"
   - "src/widget/core/rating-summary.js"
-  - "src/widget/core/link-scope.js"
+  - "src/widget/placement/capability.js"
   - "src/widget/core/health.js"
   - "src/widget/observer.js"
   - "src/widget/reviews-section/bootstrap.js"
@@ -78,7 +82,7 @@ source_files:
   - "src/widget/structured-data/jsonld.js"
   - "src/widget/surfaces/structured-data.surface.js"
   - "src/widget/listing-badges/index.js"
-  - "src/widget/listing-badges/dom.js"
+  - "src/widget/listing-badges/strict-inject.js"
   - "src/widget/icons/index.js"
   - "src/widget/icons/review-icons.js"
   - "src/widget/icons/filter-icons.js"
@@ -106,15 +110,21 @@ are intentionally retained for cache safety. Start with `src/widget/loader.js`,
 `source_files`; then follow imports for the touched surface. Source/runtime
 behavior wins over this page.
 
+Automatic placement follows [[ADR_0038_Runtime_Attested_Storefront_Placement]]:
+versioned policy selects an adapter strategy, strict ephemeral DOM proof gates
+the ratings request, and the same proof is revalidated before injection. The
+legacy placement boolean is always false and is not runtime authority.
+
 ## Summary
 A classic ikas-compatible storefront entry (`public/widget.js`) loaded by every storefront page, which imports an ESM runtime and lazy chunks from `public/widget-runtime/*`. It detects context (product page, listing/search page, preview iframe), fetches per-merchant settings, and renders summaries, listings, badges, the review submission modal, and the photo review detail lightbox. The runtime is intentionally framework-free.
 
-Public settings return `runtime.themeAdapterKey/source` plus placement gates. The
-historical 2026-05-23 Admin API contract allowed active-theme resolution, but the
-live v1/v2 schema no longer exposed those fields on 2026-08-09. The backend now
-records provider-unavailable evidence, refuses to let legacy metadata unlock
-automatic placement, and uses the conservative generic adapter for explicit review
-mounts. Script installation still uses supported storefront identifiers.
+Public settings return `runtime.themeAdapterKey/source`, versioned
+`placementPolicy`, legacy `autoPlacementEnabled: false`, and the independent
+review-mount gate. Stable verified theme-id evidence selects a provider adapter;
+otherwise an explicitly runtime-detectable adapter may attest an exact surface.
+The live v1/v2 schema no longer exposed active-theme fields on 2026-08-09, so
+runtime attestation closes that platform gap without treating DOM as product
+identity. Script installation still uses supported storefront identifiers.
 
 As of the 2026-05-17 Phase 2 implementation work, local build output is split:
 `public/widget.js` is a small classic loader, `public/widget-runtime/runtime.js`
@@ -148,10 +158,11 @@ origin.
 |---|---|
 | [src/widget/index.js](src/widget/index.js) | Thin entry. Side-effect inits (ADR_0011 order) + preview/prod branch. Delegates to `loader.js`. |
 | [loader.js](src/widget/loader.js) | Orchestration. `startWidget()` (prod) / `startPreview()` (admin iframe). Production wires context -> registry (ADR_0013); preview enforces the versioned same-origin parent protocol and lazy-loads the selected scene renderer. |
-| [core/storefront-context.js](src/widget/core/storefront-context.js) | Single owner of `window.IkasEvents` subscription; exposes page/product context (`onProductView`/`onPageView`) + DOM fallback (ADR_0013). `PAGE_VIEW` duplicates are suppressed by semantic `pageType + pathname/search`, not by global time alone. |
+| [core/storefront-context.js](src/widget/core/storefront-context.js) | Single owner of `window.IkasEvents` subscriptions and current-generation event product maps; exposes page/product context plus the existing identity fallback. |
+| [core/context-epoch.js](src/widget/core/context-epoch.js) | Single monotonic owner for pathname/product identity invalidation. Async placement work carries this epoch so stale route results cannot mutate the next surface. |
 | [core/registry.js](src/widget/core/registry.js) | Surface registry (`rating-badge`, `reviews-main`, `structured-data`, `listing-badge`) with guarded async mounts plus key-targeted mounting for explicit review-mount replay. |
 | [core/lazy-modules.js](src/widget/core/lazy-modules.js) | Dynamic import boundary owner for reviews, listing, badge, structured-data, and preview render modules. |
-| [core/settings.js](src/widget/core/settings.js) | Shared public settings fetch/cache used by lazy modules without pulling PDP render code. |
+| [core/settings.js](src/widget/core/settings.js) | Shared v2 public settings fetch/cache. Applies the versioned placement policy, disables placement on stale fallback, and removes the legacy cache key after a valid policy. |
 | [core/rating-summary.js](src/widget/core/rating-summary.js) | Shared one-product approved rating summary fetch used by visual badge and structured-data surfaces without duplicate API calls. |
 | [core/health.js](src/widget/core/health.js) | Runtime health marker, visibility telemetry, and bounded one-shot DOM-removal self-heal helpers for badge surfaces. |
 | [surfaces/](src/widget/surfaces/) | Thin surface descriptors (`detect`/`mount`) that lazy-load implementation modules. |
@@ -162,25 +173,26 @@ origin.
 | [core/cache.js](src/widget/core/cache.js) | `sessionStorage` wrapper with in-memory fallback (private browsing / quota exceeded). Persists across same-tab navigations. |
 | [core/helpers.js](src/widget/core/helpers.js) | Shared display helpers, including trusted review image URL filtering for storefront render paths. |
 | [icons/](src/widget/icons/) | Public icon API plus split review/rating and filter icon registries shared by runtime and admin preview. |
-| [observer.js](src/widget/observer.js) | MutationObserver to re-render listing badges on SPA theme nav; uses scoped listing link discovery instead of whole-document link scans. |
-| [events.js](src/widget/events.js) | SPA history patch (stale PDP surface cleanup for review content, rating badge, and structured data) + quick-view modal badge plumbing. IkasEvents handling moved to `core/storefront-context.js` (ADR_0013). |
+| [observer.js](src/widget/observer.js) | One debounced listing/modal coordinator. Relevant DOM mutations trigger strict re-attestation; broad legacy discovery is not reused. |
+| [events.js](src/widget/events.js) | SPA history invalidation/cleanup plus attested-card quick-view context capture. Generic product-like clicks no longer establish modal identity. |
+| [placement/capability.js](src/widget/placement/capability.js) | Strict PDP/listing/modal proof creation and revalidation. Separates adapter selection, product identity, DOM placement, and async lifecycle. |
 | [rating-badge/](src/widget/rating-badge/) | Independent PDP rating badge surface. Fetches one-product rating summaries and owns only visual badge DOM cleanup/injection. |
 | [structured-data/](src/widget/structured-data/) | Independent Product `AggregateRating` JSON-LD surface. Emits only when the rich-snippet toggle, approved ratings, and visible/expected Renuvex rating content gates pass. |
 | [reviews-section/bootstrap.js](src/widget/reviews-section/bootstrap.js) | Reviews section entry. Fetches settings, checks the explicit reviews mount, resets per-product review state, fetches initial review/media-gallery data, guards each async boundary against stale product/path bootstraps, then dynamically imports `render.js`. |
 | [reviews-section/reviews-api.js](src/widget/reviews-section/reviews-api.js) | Shared reviews/media-gallery fetch helpers, cache handling, preview fallback, and explicit review-fetch error result. |
 | [reviews-section/render.js](src/widget/reviews-section/render.js) | Compose summary + reviews + modal CTA based on settings; handles filter/sort/load-more fetches through `reviews-api.js`. |
-| [core/product-title.js](src/widget/core/product-title.js) | Heuristic to find product title element across themes. |
+| [core/product-title.js](src/widget/core/product-title.js) | Legacy/preview-compatible title helper. It is not production placement authority. |
 | [reviews-section/review-modal.js](src/widget/reviews-section/review-modal.js) | Photo review detail lightbox. Distinct from the submission wizard. |
 | [reviews-section/review-form-modal/](src/widget/reviews-section/review-form-modal/) | Multi-step submission wizard (steps + progress + state machine). |
-| [listing-badges/](src/widget/listing-badges/) | Listing-page badge bootstrap, scoped link discovery, bulk fetch, slot reservation, injection. |
+| [listing-badges/](src/widget/listing-badges/) | Production listing orchestration consumes strict proofs for bulk reads and mutation; the separate fixture helper is preview-only. |
 | [preview/](src/widget/preview/) | Preview scene registry, deterministic local fixtures, shared fixture document, and adapters that invoke production Reviews/PDP Badge/Listing Badge renderers without DB or provider reads. |
 | [review-layouts/](src/widget/review-layouts/) | `card` / `gallery` / `list` review item layouts (registry in `index.js`). |
 | [summary-layouts/](src/widget/summary-layouts/) | `classic` / `compact` / `hero` / `minimal` / `split` summary layouts. |
 | [summary-layouts/shared/](src/widget/summary-layouts/shared/) | Shared summary primitives: rating bar chart, write/filter actions, write-form opener, and popover registry. |
-| [themes/current-adapter.js](src/widget/themes/current-adapter.js) | Runtime-selected adapter registry. Defaults to Ozy unless public settings select `generic`. |
-| [themes/generic/](src/widget/themes/generic/) | Conservative unknown-theme adapter; avoids Ozy-specific selectors and relies on generic scoped link/title heuristics. |
+| [themes/current-adapter.js](src/widget/themes/current-adapter.js) | Adapter registry and versioned policy owner. Defaults and unknown keys resolve to `generic`; runtime detection is explicit opt-in. |
+| [themes/generic/](src/widget/themes/generic/) | Conservative unknown-theme adapter. It is never a production runtime detector. |
 | [reviews-section/styles.js](src/widget/reviews-section/styles.js) | Stable `CLASSIC_CSS` aggregator for shared review-section CSS. Owned CSS modules live under [reviews-section/styles/](src/widget/reviews-section/styles/). |
-| [themes/ozy/](src/widget/themes/ozy/) | Ozy selectors plus fallback adapter. Theme-specific CSS should only live here if it is a real Ozy override. |
+| [themes/ozy/](src/widget/themes/ozy/) | Ozy strict selectors plus placement adapter. Theme-specific CSS should only live here if it is a real Ozy override. |
 
 ## Lifecycle
 
@@ -268,7 +280,7 @@ Future storefront widgets must follow the same surface-isolation contract as the
 2. Use auto-placement only for lightweight surfaces that naturally belong near existing storefront DOM, such as listing badges or title badges. Auto-placement is allowed, but it is a higher-risk path and must fail closed when the DOM is ambiguous.
 3. Keep `surface.detect()` cheap. It may inspect context and small DOM signals, but it must not import heavy modules, fetch data, mutate DOM, or start long async work.
 4. Lazy-load implementation modules from `surface.mount()` only after the surface is proven relevant. New carousel, Q&A, media, story, or analytics widgets must not be statically imported by `src/widget/index.js`, `src/widget/loader.js`, or always-loaded core modules.
-5. Treat ikas Storefront Events as the primary signal and DOM heuristics as fallback. Before changing placement logic, inspect `core/storefront-context.js`, `themes/current-adapter.js`, the active theme adapter, and `listing-badges/fallback-candidates.js`.
+5. Treat ikas Storefront Events as the primary context/identity signal and strict adapter proofs as the separate placement authority. Before changing placement logic, inspect `core/storefront-context.js`, `core/context-epoch.js`, `placement/capability.js`, `themes/current-adapter.js`, and the active adapter.
 6. Any new heuristic must define both positive and negative tests in `tests/widget-network-smoke.spec.ts`. At minimum, cover duplicate events, missing mount, late mount, generic links, nav/header/footer links, single product-like links, and unsupported-theme fail-closed behavior when relevant.
 7. Every new `src/widget/surfaces/*.surface.js` descriptor must be covered by the surface contract gate in `tests/unit/widget-surface-contracts.test.ts`.
 8. Preserve request fan-out rules. Listing/category/home surfaces should use bulk or aggregate reads; do not add per-card public API requests. High-read surfaces should use `ProductReviewSummary` or a dedicated read model before reaching production scale.
@@ -336,6 +348,11 @@ merchant theme DOM; real storefront smoke remains a separate acceptance layer.
 - `/api/public/settings` and `/api/public/reviews` set `Cache-Control: s-maxage=60, stale-while-revalidate=300` (Vercel CDN).
 - Public badge, structured-data, and review summary distribution reads use the backend `ProductReviewSummary` read model. Widget response fields stay the same, but new high-read widget surfaces should prefer explicit aggregate/read-model endpoints over repeated raw `Review.groupBy()` scans. See [[ADR_0026_Product_Review_Summary_Read_Model]].
 - Widget side: `sessionStorage` (with in-memory fallback) cache in `core/cache.js` — survives same-tab navigation; settings stay fresh for 5 minutes and can be reused stale for up to 24 hours during transient settings fetch failures.
+- Placement adds a stricter cache rule: the current runtime uses a v2 settings
+  key, a 5-24 hour network-error stale fallback always disables automatic
+  placement, and entries older than 24 hours are rejected. A valid v1 policy
+  removes the old key, but cannot remotely stop an already running old
+  JavaScript context.
 - Review fetch failures use stale cached review data when available; without stale data, `reviews-api.js fetchReviews()` returns an explicit error result so `render.js` can show a retryable error state instead of an empty list.
 - Review UI interactions in `render.js` guard async sort/filter/retry/load-more responses with a request token and active state snapshot; late responses cannot mutate a newer active selection. Load-more also compares returned ids against the active loaded review collection before inserting DOM nodes.
 - PDP product transitions are route- and identity-aware. On SPA pathname changes, `events.js` clears any rendered review shadow content into the existing quiet `#renuvex-reviews` shell before a delayed ikas product event can arrive. If a previously rendered review widget belongs to product A and ikas later emits `PRODUCT_VIEW` for product B, `bootstrap.js` keeps the same shell and product guards active before settings or reviews fetches complete. This prevents product A reviews from staying visible on product B while preserving the layout reservation. Same-path variant/query changes and same-product duplicate `PRODUCT_VIEW` events are left intact.
@@ -353,16 +370,19 @@ merchant theme DOM; real storefront smoke remains a separate acceptance layer.
 
 ## CI smoke gate
 - `pnpm test:widget-smoke` runs Playwright against the built public widget assets (`public/widget.js` + `public/widget-runtime/*`) instead of importing source modules directly.
+- `pnpm test:widget-placement` covers strict target proofs, epoch races,
+  listing/modal no-op cases, settings-cache cutover, and the retained real old
+  runtime consuming the new backend payload.
 - The test fixture serves the loader/runtime from a fake widget origin and an ikas-like merchant page from a fake merchant origin, then intercepts public API calls. This verifies the browser-visible network contract, CORS behavior, dynamic import boundaries, DOM output, and manifest entry points.
 - Covered scenarios: review mount present, review mount absent, badge disabled, unsupported auto-placement with explicit review mount, and generic-link pages where the legacy listing fallback must not load `listing-badges-*`.
-- Additional Playwright suites cover layout/render pairwise smoke (`pnpm test:widget-runtime`), lightbox + review wizard flows (`pnpm test:widget-interactions`), and admin preview/settings behavior (`pnpm test:admin-preview`). Vitest covers public API routes and storefront theme-state helpers (`pnpm test:unit`).
+- Additional Playwright suites cover layout/render pairwise smoke (`pnpm test:widget-runtime`), lightbox + review wizard flows (`pnpm test:widget-interactions`), and admin preview/settings behavior (`pnpm test:admin-preview`). Vitest covers public API routes, storefront theme-state helpers, and static production-placement import boundaries (`pnpm test:unit`).
 - `pnpm test:ci` runs the automated browser + unit layers together. `.github/workflows/widget-smoke.yml` runs `pnpm build:widget`, installs Chromium, runs `pnpm test:ci`, syntax-checks generated widget assets with `pnpm check:widget-js`, then runs `tsc`, `lint`, and `git diff --check`. Wiki audit remains a local gate because this repo intentionally ignores local agent rule files such as `AGENTS.md`.
 - See [[Test_Strategy]] for the layer-by-layer contract and what still requires manual-auth or live post-deploy smoke.
 
 ## Notes
 - The widget is the **highest-leverage code surface** in the codebase (every storefront load executes it). Bundle size and TTI matter.
 - Don't introduce a framework (React, Preact, Lit) without an explicit ADR. The vanilla approach is a deliberate trade-off — see [[ADR_0002_Widget_Injection_Strategy]].
-- DOM identification (product id, slug, title) uses Storefront Events first and theme/DOM fallbacks second. When fixing a "widget doesn't show on theme X" issue, inspect `core/storefront-context.js`, `product-title.js`, and the active theme adapter before changing review bootstrap.
+- Product identity uses Storefront Events first and the lifecycle-safe slug resolver only where the current event has no canonical product id. Production placement is separate: inspect `placement/capability.js`, `core/context-epoch.js`, and the active strict adapter. `core/product-title.js` is retained only for the explicitly isolated preview path.
 - Browser conflict hardening is diagnostic and bounded: badge render paths report visibility/dom-conflict events and try one remount if a rendered badge node is removed; they do not loop against aggressive third-party scripts. The visibility probe re-resolves the **current** owned node when it fires (not the originally injected reference), so a self-heal/theme re-render that swaps the element does not produce a false `missing_after_render`. Surfaces with an explicit SPA lifecycle may also provide a relevance predicate: the review surface suppresses only probes retired by an intentional route/product transition, while a relevant missing node still reports. See [[Bug_Listing_Badge_Missing_After_Render]] and [[Bug_Review_Widget_SPA_Health_Probe_False_Positive]].
 - The widget assumes a single product per page on PDP. Multi-product pages (looks/sets) would need a redesign.
 - Review submission has a single runtime path: all write CTAs open the multi-step modal. The legacy inline/page form path was removed to reduce storefront bundle complexity.

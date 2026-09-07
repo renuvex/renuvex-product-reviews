@@ -9,3 +9,7 @@ export function cacheGet(key) {
 export function cacheSet(key, val) {
   try { sessionStorage.setItem(key, val); } catch (_) { _memCache[key] = val; }
 }
+
+export function cacheRemove(key) {
+  try { sessionStorage.removeItem(key); } catch (_) { delete _memCache[key]; }
+}

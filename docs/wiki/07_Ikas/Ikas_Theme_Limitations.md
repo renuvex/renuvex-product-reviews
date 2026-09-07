@@ -3,8 +3,8 @@ type: ikas
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-09
-last_verified: 2026-08-09
+updated: 2026-08-10
+last_verified: 2026-08-10
 confidence: high
 tags:
   - ikas
@@ -15,6 +15,7 @@ related:
   - "[[Ikas_Storefront_Script_Capabilities]]"
   - "[[Widget_Architecture]]"
   - "[[Theme_Adapter_Playbook]]"
+  - "[[ADR_0038_Runtime_Attested_Storefront_Placement]]"
 source_files:
   - "src/lib/ikas-client/graphql-requests.ts"
   - "src/lib/storefront-theme.ts"
@@ -25,8 +26,9 @@ source_files:
   - "src/app/api/public/storefront-theme/lazy-sync/route.ts"
   - "src/widget/themes/"
   - "src/widget/core/settings.js"
-  - "src/widget/core/product-title.js"
-  - "src/widget/listing-badges/collect.js"
+  - "src/widget/core/context-epoch.js"
+  - "src/widget/placement/capability.js"
+  - "src/widget/listing-badges/index.js"
   - "src/widget/themes/current-adapter.js"
   - "src/widget/reviews-section/styles.js"
 ---
@@ -34,7 +36,7 @@ source_files:
 # ikas Theme Limitations
 
 ## Summary
-The widget runs inside arbitrary merchant themes. ikas does not expose a browser-runtime theme detector or stable DOM mount points today, so the widget still needs Storefront Events for page/product context plus DOM heuristics or adapters for placement. The active-theme fields observed in May 2026 are no longer present in the live v1/v2 schema as of 2026-08-09. Automatic theme-based placement is therefore fail-closed; script management and explicit review mounts continue without treating historical theme metadata as current evidence.
+The widget runs inside arbitrary merchant themes. ikas does not expose a universal stable DOM mount contract today, so Storefront Events provide page/product context while an independent placement provider must prove an exact target. The active-theme fields observed in May 2026 are no longer present in the live v1/v2 schema as of 2026-08-09. Historical provider metadata cannot authorize placement; ADR 0038 permits only verified provider selection or an explicitly opted-in runtime adapter with a current strict signature. Unsupported and ambiguous themes remain fail-closed, while explicit review mounts continue independently.
 
 ## What we control
 - A single `<script>` per storefront via `StorefrontJSScript`.
@@ -50,9 +52,9 @@ The widget runs inside arbitrary merchant themes. ikas does not expose a browser
 ## Active Theme Detection
 - Historical evidence: direct ikas developer feedback and schema verification on 2026-05-23 exposed nested `themes[].isMainTheme` and `mainStorefrontThemeId`.
 - Current evidence: live v1 and v2 introspection plus repository codegen on 2026-08-09 show those fields are absent from `Storefront`; the supported query now requests only `id` and `name`.
-- Renuvex records new observations as `provider_unavailable` and coerces older stored metadata to `legacy_unverifiable`. Neither status can unlock `autoPlacementEnabled`.
+- Renuvex records new observations as `provider_unavailable` and coerces older stored metadata to `legacy_unverifiable`. Neither status is provider theme evidence; current runtime placement, where supported, still requires strict runtime attestation.
 - This is an Admin/API-side signal, not a storefront browser global. The storefront widget cannot safely read it by itself without backend/public-settings plumbing.
-- The app stores only non-sensitive evidence in `StoreSettings.storefrontTheme` and exposes runtime gates through public settings. With current provider-unavailable evidence, it uses the generic adapter, disables automatic placement, and preserves the explicit shadow-isolated review mount.
+- The app stores only non-sensitive evidence in `StoreSettings.storefrontTheme` and exposes a versioned `placementPolicy` through public settings. Provider-unavailable evidence selects `runtime_attestation`; generic remains disabled unless exactly one explicitly runtime-detectable adapter proves the current DOM.
 - `StoreSettings.storefrontTheme` now uses a v2 JSON state: `{ syncStatus, stable, pending, lastCheckedAt, verificationDueAt, verifiedAt }`. Public settings read the stable theme while a newly observed theme is pending.
 - This helps choose an adapter automatically, but it does not provide stable DOM anchors for product title, product card, or review block placement.
 
@@ -68,16 +70,16 @@ The widget runs inside arbitrary merchant themes. ikas does not expose a browser
 - [src/widget/themes/ozy/](src/widget/themes/ozy/) - Ozy selectors, adapter behavior, and optional Ozy-specific style overrides.
 - [src/widget/themes/generic/](src/widget/themes/generic/) - conservative fallback adapter for unknown active themes.
 - [src/lib/storefront-theme.ts](src/lib/storefront-theme.ts) - resolves Admin API storefront/theme metadata into public runtime adapter metadata.
-- [src/widget/core/product-title.js](src/widget/core/product-title.js) - generic heuristic to locate product title.
+- [src/widget/placement/capability.js](src/widget/placement/capability.js) - strict production PDP/listing/modal target proofs and stale-result revalidation.
 - [src/widget/reviews-section/bootstrap.js](src/widget/reviews-section/bootstrap.js) - product detection fallback.
-- [src/widget/listing-badges/collect.js](src/widget/listing-badges/collect.js) - listing card discovery.
+- [src/widget/listing-badges/index.js](src/widget/listing-badges/index.js) - proof-driven listing rating orchestration.
 - [src/widget/reviews-section/styles.js](src/widget/reviews-section/styles.js) - shared Renuvex review widget CSS aggregator; owned shared modules live under `src/widget/reviews-section/styles/` and remain intentionally outside theme adapter folders.
 
 ## Known Constraints / TODO
 - No structured theme widget surface or stable DOM mount point from ikas is confirmed today.
 - Multi-storefront-per-merchant settings are merchant-global today; ikas allows per-storefront variants. See [[Open_Questions]].
 - Theme variants in build: `pnpm build:widget --theme=new-theme` exists, but runtime selection of which bundle to load is unclear.
-- ~~`generic_unknown` is an adapter selector, not a visibility policy~~ — **RESOLVED 2026-05-27** by [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]]. The public runtime now carries `autoPlacementEnabled` (gates badges; false unless `adapterMatchedBy === 'theme_id'` AND adapter key is non-generic) and `reviewsMountEnabled` (gates the explicit-mount review section; true whenever active-theme metadata exists). Unknown themes silently skip auto-placement.
+- ~~`generic_unknown` is an adapter selector, not a visibility policy~~ — **RESOLVED and superseded.** ADR 0022 first introduced a boolean gate; ADR 0038 now makes `placementPolicy` canonical, keeps the legacy boolean permanently false, and requires exact target proof for both provider-selected and runtime-attested adapters. Unknown or ambiguous adapters silently skip auto-placement.
 - ~~The review section is not isolated against host-theme `!important` CSS~~ — **RESOLVED 2026-05-26** by [[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]]. The review section, photo lightbox, and review-form wizard now render inside their own open Shadow DOM roots; selector-targeted host rules (the `img{width:100%!important}` class of breakage) cannot cross the boundary. Theme typography still flows in via `:host { …: inherit }` so supported-theme parity is preserved.
 
 ## ikas Webhook Scopes (introspected 2026-05-27)
@@ -119,8 +121,8 @@ The Admin API `saveWebhooks` mutation accepts exactly 10 scopes:
   storefront-theme instance, not a new catalog theme id. Keying the allowlist on
   `activeStorefrontThemeId` would have dropped Ozy support after the clone; keying on
   `activeThemeId` does not.
-- **`generic_unknown` now hides auto-placement** (resolved 2026-05-27 by ADR_0022). PDP / listing /
-  modal badges respect `runtime.autoPlacementEnabled`. The explicit-mount review section is
+- **`generic_unknown` never authorizes auto-placement.** PDP, listing, and modal
+  badges require a supported v1 `placementPolicy` plus a strict current proof. The explicit-mount review section is
   unaffected — it continues to render on any theme via `data-renuvex-widget="reviews"` plus
   the shadow-isolation guarantee from ADR_0021.
 - **Lazy resync replaces missing webhook.** `/api/public/settings` now reads the persisted
@@ -134,17 +136,19 @@ The Admin API `saveWebhooks` mutation accepts exactly 10 scopes:
   subsequent requests within the threshold skip token access automatically. The
   30-minute threshold is v1; tuning signals and playbook are captured in
   [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]] "Future Tuning Signals".
-- **First visitor after a theme change** still sees the stale adapter for one storefront
-  cache cycle (`s-maxage=60, stale-while-revalidate=300`). Under ADR_0022's fail-closed
-  default this manifests as "missing badges" on a theme that was just switched off the
-  allowlist, never as "badge in the wrong place" — a strictly safer regression than the
-  pre-ADR generic-adapter heuristic behavior.
+- `themeSyncDue` is only an operational resync signal. `true` does not revoke
+  placement by itself, and `false` does not prove the merchant has not changed
+  themes since the last check. Every enabled policy still needs a strict current
+  DOM proof, so stale provider metadata cannot fall through to generic targets.
+- The Worker caches eligible settings responses for 60 seconds through
+  `caches.default`; its Cache API path does not implement origin
+  `stale-while-revalidate`. Browser responses remain `max-age=0, must-revalidate`.
 
 ## Workarounds We Use
 - MutationObserver in [src/widget/observer.js](src/widget/observer.js) to handle SPA-style navigation.
-- Defensive selectors in `themes/ozy/`.
+- Strict, bounded Ozy selectors behind explicit runtime-detection opt-in.
 - A per-theme adapter checklist in [[Theme_Adapter_Playbook]], with Ozy as the current reference implementation.
-- Storefront Events remain the primary context source. There is currently no supported Admin API active-theme field for adapter selection, and runtime placement checks remain mandatory.
+- Storefront Events remain the primary context source. There is currently no supported Admin API active-theme field for adapter selection; runtime placement checks remain mandatory and separate from identity.
 
 ## Notes
 - When a merchant reports "widget doesn't show", check in order: script injection, public settings/API calls, Storefront Events/product context, then placement/product-title.

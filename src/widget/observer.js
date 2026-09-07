@@ -1,31 +1,32 @@
 // observer.js - MutationObserver for lazy product-card content.
 
-import { extractSlug, SYSTEM_SLUGS } from './core/helpers.js';
 import { ls } from './core/state.js';
 import { scheduleListingBadgeHydration } from './core/listing-viewport-gate.js';
-import { collectLinksFromScopes, getMainContentScopes } from './core/link-scope.js';
-import { getThemeAdapter } from './themes/current-adapter.js';
+import {
+  collectListingPlacementProofs,
+  hasRuntimeDetectableListingSignature,
+  reconcileModalPlacementContext,
+  resolveModalPlacementProof,
+} from './placement/capability.js';
+import { getStorefrontContextEpoch } from './core/context-epoch.js';
 
 var mutationDebounceTimer = null;
 var mutationObserver = null;
 
-function getObserverListingScopes() {
-  var activeAdapter = getThemeAdapter();
-  var containers = activeAdapter && activeAdapter.findListingContainers
-    ? activeAdapter.findListingContainers()
-    : [];
-  return containers && containers.length ? containers : getMainContentScopes();
-}
-
 function hasUnbadgedListingLinks() {
-  return collectLinksFromScopes(getObserverListingScopes()).some(function(a) {
-    if (a.getAttribute('data-renuvex-badge')) return false;
-    var href = a.getAttribute('href') || '';
-    if (href.charAt(0) === '#' || href.charAt(0) === '?') return false;
-    if (a.closest('[data-renuvex-slot],[data-renuvex-listing-badge],#renuvex-pr-reviews-widget,#renuvex-pr-rating-badge')) return false;
-    var path = extractSlug(a.href);
-    return path && path.length >= 3 && !SYSTEM_SLUGS.test(path);
-  });
+  var modalProof = resolveModalPlacementProof();
+  if (modalProof && !modalProof.titleEl.querySelector('[data-renuvex-listing-badge]')) return true;
+  var proofs = collectListingPlacementProofs(getStorefrontContextEpoch());
+  if (proofs.length) {
+    return proofs.some(function (proof) {
+      if (!proof.linkEl.getAttribute('data-renuvex-badge')) return true;
+      var slots = proof.mountPoint.parent.querySelectorAll('[data-renuvex-slot="listing-rating"]');
+      return !Array.from(slots).some(function (slot) {
+        return slot.getAttribute('data-renuvex-product-slug') === String(proof.slug);
+      });
+    });
+  }
+  return hasRuntimeDetectableListingSignature();
 }
 
 export function startMutationObserver() {
@@ -36,7 +37,12 @@ export function startMutationObserver() {
   if (mutationObserver) return;
   if (!document.body) return;
   mutationObserver = new MutationObserver(function(mutations) {
+    reconcileModalPlacementContext();
     var hasRelevantMutation = mutations.some(function(m) {
+      if (m.type === 'attributes') {
+        var target = m.target;
+        return !(target && target.closest && target.closest('[data-renuvex-slot],[data-renuvex-listing-badge],#renuvex-pr-rating-badge,#renuvex-pr-reviews-widget'));
+      }
       return Array.from(m.addedNodes).some(function(node) {
         if (node.nodeType !== 1) return false;
         if (node.hasAttribute && (node.hasAttribute('data-renuvex-slot') || node.hasAttribute('data-renuvex-listing-badge') || node.id === 'renuvex-pr-rating-badge' || node.id === 'renuvex-pr-reviews-widget')) return false;
@@ -55,5 +61,10 @@ export function startMutationObserver() {
       });
     }, 300);
   });
-  mutationObserver.observe(document.body, { childList: true, subtree: true });
+  mutationObserver.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['href', 'class', 'style', 'aria-hidden', 'open'],
+  });
 }

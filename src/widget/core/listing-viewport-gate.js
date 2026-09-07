@@ -4,11 +4,11 @@
 // or read API until the product cards approach the viewport. Critical PDP
 // surfaces stay outside this gate.
 
-import { extractSlug, SYSTEM_SLUGS } from './helpers.js';
-import { collectLinksFromScopes, getMainContentScopes } from './link-scope.js';
 import { loadListingBadgesModule } from './lazy-modules.js';
 import { ls } from './state.js';
-import { getThemeAdapter } from '../themes/current-adapter.js';
+import { fetchSettings } from './settings.js';
+import { isAutoPlacementEnabled } from '../themes/current-adapter.js';
+import { collectRuntimeDetectableListingProofs } from '../placement/capability.js';
 
 var LISTING_VIEWPORT_ROOT_MARGIN = '400px 0px';
 var LISTING_VIEWPORT_MARGIN_PX = 400;
@@ -21,8 +21,11 @@ function renderListingBadgesNow() {
   if (scheduledHydrationPromise) return scheduledHydrationPromise;
   ls.viewportScheduled = false;
   disconnectListingViewportGate();
-  scheduledHydrationPromise = loadListingBadgesModule().then(function (mod) {
-    return mod.renderListingBadges();
+  scheduledHydrationPromise = fetchSettings().then(function (settings) {
+    if (!settings || !isAutoPlacementEnabled()) return;
+    return loadListingBadgesModule();
+  }).then(function (mod) {
+    return mod ? mod.renderListingBadges() : undefined;
   }).finally(function () {
     scheduledHydrationPromise = null;
   });
@@ -68,40 +71,6 @@ function unbindViewportFallbackListeners() {
   viewportFallbackBound = false;
 }
 
-function isProductCandidateLink(anchor, adapter) {
-  try {
-    if (!anchor || anchor.getAttribute('data-renuvex-badge')) return false;
-    if (anchor.closest('[data-renuvex-slot],[data-renuvex-listing-badge],#renuvex-pr-reviews-widget,#renuvex-pr-rating-badge')) return false;
-    if (adapter && (adapter.isNavigationLink(anchor) || adapter.isCartLink(anchor) || adapter.isBannerLink(anchor))) return false;
-    var href = anchor.getAttribute('href') || '';
-    if (!href || href.charAt(0) === '#' || href.charAt(0) === '?') return false;
-    var slug = extractSlug(anchor.href);
-    return !!(slug && slug.length >= 3 && !SYSTEM_SLUGS.test(slug));
-  } catch (_) {
-    return false;
-  }
-}
-
-function hasProductCandidateLink(scope, adapter) {
-  if (!scope) return false;
-  if (scope.tagName === 'A' && isProductCandidateLink(scope, adapter)) return true;
-  if (typeof scope.querySelectorAll !== 'function') return false;
-  return Array.from(scope.querySelectorAll('a[href]')).some(function (anchor) {
-    return isProductCandidateLink(anchor, adapter);
-  });
-}
-
-function getCandidateRoot(anchor) {
-  var node = anchor ? anchor.parentElement : null;
-  var depth = 0;
-  while (node && node !== document.body && depth < 5) {
-    if (node.querySelector && node.querySelector('img,picture')) return node;
-    node = node.parentElement;
-    depth++;
-  }
-  return anchor;
-}
-
 function pushTarget(targets, seen, target) {
   if (!target || seen.indexOf(target) !== -1) return;
   seen.push(target);
@@ -109,25 +78,11 @@ function pushTarget(targets, seen, target) {
 }
 
 function collectViewportTargets() {
-  var adapter = getThemeAdapter();
-  var containers = adapter && adapter.findListingContainers
-    ? adapter.findListingContainers()
-    : [];
   var targets = [];
   var seen = [];
-
-  if (containers && containers.length) {
-    containers.forEach(function (container) {
-      if (hasProductCandidateLink(container, adapter)) pushTarget(targets, seen, container);
-    });
-    return targets;
-  }
-
-  collectLinksFromScopes(getMainContentScopes()).forEach(function (anchor) {
-    if (!isProductCandidateLink(anchor, adapter)) return;
-    pushTarget(targets, seen, getCandidateRoot(anchor));
+  collectRuntimeDetectableListingProofs().forEach(function (proof) {
+    pushTarget(targets, seen, proof.cardEl || proof.containerEl);
   });
-
   return targets;
 }
 
