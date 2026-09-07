@@ -20,7 +20,9 @@ function normalizeSummary(record) {
 
 export async function fetchRatingSummary(productId) {
   if (!productId) return null;
-  if (summaryCacheByProductId[productId]) return summaryCacheByProductId[productId];
+  if (Object.prototype.hasOwnProperty.call(summaryCacheByProductId, productId)) {
+    return summaryCacheByProductId[productId];
+  }
   if (inflightByProductId[productId]) return inflightByProductId[productId];
 
   var promise = (async function () {
@@ -32,7 +34,7 @@ export async function fetchRatingSummary(productId) {
       var json = await res.json();
       var record = json && json.data && json.data[productId];
       var summary = normalizeSummary(record);
-      if (summary) summaryCacheByProductId[productId] = summary;
+      summaryCacheByProductId[productId] = summary;
       return summary;
     } catch (err) {
       console.error('[renuvex-pr] rating summary fetch failed:', err);

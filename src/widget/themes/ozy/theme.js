@@ -14,30 +14,11 @@ export var THEME_MODAL_SELECTOR = '.add-to-basket-modal';
 // Modal içindeki ürün başlığı selector'ı
 export var THEME_MODAL_TITLE_SELECTOR = 'h1.product-name';
 
-// Single product section — tüm container
-export var THEME_SINGLE_PRODUCT_CONTAINER = '.single-product-container-main';
-
-// Single product section — sadece ürün adı linkine izin verilen alan
-export var THEME_SINGLE_PRODUCT_NAME_LINK = '.single-product-product-name';
-
-// Badge inject edilmemesi gereken dekoratif/banner alanları (blacklist — artık yedek)
-export var THEME_BANNER_CONTAINERS = [
-  '.hero-image-banner-main',
-  '.hero-image-main',
-  '.home-slider-main',
-  '[class*="hero-"]',
-  '[class*="banner-"]',
-  '[class*="slider-banner"]',
-  '[class*="marquee"]',
-].join(',');
-
-// Badge inject edilebilecek whitelist container'lar
-// Sadece bu container'lar içindeki linklere badge inject edilir
-export var THEME_PRODUCT_CONTAINERS = [
-  '.category-products-main',        // kategori / arama sonuçları grid'i
-  '.products-slider-main',          // ürün slider section
-  '.infinite-scroll-component',     // sonsuz scroll listing
-  '[class*="product-list"]',        // genel ürün listesi pattern'ı
-  '.single-product-container-main', // tek ürün section (anasayfa embed)
-  '.product-block-container',       // blog sayfası ürün bloğu
+// Production runtime attestation only uses exact Ozy surface selectors.
+export var THEME_STRICT_PRODUCT_CONTAINERS = [
+  '.category-products-main',
+  '.products-slider-main',
+  '.infinite-scroll-component',
+  '.single-product-container-main',
+  '.product-block-container',
 ].join(',');

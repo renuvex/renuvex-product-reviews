@@ -3,12 +3,12 @@
 // Not: ikas IkasEvents aboneliği ve PAGE_VIEW / PRODUCT_VIEW / VIEW_LISTING
 // işleme artık core/storefront-context.js içindedir (ADR_0013). Bu dosyada
 // yalnızca IkasEvents'ten BAĞIMSIZ olan iki parça kalır:
-//   - attachModalBadgeListener: quick-view modal için son tıklanan ürün slug'ı
+//   - attachModalBadgeListener: attested product-card context for quick view
 //   - attachHistoryListener:    SPA navigasyonunda eski PDP surfaces'lerini temizler
 
-import { setLastClickedSlug } from './core/state.js';
-import { extractSlug } from './core/helpers.js';
 import { removeOwnedSlots } from './core/slot.js';
+import { noteStorefrontRoute } from './core/context-epoch.js';
+import { captureModalContextFromClick, clearModalPlacementContext } from './placement/capability.js';
 
 var modalClickAttached = false;
 
@@ -17,12 +17,11 @@ export function attachModalBadgeListener() {
   modalClickAttached = true;
   document.addEventListener('click', function(e) {
     var a = e.target.closest('a[href]');
-    if (!a) return;
-    if (a.closest('header') || a.closest('nav')) return;
-    if (a.closest('[class*="basket"]') || a.closest('[class*="cart"]')) return;
-    var slug = extractSlug(a.href);
-    if (!slug || slug.length < 3) return;
-    setLastClickedSlug(slug);
+    if (!a) {
+      clearModalPlacementContext();
+      return;
+    }
+    captureModalContextFromClick(a);
   }, true);
 }
 
@@ -57,6 +56,7 @@ function cleanupStalePdpSurfaces() {
   try {
     if (location.pathname === lastPathname) return;
     lastPathname = location.pathname;
+    noteStorefrontRoute();
 
     cleanupStaleReviewSection();
 

@@ -29,7 +29,7 @@ source_files:
   - "src/widget/observer.js"
   - "src/widget/events.js"
   - "src/widget/listing-badges/inject.js"
-  - "src/widget/listing-badges/collect.js"
+  - "src/widget/placement/capability.js"
   - "src/widget/reviews-section/bootstrap.js"
   - "src/widget/review-layouts/list/index.js"
   - "src/widget/review-layouts/card/index.js"

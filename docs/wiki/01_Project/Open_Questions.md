@@ -3,8 +3,8 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-29
-last_verified: 2026-07-29
+updated: 2026-08-10
+last_verified: 2026-08-10
 confidence: medium
 tags:
   - questions
@@ -21,7 +21,7 @@ source_files:
   - "src/widget/loader.js"
   - "src/widget/core/storefront-context.js"
   - "src/widget/surfaces/listing-badge.surface.js"
-  - "src/widget/listing-badges/fallback-candidates.js"
+  - "src/widget/placement/capability.js"
   - "src/widget/core/helpers.js"
   - "src/widget/core/badge.js"
   - "src/widget/summary-layouts/shared/bar-chart.js"
@@ -63,27 +63,27 @@ boundary, but active-theme evidence is currently unavailable. On 2026-08-09 both
 live ikas v1 and v2 schemas exposed only `id/name` for the fields Renuvex uses on
 `Storefront`; `themes` and `mainStorefrontThemeId` were absent. Current code marks
 new observations as `provider_unavailable`, treats previously stored observations as
-`legacy_unverifiable`, and keeps automatic placement fail-closed. The explicit,
-shadow-isolated review mount remains available through the generic adapter.
+  `legacy_unverifiable`. ADR 0038 keeps provider identity unavailable but permits
+  strict runtime-attested Ozy placement; unsupported and ambiguous signatures stay
+  fail-closed. The explicit, shadow-isolated review mount remains independent.
 
-Still open: ikas needs to publish a supported active-theme signal before automatic
-adapter allowlisting can be re-enabled. Each subsequently supported theme also needs
-a stable identifier mapping, adapter files, selector spec, and smoke test. ikas still
+Still open: ikas needs to publish a supported active-theme or placement signal before
+provider-selected adapter placement can be re-enabled. Each runtime-detectable theme
+needs an explicit opt-in, bounded signature, cross-theme negative fixtures, and
+browser availability tests. ikas still
 does not expose official public DOM slots, and planned ikas Studio `data-*` attributes
 are not broad enough to rely on today.
 
 Detail: [[Theme_Adapter_Playbook]], [[Ikas_Theme_Limitations]],
 [[Ikas_Storefront_Script_Capabilities]].
 
-## Unknown-theme widget visibility policy — RESOLVED 2026-05-27
-**Resolved by [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]].** The two-layer policy
-shipped exactly as proposed: `autoPlacementEnabled` gates PDP / listing / modal badges
-on `evidenceStatus === 'verified'`, `adapterMatchedBy === 'theme_id'`, and a
-non-generic adapter; the current provider-unavailable state therefore keeps it off.
-`reviewsMountEnabled` acts as a backend kill-switch for the explicit-mount review
-section. Both flags are emitted by `buildPublicThemeRuntime`,
-consumed by the widget through `themes/current-adapter.js`, and gating points live in
-`rating-badge.js`, `listing-badges/inject.js`, and `render.js findReviewsMount`. The
+## Unknown-theme widget visibility policy — RESOLVED, AMENDED 2026-08-10
+**Resolved by ADR 0022 and superseded for automatic placement by
+[[ADR_0038_Runtime_Attested_Storefront_Placement]].** `placementPolicy` is now the
+canonical authority, the legacy boolean is always false, and every production
+PDP/listing/modal path requires a strict current proof before rating reads or DOM
+mutation. `reviewsMountEnabled` remains the independent backend kill-switch for the
+explicit review mount. The
 admin warning UI for unsupported themes is **deferred** as a follow-up — the runtime
 signal is already in place (`adapterSource === 'generic_unknown'`), it just needs a
 dashboard surface.

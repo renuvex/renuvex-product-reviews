@@ -77,6 +77,15 @@ Legacy planned or unknown DB rows are retained but cannot reach storefront
 configuration. Release availability, merchant `enabled`, and future plan or
 tenant entitlement are separate concepts.
 
+The same response exposes a small versioned placement contract. The current
+runtime treats `runtime.placementPolicy` as the sole automatic-placement
+authority, uses `runtime.themeAdapterKey` only for adapter selection, and treats
+`runtime.themeSyncDue` only as a best-effort resync signal. During the safety-first
+cutover, `runtime.autoPlacementEnabled` is always `false`, so retained old
+runtimes cannot re-enter broad heuristic placement. Missing, malformed, unknown,
+or stale policy data disables automatic placement without disabling explicit
+review mounts. See [[ADR_0038_Runtime_Attested_Storefront_Placement]].
+
 Settings UI in admin: [src/features/widget-management/components/editor/SettingsPanel.tsx](src/features/widget-management/components/editor/SettingsPanel.tsx).
 
 ## Language And Localization Boundary

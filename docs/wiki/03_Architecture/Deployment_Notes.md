@@ -123,6 +123,14 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
   - A repeated request returned `X-Renuvex-Edge-Cache: HIT`.
   - The response includes `runtime.themeSyncDue`; lazy sync stays on `app.renuvex.app` through `POST /api/public/storefront-theme/lazy-sync`.
 
+### Placement-policy rollout and rollback
+
+- Build the backend policy producer and strict widget runtime from the same commit, but deploy them in two explicit stages. Deploy the backend first and verify the origin response contains a supported `runtime.placementPolicy` plus legacy `runtime.autoPlacementEnabled=false`; only then deploy the Worker/runtime with separate approval.
+- Acceptance is response- and artifact-based, not a fixed wait: verify the origin settings body, the Worker edge body and `X-Renuvex-Edge-Cache` diagnosis, the build manifest entry, the fetched content-hashed runtime, and a fresh-browser Ozy PDP/listing smoke test.
+- The Worker stores allowlisted settings responses in `caches.default` for 60 seconds and returns browser-facing `Cache-Control: public, max-age=0, must-revalidate`. Cache API entries are PoP-local and do not implement `stale-while-revalidate` or `stale-if-error`; inspect origin and edge independently.
+- Runtime/detector regression: retain the new backend and roll the Worker back, leaving a freshly loaded legacy runtime safe-disabled through the legacy false boolean. Backend serialization/policy or legacy-boolean regression requires a backend fix/rollback; Worker rollback alone is insufficient. A stale edge payload requires exact origin/edge verification and any cache purge needs separate approval. Rolling both layers back to the old contract restores the historical broad placement behavior and is not the default rollback.
+- An already-running old browser execution context cannot be remotely revoked by a backend or Worker rollback. Session-cache TTL is not an in-memory authorization lease; use a fresh page context for rollout acceptance and document any still-open-tab limitation. See [[ADR_0038_Runtime_Attested_Storefront_Placement]].
+
 ## Local development
 1. `pnpm install`
 2. Copy `.env.example` → `.env.local`, fill values

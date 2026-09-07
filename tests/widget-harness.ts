@@ -12,18 +12,25 @@ import {
 } from '../src/widget/preview/scenes.js';
 
 export const WIDGET_ORIGIN = 'https://widget.test';
+const LEGACY_WIDGET_READ_ORIGIN = 'https://widget.renuvex.app';
 export const API_ORIGIN = resolveWidgetApiOrigin();
 export const READ_API_ORIGIN = resolveWidgetReadApiOrigin();
 export const MERCHANT_ORIGIN = 'https://merchant.test';
 export const PUBLIC_KEY = 'ci-public-key';
 export const PRODUCT_ID = 'product-1';
 export const PRODUCT_NAME = 'Premium';
+// Pre-cutover runtime from baseline 49962371498e8b9e80137f92baa1b1bab5a21fc7.
+// It is retained by the widget artifact policy so the safety-first backend
+// contract can be exercised against the consumer that reads only the legacy
+// autoPlacementEnabled boolean.
+export const LEGACY_PLACEMENT_RUNTIME_ENTRY = 'widget-runtime/runtime-CC2YLTM4.js';
 
 export type RuntimeOptions = {
   autoPlacementEnabled?: boolean;
   reviewsMountEnabled?: boolean;
   themeAdapterKey?: string;
   themeSyncDue?: boolean;
+  placementPolicy?: { version?: number; mode?: string } | null;
 };
 
 export type IkasEventSequenceItem = {
@@ -52,6 +59,13 @@ export type SmokeOptions = {
   previewWidgetId?: string;
   previewScene?: string;
   listingOffsetTop?: number;
+  productMarkup?: string;
+  listingMarkup?: string;
+  settingsStatus?: number;
+  settingsAbort?: Parameters<Route['abort']>[0];
+  ratingDelayMs?: number;
+  settingsPayload?: unknown;
+  widgetRuntimeEntry?: string;
   hasMore?: boolean;
   approvedReviewCount?: number;
   reviewsGetHandler?: (route: Route) => Promise<void>;
@@ -96,6 +110,14 @@ function jsHeaders(): Record<string, string> {
 function jsonHeaders(): Record<string, string> {
   return {
     'Access-Control-Allow-Origin': '*',
+    'Content-Type': 'application/json; charset=utf-8',
+  };
+}
+
+function widgetBeaconHeaders(): Record<string, string> {
+  return {
+    'Access-Control-Allow-Origin': MERCHANT_ORIGIN,
+    'Access-Control-Allow-Credentials': 'true',
     'Content-Type': 'application/json; charset=utf-8',
   };
 }
@@ -158,7 +180,10 @@ export function settingsResponse(options: SmokeOptions): unknown {
     runtime: {
       themeAdapterKey: runtime.themeAdapterKey || 'ozy',
       adapterSource: runtime.themeAdapterKey === 'generic' ? 'generic_unknown' : 'auto',
-      autoPlacementEnabled: runtime.autoPlacementEnabled !== false,
+      placementPolicy: runtime.placementPolicy === undefined
+        ? { version: 1, mode: runtime.autoPlacementEnabled === false ? 'disabled' : 'provider_verified' }
+        : runtime.placementPolicy,
+      autoPlacementEnabled: false,
       reviewsMountEnabled: runtime.reviewsMountEnabled !== false,
       themeSyncDue: runtime.themeSyncDue === true,
     },
@@ -208,7 +233,12 @@ function resolveWidgetReadApiOrigin(): string {
 }
 
 function apiOrigins(): string[] {
-  return Array.from(new Set([WIDGET_ORIGIN, API_ORIGIN, READ_API_ORIGIN].filter(Boolean)));
+  return Array.from(new Set([
+    WIDGET_ORIGIN,
+    API_ORIGIN,
+    READ_API_ORIGIN,
+    LEGACY_WIDGET_READ_ORIGIN,
+  ].filter(Boolean)));
 }
 
 export async function routeWidgetApi(page: Page, pathPattern: string, handler: (route: Route) => Promise<void>): Promise<void> {
@@ -357,17 +387,37 @@ export async function fulfillLocalPublicAsset(route: Route): Promise<void> {
   });
 }
 
+async function fulfillWidgetEntrypoint(route: Route, runtimeEntry?: string): Promise<void> {
+  if (!runtimeEntry) {
+    await fulfillLocalPublicAsset(route);
+    return;
+  }
+  if (!/^widget-runtime\/runtime-[A-Z0-9]+\.js$/.test(runtimeEntry)) {
+    throw new Error(`Invalid widget runtime fixture: ${runtimeEntry}`);
+  }
+  await readFile(path.join(process.cwd(), 'public', ...runtimeEntry.split('/')), 'utf8');
+  await route.fulfill({
+    status: 200,
+    headers: jsHeaders(),
+    body: `import(${JSON.stringify(`${WIDGET_ORIGIN}/${runtimeEntry}`)});`,
+  });
+}
+
 export async function setupWidgetRoutes(page: Page, options: SmokeOptions = {}): Promise<RequestLog> {
   const log = createRequestLog(page);
 
-  await page.route(`${WIDGET_ORIGIN}/widget.js**`, fulfillLocalPublicAsset);
+  await page.route(`${WIDGET_ORIGIN}/widget.js**`, (route) => fulfillWidgetEntrypoint(route, options.widgetRuntimeEntry));
   await page.route(`${WIDGET_ORIGIN}/widget-runtime/**`, fulfillLocalPublicAsset);
   await page.route('https://media.renuvex.app/**', fulfillImage);
   await routeWidgetApi(page, '/api/public/settings**', async (route) => {
+    if (options.settingsAbort) {
+      await route.abort(options.settingsAbort);
+      return;
+    }
     await route.fulfill({
-      status: 200,
+      status: options.settingsStatus || 200,
       headers: jsonHeaders(),
-      body: JSON.stringify(settingsResponse(options)),
+      body: JSON.stringify(options.settingsPayload === undefined ? settingsResponse(options) : options.settingsPayload),
     });
   });
   await routeThemeLazySync(page);
@@ -400,6 +450,7 @@ export async function setupWidgetRoutes(page: Page, options: SmokeOptions = {}):
     });
   });
   await routeWidgetApi(page, '/api/public/ratings**', async (route) => {
+    if (options.ratingDelayMs) await new Promise((resolve) => setTimeout(resolve, options.ratingDelayMs));
     await route.fulfill({
       status: 200,
       headers: jsonHeaders(),
@@ -434,7 +485,7 @@ export async function setupWidgetRoutes(page: Page, options: SmokeOptions = {}):
   await routeWidgetApi(page, '/api/public/widget-error**', async (route) => {
     await route.fulfill({
       status: 204,
-      headers: jsonHeaders(),
+      headers: widgetBeaconHeaders(),
       body: '',
     });
   });
@@ -495,7 +546,7 @@ export async function setupPreviewRoutes(page: Page, options: SmokeOptions = {})
   await page.route(`${MERCHANT_ORIGIN}/widget-runtime/**`, fulfillLocalPublicAsset);
   await page.route(`${MERCHANT_ORIGIN}/preview-assets/**`, fulfillLocalPublicAsset);
   await routeWidgetApi(page, '/api/public/widget-error**', async (route) => {
-    await route.fulfill({ status: 204, headers: jsonHeaders(), body: '' });
+    await route.fulfill({ status: 204, headers: widgetBeaconHeaders(), body: '' });
   });
   await page.route((url) => (
     url.origin === MERCHANT_ORIGIN &&
@@ -515,7 +566,7 @@ export async function setupGenericLinksPage(page: Page): Promise<RequestLog> {
   await page.route(`${WIDGET_ORIGIN}/widget.js**`, fulfillLocalPublicAsset);
   await page.route(`${WIDGET_ORIGIN}/widget-runtime/**`, fulfillLocalPublicAsset);
   await routeWidgetApi(page, '/api/public/widget-error**', async (route) => {
-    await route.fulfill({ status: 204, headers: jsonHeaders(), body: '' });
+    await route.fulfill({ status: 204, headers: widgetBeaconHeaders(), body: '' });
   });
   await page.route(`${MERCHANT_ORIGIN}/**`, async (route) => {
     await route.fulfill({
@@ -547,14 +598,19 @@ export async function setupProductListingFallbackPage(page: Page, options: Smoke
   await page.route(`${WIDGET_ORIGIN}/widget-runtime/**`, fulfillLocalPublicAsset);
   await page.route('https://media.renuvex.app/**', fulfillImage);
   await routeWidgetApi(page, '/api/public/settings**', async (route) => {
+    if (options.settingsAbort) {
+      await route.abort(options.settingsAbort);
+      return;
+    }
     await route.fulfill({
-      status: 200,
+      status: options.settingsStatus || 200,
       headers: jsonHeaders(),
-      body: JSON.stringify(settingsResponse(options)),
+      body: JSON.stringify(options.settingsPayload === undefined ? settingsResponse(options) : options.settingsPayload),
     });
   });
   await routeThemeLazySync(page);
   await routeWidgetApi(page, '/api/public/ratings**', async (route) => {
+    if (options.ratingDelayMs) await new Promise((resolve) => setTimeout(resolve, options.ratingDelayMs));
     await route.fulfill({
       status: 200,
       headers: jsonHeaders(),
@@ -562,6 +618,7 @@ export async function setupProductListingFallbackPage(page: Page, options: Smoke
     });
   });
   await routeWidgetApi(page, '/api/public/ratings-by-slug**', async (route) => {
+    if (options.ratingDelayMs) await new Promise((resolve) => setTimeout(resolve, options.ratingDelayMs));
     await route.fulfill({
       status: 200,
       headers: jsonHeaders(),
@@ -569,7 +626,7 @@ export async function setupProductListingFallbackPage(page: Page, options: Smoke
     });
   });
   await routeWidgetApi(page, '/api/public/widget-error**', async (route) => {
-    await route.fulfill({ status: 204, headers: jsonHeaders(), body: '' });
+    await route.fulfill({ status: 204, headers: widgetBeaconHeaders(), body: '' });
   });
   await page.route(`${MERCHANT_ORIGIN}/**`, async (route) => {
     await route.fulfill({
@@ -625,7 +682,7 @@ async function setupListingProbePage(page: Page, body: string): Promise<RequestL
     });
   });
   await routeWidgetApi(page, '/api/public/widget-error**', async (route) => {
-    await route.fulfill({ status: 204, headers: jsonHeaders(), body: '' });
+    await route.fulfill({ status: 204, headers: widgetBeaconHeaders(), body: '' });
   });
   await page.route(`${MERCHANT_ORIGIN}/**`, async (route) => {
     await route.fulfill({
@@ -749,6 +806,12 @@ function productHtml(options: SmokeOptions): string {
           }, ${Math.max(0, Math.round(options.reviewsMountDelayMs))});
         </script>`
       : '<div data-renuvex-widget="reviews"></div>';
+  const productMarkup = options.productMarkup || `<section class="product-detail product-name-main">
+        <h1 class="product-name">${PRODUCT_NAME}</h1>
+        <p>CI product page.</p>
+        ${controlBlock}
+        ${reviewMountHtml}
+      </section>`;
   return `<!doctype html>
 <html lang="tr">
   <head>
@@ -761,12 +824,7 @@ function productHtml(options: SmokeOptions): string {
   </head>
   <body>
     <main>
-      <section class="product-detail">
-        <h1>${PRODUCT_NAME}</h1>
-        <p>CI product page.</p>
-        ${controlBlock}
-        ${reviewMountHtml}
-      </section>
+      ${productMarkup}
     </main>
   </body>
 </html>`;
@@ -779,6 +837,20 @@ function productListingFallbackHtml(options: SmokeOptions = {}): string {
   const listingSpacer = typeof options.listingOffsetTop === 'number'
     ? `<div aria-hidden="true" style="height:${Math.max(0, Math.round(options.listingOffsetTop))}px"></div>`
     : '';
+  const listingMarkup = options.listingMarkup || `<section class="listing-grid category-products-main">
+        <article class="product-card">
+          <a href="/premium-shorts">
+            <img src="${reviewImage('listing-1')}" alt="">
+            <h2 class="product-name">Premium Shorts</h2>
+          </a>
+        </article>
+        <article class="product-card">
+          <a href="/linen-shirt">
+            <img src="${reviewImage('listing-2')}" alt="">
+            <h2 class="product-name">Linen Shirt</h2>
+          </a>
+        </article>
+      </section>`;
   return `<!doctype html>
 <html lang="tr">
   <head>
@@ -790,20 +862,7 @@ function productListingFallbackHtml(options: SmokeOptions = {}): string {
   <body>
     <main>
       ${listingSpacer}
-      <section class="listing-grid">
-        <article class="product-card">
-          <a href="/premium-shorts">
-            <img src="${reviewImage('listing-1')}" alt="">
-            <h2>Premium Shorts</h2>
-          </a>
-        </article>
-        <article class="product-card">
-          <a href="/linen-shirt">
-            <img src="${reviewImage('listing-2')}" alt="">
-            <h2>Linen Shirt</h2>
-          </a>
-        </article>
-      </section>
+      ${listingMarkup}
     </main>
   </body>
 </html>`;

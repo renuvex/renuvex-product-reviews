@@ -20,6 +20,7 @@ import { probeWidgetVisibility, reportWidgetHealth, watchOneTimeRemoval } from '
 import { createOwnedSlot, removeOwnedSlots, setSlotContext } from '../core/slot.js';
 import { getAfterElementMountPoint, placeOwnedSlot, watchOwnedSlotPosition } from '../core/slot-position.js';
 import { getThemeAdapter, isAutoPlacementEnabled } from '../themes/current-adapter.js';
+import { validatePdpPlacementProof } from '../placement/capability.js';
 
 var ratingBadgeRemovalObserver = null;
 var ratingBadgePositionObserver = null;
@@ -66,19 +67,15 @@ function getProductBadgeMountPoint(titleEl) {
   return getAfterElementMountPoint(titleEl);
 }
 
-export function injectRatingBadge(avgRating, totalCount, productName, badgeSettings, iconPair, productId, selfHealAttempt) {
-  // Önceki üründen kalan eski badge'i temizle. Cleanup, ADR_0022 gate'inden
-  // ÖNCE çalışır: bir önceki sayfada placement açıkken inject olmuş eski bir
-  // badge varsa, gate kapanmış olsa bile temizlenmesi gerek.
+export function injectRatingBadge(avgRating, totalCount, productName, badgeSettings, iconPair, productId, selfHealAttempt, placementProof) {
+  // Cleanup runs before the policy gate so a badge from the previous product
+  // cannot survive a navigation that disables placement.
   cleanupPdpRatingBadgeDom();
-  // ADR_0022 — Placement allowlist. Unknown themes (or any state where
-  // `adapterMatchedBy !== 'theme_id'`) silently skip auto-placement. The
-  // explicit-mount review section continues to render via its own opt-in
-  // path; only the heuristic PDP/listing/modal badges are gated here.
-  // Skip after cleanup but BEFORE any DOM probe / style injection so
-  // "placement off" means "no badge surface at all", matching the contract
-  // documented in ADR_0022. JSON-LD is owned by structured-data now.
+  // ADR_0038: placementPolicy selects a provider, but production injection
+  // still requires that provider's exact, current target proof. Explicit
+  // review mounts and preview rendering use separate contracts.
   if (!isAutoPlacementEnabled()) return;
+  if (!window.__ikasPreviewMode && !validatePdpPlacementProof(placementProof)) return;
 
   if (!avgRating) return;
 
@@ -91,7 +88,7 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
   // Idempotent; her render'da güvenle çağrılabilir.
   ensureBadgeStyles();
 
-  var titleEl = findProductTitleEl(productName);
+  var titleEl = placementProof ? placementProof.titleEl : findProductTitleEl(productName);
   if (!titleEl || !titleEl.parentNode) {
     reportWidgetHealth('dom-conflict', 'PDP product title could not be found for badge placement', {
       surface: 'pdp-badge',
@@ -102,7 +99,7 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
     return;
   }
 
-  var mountPoint = getProductBadgeMountPoint(titleEl);
+  var mountPoint = placementProof ? placementProof.mountPoint : getProductBadgeMountPoint(titleEl);
   if (!mountPoint || !mountPoint.parent) {
     reportWidgetHealth('dom-conflict', 'PDP badge mount point could not be resolved', {
       surface: 'pdp-badge',
@@ -191,7 +188,7 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
   });
   if (!selfHealAttempt) {
     ratingBadgeRemovalObserver = watchOneTimeRemoval(slot, 'pdp-badge', function () {
-      injectRatingBadge(avgRating, totalCount, productName, badgeSettings, iconPair, productId, true);
+      injectRatingBadge(avgRating, totalCount, productName, badgeSettings, iconPair, productId, true, placementProof);
     }, { productName: productName || '', productId: productId || '' });
   }
 }

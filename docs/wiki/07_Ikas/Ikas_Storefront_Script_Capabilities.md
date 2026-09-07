@@ -3,8 +3,8 @@ type: ikas
 project: renuvex-product-reviews
 status: active
 created: 2026-05-15
-updated: 2026-06-06
-last_verified: 2026-06-06
+updated: 2026-08-10
+last_verified: 2026-08-10
 confidence: high
 tags:
   - ikas
@@ -19,6 +19,7 @@ related:
   - "[[Ikas_API_Notes]]"
   - "[[Theme_Adapter_Playbook]]"
   - "[[Ikas_Lifecycle_Mount_Questions]]"
+  - "[[ADR_0038_Runtime_Attested_Storefront_Placement]]"
 source_files:
   - "src/lib/ikas-client/graphql-requests.ts"
   - "src/lib/ikas-client/v1-graphql-requests.ts"
@@ -33,6 +34,8 @@ source_files:
   - "src/lib/storefront-theme.ts"
   - "src/widget/loader.js"
   - "src/widget/events.js"
+  - "src/widget/core/context-epoch.js"
+  - "src/widget/placement/capability.js"
   - "src/widget/reviews-section/bootstrap.js"
 ---
 
@@ -135,7 +138,10 @@ Live v1/v2 introspection and repository codegen no longer expose `themes` or
 for supported storefront script management. Renuvex treats the missing theme signal
 as provider-unavailable evidence: legacy metadata cannot unlock automatic placement,
 while explicit review mounts continue through the generic adapter. Re-enabling active
-theme allowlisting requires a newly verified provider contract.
+theme allowlisting requires a newly verified provider contract. ADR 0038 does
+not reinterpret this missing provider field as theme identity; it permits only
+an explicitly opted-in adapter whose current strict DOM signature and exact
+surface target can be attested at runtime.
 
 ### Lifecycle / mount follow-up - 2026-06-06
 
@@ -180,11 +186,10 @@ cookie-management scripts without a separate measured reason.
 ### Implications for this project
 
 - Keep one project-owned loader `StorefrontJSScript` per storefront. This is confirmed as an accepted ikas pattern, not a workaround.
-- **Do not build theme adapters as the primary mechanism, and do not hack around missing anchors.** The correct, ikas-sanctioned source of page/product context is Storefront Events — not DOM class heuristics. Theme-class selectors should be treated as a temporary fallback only, not the architecture.
-- There is currently no official DOM mount point. Until ikas Studio `data-*` attributes ship and reach enough stores, mounting still requires the app's own anchor/placeholder logic, but page and product identity must come from Storefront Events rather than DOM scraping.
-- Theme adapters are the placement fallback layer. The per-theme selector checklist and Ozy spec live in [[Theme_Adapter_Playbook]].
-- Active theme adapter selection is currently disabled because the live schema no longer exposes the required fields. Generic explicit mounts remain available; automatic placement stays fail-closed.
-- Plan for a future migration to ikas `data-*` attributes once they are broadly available; design the loader so the context source can be swapped without rewriting widget modules.
+- Storefront Events remains the primary page/product context source. DOM evidence authorizes placement only; it must not manufacture canonical product identity from title text or classes.
+- There is currently no official DOM mount point. ADR 0038 treats strict theme adapters as compatibility placement providers, not as a replacement for the event context layer. Unsupported, partial, or ambiguous signatures are no-ops.
+- Active provider theme selection is currently unavailable because the live schema no longer exposes the required fields. Ozy may still be selected by its bounded runtime signature; generic is never runtime-detectable and explicit review mounts remain separate.
+- Plan for a future migration to official ikas `data-*`, slot, block, or mount primitives. The placement-provider boundary allows that migration without rewriting product identity, ratings, lifecycle, renderers, or surface orchestration.
 - For `isHighPriority` / `order`: this review app does not manage cookies/consent, so it does not need to preempt Facebook/Google scripts. ikas confirmed `isHighPriority` is for relative app-script ordering, not a general first-discovery optimization.
 - Do not add resource-hint assumptions to the injected loader. ikas currently does not support app-provided head-level hints, and hints added after the loader is discovered cannot solve first discovery timing.
 
