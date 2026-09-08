@@ -81,7 +81,15 @@ Star+count badge injected into strictly attested product cards on collection, se
   Live Worker no-store acceptance remains a separate deployment gate.
 - Production discovery is bounded to strict containers exposed by explicitly runtime-detectable adapters. There is no `main/[role=main]`, class-substring, whole-document link, or title-text placement fallback.
 - The existing MutationObserver remains the single debounced coordinator. It triggers re-attestation for lazy cards; it is not itself placement authority.
-- Below-the-fold listing/product-slider candidates are registered with `IntersectionObserver` through [core/listing-viewport-gate.js](src/widget/core/listing-viewport-gate.js). The default `rootMargin` is `900px 0px`: near/above-viewport cards hydrate at current speed, while far below-the-fold cards do not load the `listing-badges-*` chunk or call `/api/public/ratings*` until the shopper scrolls near them. A passive scroll/resize check exists only as a non-polling safety fallback if the observer callback does not fire.
+- The coordinator records only proof-scoped request state in a `WeakMap`: an
+  exact card proof can be `in_flight`, and a successful zero/omitted result can
+  be `empty` for that same DOM identity and context epoch. Carousel/style
+  mutations therefore cannot queue the same slug batch repeatedly while it is
+  running or after a valid empty response. Network/HTTP failures are not marked
+  resolved, while a recycled link, changed slug/product identity, replaced
+  title/mount, or new epoch naturally invalidates the state. No slug rating is
+  written to `sessionStorage`, edge cache, or a cross-card cache.
+- Below-the-fold listing/product-slider candidates are registered with `IntersectionObserver` through [core/listing-viewport-gate.js](src/widget/core/listing-viewport-gate.js). The default `rootMargin` is `400px 0px`: near/above-viewport cards hydrate at current speed, while far below-the-fold cards do not load the `listing-badges-*` chunk or call `/api/public/ratings*` until the shopper scrolls near them. A passive scroll/resize check exists only as a non-polling safety fallback if the observer callback does not fire.
 - Badge slots are reserved before rating data finishes loading and replaced in place when real ratings arrive, reducing listing-card layout shift.
 - Listing badge slots mount as siblings immediately after product title elements by default. There is no publicApiKey allowlist or legacy in-title branch; supported theme exceptions must use the adapter mount-point override.
 
@@ -130,6 +138,10 @@ CSS variable before injecting badges. Badge stars are no longer hardcoded to
 - [[ADR_0015_Canonical_Product_Identity]]
 
 ## Change Log
+- 2026-09-08: Bound listing request coordination to the exact placement proof.
+  Repeated carousel/style mutations no longer fan out duplicate slug reads
+  while a batch is in flight or after a successful empty response; failed
+  requests remain retryable and lifecycle-safe slug results remain uncached.
 - 2026-08-10: ADR 0038 replaced broad production listing discovery with strict proof-carrying placement, current-epoch event identity plus lifecycle-safe slug fallback, and safety-first legacy runtime cutover. The existing observer remains the only listing coordinator; preview keeps a separate fixture helper.
 - 2026-08-09: Corrected the lifecycle identity/cache contract. Slug-only reads
   require one fresh unambiguous active snapshot, never query historical

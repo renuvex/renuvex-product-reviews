@@ -155,6 +155,92 @@ test('strict Ozy listing placement does not require product media', async ({ pag
   expect(widgetErrors(log)).toEqual([]);
 });
 
+test('carousel mutations do not duplicate an in-flight or resolved-empty slug read', async ({ page }) => {
+  const log = await setupProductListingFallbackPage(page, {
+    ratingsBySlugHandler: async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: { 'premium-shorts': { avg: '4.8', count: 12 } } }),
+      });
+    },
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await expect.poll(() => countUrls(log, '/api/public/ratings-by-slug'), { timeout: 6000 }).toBe(1);
+
+  await page.evaluate(() => {
+    const listing = document.querySelector('.category-products-main');
+    [100, 450, 1200].forEach((delay, index) => {
+      setTimeout(() => listing?.setAttribute('style', `transform:translateX(-${index + 1}px)`), delay);
+    });
+  });
+
+  await expect.poll(() => countListingBadges(page), { timeout: 6000 }).toBe(1);
+  await page.waitForTimeout(1200);
+  expect(countUrls(log, '/api/public/ratings-by-slug')).toBe(1);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('a new strict card added during an in-flight batch queues one follow-up read', async ({ page }) => {
+  let attempts = 0;
+  const log = await setupProductListingFallbackPage(page, {
+    ratingsBySlugHandler: async (route) => {
+      attempts += 1;
+      if (attempts === 1) await new Promise((resolve) => setTimeout(resolve, 800));
+      const slugs = new URL(route.request().url()).searchParams.get('slugs')?.split(',') ?? [];
+      const data = Object.fromEntries(slugs.map((slug) => [slug, { avg: '4.7', count: 5 }]));
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data }) });
+    },
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await expect.poll(() => countUrls(log, '/api/public/ratings-by-slug'), { timeout: 6000 }).toBe(1);
+
+  await page.evaluate(() => {
+    document.querySelector('.category-products-main')?.insertAdjacentHTML(
+      'beforeend',
+      '<article class="product-card"><a href="/new-arrival"><h2 class="product-name">New Arrival</h2></a></article>',
+    );
+  });
+
+  await expect.poll(() => countUrls(log, '/api/public/ratings-by-slug'), { timeout: 6000 }).toBe(2);
+  await expect.poll(() => countListingBadges(page), { timeout: 6000 }).toBe(3);
+  await page.waitForTimeout(700);
+  expect(countUrls(log, '/api/public/ratings-by-slug')).toBe(2);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('a failed slug read remains retryable and a successful empty retry is deduped', async ({ page }) => {
+  let attempts = 0;
+  const log = await setupProductListingFallbackPage(page, {
+    ratingsBySlugHandler: async (route) => {
+      attempts += 1;
+      if (attempts === 1) {
+        await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'unavailable' }) });
+        return;
+      }
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: {} }) });
+    },
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await expect.poll(() => countUrls(log, '/api/public/ratings-by-slug'), { timeout: 6000 }).toBe(1);
+  await page.waitForTimeout(500);
+
+  await page.evaluate(() => {
+    document.querySelector('.category-products-main')?.setAttribute('style', 'transform:translateX(-1px)');
+  });
+  await expect.poll(() => countUrls(log, '/api/public/ratings-by-slug'), { timeout: 6000 }).toBe(2);
+  await page.waitForTimeout(500);
+
+  await page.evaluate(() => {
+    document.querySelector('.category-products-main')?.setAttribute('style', 'transform:translateX(-2px)');
+  });
+  await page.waitForTimeout(800);
+  expect(countUrls(log, '/api/public/ratings-by-slug')).toBe(2);
+  expect(await countListingBadges(page)).toBe(0);
+  expect(widgetErrors(log).filter((message) => !message.includes('503 (Service Unavailable)'))).toEqual([]);
+});
+
 test('a recycled product card cannot receive the previous slug rating response', async ({ page }) => {
   const log = await setupProductListingFallbackPage(page, { ratingDelayMs: 700 });
   await page.goto(`${MERCHANT_ORIGIN}/clothing`);

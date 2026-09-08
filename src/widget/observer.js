@@ -9,6 +9,7 @@ import {
   resolveModalPlacementProof,
 } from './placement/capability.js';
 import { getStorefrontContextEpoch } from './core/context-epoch.js';
+import { getListingProofRequestStatus } from './core/listing-proof-request-state.js';
 
 var mutationDebounceTimer = null;
 var mutationObserver = null;
@@ -19,6 +20,8 @@ function hasUnbadgedListingLinks() {
   var proofs = collectListingPlacementProofs(getStorefrontContextEpoch());
   if (proofs.length) {
     return proofs.some(function (proof) {
+      var requestStatus = getListingProofRequestStatus(proof);
+      if (requestStatus === 'in_flight' || requestStatus === 'empty') return false;
       if (!proof.linkEl.getAttribute('data-renuvex-badge')) return true;
       var slots = proof.mountPoint.parent.querySelectorAll('[data-renuvex-slot="listing-rating"]');
       return !Array.from(slots).some(function (slot) {

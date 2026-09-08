@@ -64,6 +64,7 @@ export type SmokeOptions = {
   settingsStatus?: number;
   settingsAbort?: Parameters<Route['abort']>[0];
   ratingDelayMs?: number;
+  ratingsBySlugHandler?: (route: Route) => Promise<void>;
   settingsPayload?: unknown;
   widgetRuntimeEntry?: string;
   hasMore?: boolean;
@@ -618,6 +619,10 @@ export async function setupProductListingFallbackPage(page: Page, options: Smoke
     });
   });
   await routeWidgetApi(page, '/api/public/ratings-by-slug**', async (route) => {
+    if (options.ratingsBySlugHandler) {
+      await options.ratingsBySlugHandler(route);
+      return;
+    }
     if (options.ratingDelayMs) await new Promise((resolve) => setTimeout(resolve, options.ratingDelayMs));
     await route.fulfill({
       status: 200,

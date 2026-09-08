@@ -12,8 +12,12 @@ import {
   injectStrictBadges,
   reserveStrictBadgeSlots,
 } from './strict-inject.js';
-import { collectListingPlacementProofs } from '../placement/capability.js';
+import { collectListingPlacementProofs, validateListingPlacementProof } from '../placement/capability.js';
 import { getStorefrontContextEpoch, isStorefrontContextCurrent } from '../core/context-epoch.js';
+import {
+  markListingProofRequestsInFlight,
+  settleListingProofRequests,
+} from '../core/listing-proof-request-state.js';
 
 function cleanupListingBadges() {
   disconnectStrictListingObservers();
@@ -67,7 +71,10 @@ export async function renderListingBadges() {
     });
     var slugs = Object.keys(productTargets);
     if (!slugs.length) { ls.rendered = false; return; }
-    var ratingsPromise = fetchRatings(productTargets).catch(function() { return {}; });
+    markListingProofRequestsInFlight(placementProofs);
+    var ratingsPromise = fetchRatings(productTargets).catch(function() {
+      return { ratings: {}, resolvedTargets: {} };
+    });
 
     var reviewsSettings = widgets.reviews || {};
     var iconPair = getIconFromSettings(reviewsSettings);
@@ -102,12 +109,18 @@ export async function renderListingBadges() {
     // replace placeholders only when the same proofs remain current.
     reserveStrictBadgeSlots(placementProofs);
 
-    var ratings = await ratingsPromise;
+    var ratingResult = await ratingsPromise;
     if (!isStorefrontContextCurrent(epoch)) {
       clearStrictBadgePlaceholders();
       return;
     }
-    injectStrictBadges(placementProofs, ratings, iconPair, badgeSettings);
+    settleListingProofRequests(
+      placementProofs,
+      ratingResult.ratings,
+      ratingResult.resolvedTargets,
+      validateListingPlacementProof,
+    );
+    injectStrictBadges(placementProofs, ratingResult.ratings, iconPair, badgeSettings);
   } finally {
     ls.inProgress = false;
     if (ls.queued) {
