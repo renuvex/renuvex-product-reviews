@@ -32,6 +32,7 @@ source_files:
   - "src/lib/review-media.ts"
   - "src/lib/review-summary.ts"
   - "src/widget/core/cache.js"
+  - "src/widget/core/listing-proof-request-state.js"
   - "src/widget/core/settings.js"
   - "public/widget-runtime/build-manifest.json"
   - "src/app/api/public/settings/route.ts"
@@ -200,6 +201,12 @@ now treats `200` and `304` as cacheable asset responses so stable files keep
 
 ## Widget client cache
 [src/widget/core/cache.js](src/widget/core/cache.js) wraps `sessionStorage` with an in-memory fallback. Avoids redundant fetches when the user clicks pagination, opens/closes modal, navigates between products in the same tab, etc. `sessionStorage` survives reloads in the same tab and normally ends when that tab closes.
+
+Listing mutation dedupe is a separate, proof-scoped runtime mechanism. It
+holds only `in_flight` or successful-empty state for the exact DOM link/proof
+inside a `WeakMap`; it never writes slug ratings to `sessionStorage` or shares
+them across cards. HTTP/network failures are not resolved, and any proof
+identity or context-epoch change makes the prior state inapplicable.
 
 Settings have a 5-minute fresh window and a 24-hour stale tolerance for transient fetch failures. ADR 0038 uses a new v2 cache key. A valid v1 `placementPolicy` removes the old key once; stale v2 settings may preserve non-placement configuration but always force automatic placement to `disabled`. The 5-minute TTL is not a remote revocation timer for JavaScript already running in an open tab, and a legacy runtime can reuse a stale legacy payload for up to 24 hours after a failed refetch. Image trust is not a settings field; storefront media rendering uses provider-neutral public descriptors from `/api/public/reviews`.
 

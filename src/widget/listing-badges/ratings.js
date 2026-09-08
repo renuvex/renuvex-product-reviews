@@ -48,8 +48,18 @@ function batch(values) {
 
 function fetchJsonData(url) {
   return fetchWithTimeout(url)
-    .then(function(res) { return res.ok ? res.json().then(function(json) { return json.data || {}; }) : {}; })
-    .catch(function() { return {}; });
+    .then(function(res) {
+      if (!res.ok) return { ok: false, data: {} };
+      return res.json()
+        .then(function(json) {
+          if (!json || !json.data || typeof json.data !== 'object' || Array.isArray(json.data)) {
+            return { ok: false, data: {} };
+          }
+          return { ok: true, data: json.data };
+        })
+        .catch(function() { return { ok: false, data: {} }; });
+    })
+    .catch(function() { return { ok: false, data: {} }; });
 }
 
 export async function fetchRatings(input) {
@@ -57,6 +67,7 @@ export async function fetchRatings(input) {
   var slugs = Object.keys(targets);
   var ratingsKey = 'renuvex_pr_ratings_v2_' + PUBLIC_API_KEY;
   var ratings = {};
+  var resolvedTargets = {};
 
   var cached = cacheGet(ratingsKey);
   if (cached) {
@@ -75,7 +86,10 @@ export async function fetchRatings(input) {
     if (!ratings[slug]) return true;
     return !!(productId && ratings[slug]._productId !== productId);
   });
-  if (!missing.length) return ratings;
+  slugs.forEach(function(slug) {
+    if (missing.indexOf(slug) === -1) resolvedTargets[slug] = targets[slug].productId || null;
+  });
+  if (!missing.length) return { ratings: ratings, resolvedTargets: resolvedTargets };
 
   var missingWithProductId = missing.filter(function(slug) {
     return !!(targets[slug] && targets[slug].productId);
@@ -97,30 +111,44 @@ export async function fetchRatings(input) {
   var productBatchResults = await Promise.all(batch(productIds).map(function(productBatch) {
     var url = READ_API_BASE + '/api/public/ratings?storeId=' + encodeURIComponent(PUBLIC_API_KEY) +
       '&productIds=' + productBatch.map(encodeURIComponent).join(',');
-    return fetchJsonData(url);
+    return fetchJsonData(url).then(function(result) {
+      return { productIds: productBatch, result: result };
+    });
   }));
 
-  productBatchResults.forEach(function(data) {
-    applyProductRatingsToSlugs(ratings, targets, data);
+  productBatchResults.forEach(function(batchResult) {
+    if (!batchResult.result.ok) return;
+    var resolvedSlugs = missingWithProductId.filter(function(slug) {
+      return batchResult.productIds.indexOf(targets[slug].productId) !== -1;
+    });
+    applyProductRatingsToSlugs(ratings, targets, batchResult.result.data);
+    markEmpty(ratings, resolvedSlugs, targets);
+    resolvedSlugs.forEach(function(slug) {
+      resolvedTargets[slug] = targets[slug].productId;
+    });
   });
 
   var slugFallbackResults = await Promise.all(batch(missingBySlugOnly).map(function(slugBatch) {
     var url = READ_API_BASE + '/api/public/ratings-by-slug?storeId=' + encodeURIComponent(PUBLIC_API_KEY) +
       '&slugs=' + slugBatch.map(encodeURIComponent).join(',');
-    return fetchJsonData(url);
+    return fetchJsonData(url).then(function(result) {
+      return { slugs: slugBatch, result: result };
+    });
   }));
 
-  slugFallbackResults.forEach(function(data) {
-    Object.keys(data).forEach(function(slug) {
-      ratings[slug] = data[slug];
+  slugFallbackResults.forEach(function(batchResult) {
+    if (!batchResult.result.ok) return;
+    batchResult.slugs.forEach(function(slug) {
+      if (batchResult.result.data[slug]) ratings[slug] = batchResult.result.data[slug];
+      resolvedTargets[slug] = null;
     });
+    markEmpty(ratings, batchResult.slugs, targets);
   });
 
-  markEmpty(ratings, missing, targets);
   var exactIdRatings = {};
   Object.keys(ratings).forEach(function(slug) {
     if (ratings[slug] && ratings[slug]._productId) exactIdRatings[slug] = ratings[slug];
   });
   cacheSet(ratingsKey, JSON.stringify({ t: Date.now(), v: exactIdRatings }));
-  return ratings;
+  return { ratings: ratings, resolvedTargets: resolvedTargets };
 }

@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-08-10
-updated: 2026-08-10
-last_verified: 2026-08-10
+updated: 2026-09-08
+last_verified: 2026-09-08
 confidence: high
 tags:
   - adr
@@ -163,6 +163,12 @@ debounces relevant mutations and reruns strict attestation; it does not reuse
 legacy broad discovery. PDP late-DOM observation is one generation-bound
 observer, cancelled by context invalidation or a resource-safety watchdog. The
 watchdog is not an Ikas DOM-ready guarantee.
+
+Listing request coordination is bound to the exact ephemeral proof. A
+`WeakMap` suppresses duplicate work for a proof while its bulk request is in
+flight and after a successful empty response. It is not a slug rating cache:
+HTTP/network failures remain retryable, and any link, identity, target, or
+epoch change invalidates the match.
 
 JSON-LD is emitted only after a real visible eligible Renuvex rating/review
 surface exists. Placement policy alone is insufficient.

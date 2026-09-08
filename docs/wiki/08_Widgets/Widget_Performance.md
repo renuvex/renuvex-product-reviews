@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-10
-last_verified: 2026-08-10
+updated: 2026-09-08
+last_verified: 2026-09-08
 confidence: high
 tags:
   - widget
@@ -38,6 +38,7 @@ source_files:
   - "src/widget/core/lazy-modules.js"
   - "src/widget/core/settings.js"
   - "src/widget/core/listing-viewport-gate.js"
+  - "src/widget/core/listing-proof-request-state.js"
   - "src/widget/core/rating-summary.js"
   - "src/widget/placement/capability.js"
   - "src/widget/surfaces/reviews-main.surface.js"
@@ -78,6 +79,11 @@ The widget runs on every storefront page in the world that hosts our merchants. 
 - Initial requests on PDP with a review mount: settings, ratings, reviews, and the media-gallery fetch. Badge-only PDPs use settings + ratings and skip the review render/BIG chunks plus reviews/media-gallery APIs (ADR_0024).
 - A PDP that also has product carousels mounts the listing-badge surface alongside reviews-main; `core/settings.js` shares one in-flight settings request across both surfaces, so `/api/public/settings` is fetched once, not twice (fixed 2026-05-17).
 - Initial listing rating reads remain bulk: canonical product ids use `/api/public/ratings`; strictly attested cards without current event membership may use the lifecycle-safe, uncached slug route.
+- Carousel and style mutations cannot queue the same proof batch repeatedly:
+  the coordinator tracks only `in_flight` and successful-empty state for the
+  exact DOM proof in a `WeakMap`. This does not persist or share slug ratings;
+  HTTP/network failures remain retryable, and recycled cards or a new context
+  epoch require fresh resolution.
 - Image upload: client-direct browser upload to AWS S3 with server-issued presigned POST; no image bytes proxy through our server.
 - 2026-05-24 (ADR_0019): read-only rating stars render via one injected SVG `<symbol>` sprite + `<use>` instead of inlining the full `<path>` per star. Measured before the change on the live dev store: ~76 KB of duplicated `<path>` data on a busy PDP (10 reviews) and ~4.6 KB per listing badge (linear in catalog size). The sprite defines the geometry once, so each star becomes a small `<use>` ref. Re-measure live DOM path bytes after deploy.
 - 2026-05-27 (ADR_0024): PDP title badge is separated into a `rating-badge-*` lazy chunk. If the merchant omits `<div data-renuvex-widget="reviews"></div>`, the storefront avoids review render/BIG chunks and the reviews/media-gallery API calls. `reviews-section/bootstrap.js` must not statically import `render.js`; it dynamically imports the renderer only after the explicit mount check and review fetch path.
