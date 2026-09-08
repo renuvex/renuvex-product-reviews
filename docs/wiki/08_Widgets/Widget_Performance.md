@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-04
-last_verified: 2026-07-04
+updated: 2026-09-08
+last_verified: 2026-09-08
 confidence: high
 tags:
   - widget
@@ -28,6 +28,7 @@ source_files:
   - "tests/widget-network-smoke.spec.ts"
   - "tests/widget-runtime-smoke.spec.ts"
   - "tests/widget-interaction-smoke.spec.ts"
+  - "tests/widget-placement-capability.spec.ts"
   - "tests/unit/widget-surface-contracts.test.ts"
   - ".github/workflows/widget-smoke.yml"
   - "src/widget/classic-loader.js"
@@ -37,8 +38,9 @@ source_files:
   - "src/widget/core/lazy-modules.js"
   - "src/widget/core/settings.js"
   - "src/widget/core/listing-viewport-gate.js"
+  - "src/widget/core/listing-proof-request-state.js"
   - "src/widget/core/rating-summary.js"
-  - "src/widget/listing-badges/fallback-candidates.js"
+  - "src/widget/placement/capability.js"
   - "src/widget/surfaces/reviews-main.surface.js"
   - "src/widget/surfaces/listing-badge.surface.js"
   - "src/widget/rating-badge/index.js"
@@ -70,21 +72,27 @@ measurement.
 The widget runs on every storefront page in the world that hosts our merchants. Bundle size, time to interactive, and request fan-out are the three numbers that matter.
 
 ## Current footprint
+- ADR 0038 keeps one debounced listing MutationObserver and adds no polling. Production placement scans only explicitly runtime-detectable adapter signatures, then requests ratings for exact proofs and revalidates those proofs before mutation. `pnpm test:widget-placement` pins observer/request cardinality and stale-context behavior.
 - Phase 3 local build output on 2026-05-17: `public/widget.js` is a classic compatibility loader (~1.6 KB), `public/widget-runtime/runtime.js` is a tiny stable shim, the active ESM entry is content-hashed (`runtime-*.js`, ~9.6 KB), and heavy PDP/product rendering is behind lazy ESM chunks.
 - `public/widget-runtime/build-manifest.json` records output bytes and import kinds. In the local build, the runtime entry has dynamic imports for rating badge, product bootstrap, listing badges, and preview/product render.
 - The deployed pre-Phase-2 legacy Vercel alias `widget.js?...` response measured `177763` bytes on 2026-05-15. Re-measure current `https://widget.renuvex.app/widget.js` before claiming live performance improvement.
 - Initial requests on PDP with a review mount: settings, ratings, reviews, and the media-gallery fetch. Badge-only PDPs use settings + ratings and skip the review render/BIG chunks plus reviews/media-gallery APIs (ADR_0024).
 - A PDP that also has product carousels mounts the listing-badge surface alongside reviews-main; `core/settings.js` shares one in-flight settings request across both surfaces, so `/api/public/settings` is fetched once, not twice (fixed 2026-05-17).
-- Initial requests on listing page: 1 (`/api/public/ratings-by-slug` — bulk).
+- Initial listing rating reads remain bulk: canonical product ids use `/api/public/ratings`; strictly attested cards without current event membership may use the lifecycle-safe, uncached slug route.
+- Carousel and style mutations cannot queue the same proof batch repeatedly:
+  the coordinator tracks only `in_flight` and successful-empty state for the
+  exact DOM proof in a `WeakMap`. This does not persist or share slug ratings;
+  HTTP/network failures remain retryable, and recycled cards or a new context
+  epoch require fresh resolution.
 - Image upload: client-direct browser upload to AWS S3 with server-issued presigned POST; no image bytes proxy through our server.
 - 2026-05-24 (ADR_0019): read-only rating stars render via one injected SVG `<symbol>` sprite + `<use>` instead of inlining the full `<path>` per star. Measured before the change on the live dev store: ~76 KB of duplicated `<path>` data on a busy PDP (10 reviews) and ~4.6 KB per listing badge (linear in catalog size). The sprite defines the geometry once, so each star becomes a small `<use>` ref. Re-measure live DOM path bytes after deploy.
 - 2026-05-27 (ADR_0024): PDP title badge is separated into a `rating-badge-*` lazy chunk. If the merchant omits `<div data-renuvex-widget="reviews"></div>`, the storefront avoids review render/BIG chunks and the reviews/media-gallery API calls. `reviews-section/bootstrap.js` must not statically import `render.js`; it dynamically imports the renderer only after the explicit mount check and review fetch path.
-- 2026-05-27 follow-up: review/media-gallery fetch helpers live in `reviews-section/reviews-api.js`, not bootstrap. The 2-second listing fallback in `loader.js` now requires product-card-like DOM candidates (same-origin product-like links with nearby images) before loading the listing-badges entry chunk, reducing false-positive loads on clean PDPs.
+- Historical 2026-05-27 behavior used a media-based listing fallback. ADR 0038 removed that broad production path. A one-shot 2-second bootstrap probe remains only to discover already-rendered strict adapter signatures when `PAGE_VIEW` is missing/late; late cards reuse the existing observer, and neither path uses media as authority or treats two seconds as a correctness cutoff.
 - 2026-05-28 CI guard, updated 2026-05-29: `pnpm test:widget-smoke` is the executable network/chunk contract. It asserts that badge-only PDPs skip `render-*` and `/api/public/reviews`, badge-disabled PDPs keep JSON-LD when the explicit review section renders, unsupported auto-placement skips visual badges while explicit reviews can still support JSON-LD, and generic-link pages do not trigger the listing fallback chunk.
 - 2026-05-28 quality gate expansion: `pnpm test:ci` now adds runtime layout smoke, lightbox/wizard flows, admin preview/settings checks, and public API/theme-state unit tests around the network contract. This catches regressions in behavior and lazy boundaries but does not enforce byte budgets yet.
 - 2026-05-28 transfer evidence: `pnpm test:widget-smoke` attaches `widget-transfer-evidence.json` for mount-present/mount-absent and badge-on/badge-off local harness scenarios. This is evidence for regressions and review, not a hard CDN transfer-size budget.
 - 2026-05-29 deployed evidence: `pnpm measure:deployed-widget` measured the real deployed widget and immutable runtime chunks while mocking merchant HTML and `/api/public/*` responses. The historical run used the legacy pre-custom-domain Vercel alias; current runs default to `https://widget.renuvex.app`. Latest controlled run is recorded in [[Widget_Transfer_Measurement_2026-05-29]]. It confirms the review render chunk and reviews API calls are skipped when the explicit review mount is absent. After the structured-data split, badge-disabled + review-mounted PDPs still call `/api/public/ratings` once for JSON-LD; badge-disabled + mount-absent PDPs skip ratings and JSON-LD.
-- 2026-05-29 fallback determinism: the legacy 2-second listing fallback candidate probe lives in `listing-badges/fallback-candidates.js` and is covered by negative tests for generic links, external links, nav/footer links, one product-like link, and product-like links without nearby media. Positive product-card DOM still loads the listing chunk and calls `ratings-by-slug`.
+- Historical 2026-05-29 fallback tests covered the former `listing-badges/fallback-candidates.js`; ADR 0038 replaces them with strict placement and cross-theme negative coverage in `tests/widget-placement-capability.spec.ts`.
 - 2026-05-29 surface contract gate: `tests/unit/widget-surface-contracts.test.ts` fails if a new `src/widget/surfaces/*.surface.js` file is added without declaring which test layer covers it.
 - 2026-05-31 clean PDP routing: `PRODUCT` `PAGE_VIEW` no longer loads the `listing-badges-*` entry chunk on clean PDPs. The listing surface accepts page events only for listing-like page types (`INDEX`, `CATEGORY`, `BRAND`, `SEARCH`), while observer and fallback probes ignore widget-owned hash/query links such as the PDP badge's `#renuvex-reviews` anchor. Listing event and product-card fallback paths remain covered by network smoke.
 - 2026-06-01 `PAGE_VIEW` semantic dedupe: same-page duplicate `PAGE_VIEW` events inside 800 ms are still suppressed, but distinct fast transitions are no longer delayed until the 2-second listing fallback. The network smoke suite covers both outcomes.

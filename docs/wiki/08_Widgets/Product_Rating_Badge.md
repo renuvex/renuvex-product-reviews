@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-30
-last_verified: 2026-07-30
+updated: 2026-08-10
+last_verified: 2026-08-10
 tags:
   - widget
   - badge
@@ -17,12 +17,13 @@ related:
   - "[[ADR_0017_Badge_Architecture]]"
   - "[[ADR_0019_Icon_Sprite_Rendering]]"
   - "[[ADR_0024_Badge_Review_Surface_Separation]]"
+  - "[[ADR_0038_Runtime_Attested_Storefront_Placement]]"
 ---
 
 # Product Rating Badge
 
 ## Summary
-Small inline star rating and count shown on the product detail page near the product title. The surface entry is [src/widget/rating-badge/index.js](src/widget/rating-badge/index.js), DOM injection lives in [src/widget/rating-badge/inject.js](src/widget/rating-badge/inject.js), and placement uses [product-title.js](src/widget/core/product-title.js). Product `AggregateRating` JSON-LD is no longer owned by this badge; it lives in the independent [[Structured_Data_And_Rich_Snippets]] surface.
+Small inline star rating and count shown on the product detail page near the product title. The surface entry is [src/widget/rating-badge/index.js](src/widget/rating-badge/index.js), DOM injection lives in [src/widget/rating-badge/inject.js](src/widget/rating-badge/inject.js), and production placement proof lives in [capability.js](src/widget/placement/capability.js). Product `AggregateRating` JSON-LD is no longer owned by this badge; it lives in the independent [[Structured_Data_And_Rich_Snippets]] surface.
 
 ## Settings (`badge` widgetId)
 Settings live under `WidgetSettings.settings` with `widgetId='badge'`. Source schema: [catalog.ts](src/lib/widgets/catalog.ts).
@@ -44,13 +45,13 @@ and passes it into `injectRatingBadge`; the star color is applied through the
 
 ## Where it appears
 - Product detail page only.
-- Anchored next to the product title via product-title heuristic.
+- Anchored next to the exact title/mount pair returned by the selected strict placement provider.
 - Updated when the product detail loads or SPA-nav fires the observer.
-- The product-title badge is a separate `badge` feature and its own lazy surface. It auto-places on the product title and is gated by the `badge` widget toggle plus `autoPlacementEnabled`, not by the review-section mount.
+- The product-title badge is a separate `badge` feature and lazy surface. It is gated by the merchant toggle, versioned placement policy, exact proof, and post-request stale revalidation; it is independent of the review-section mount.
 - The review section is opt-in through `<div data-renuvex-widget="reviews"></div>`. If that mount is missing, the review section does not render, but the PDP title badge can still render. Related bug: [[Bug_Product_Widget_Missing_Auto_Mount]].
 
 ## Notes
-- If a merchant theme has unusual title markup, the badge may attach to the wrong element. The fix is in [product-title.js](src/widget/core/product-title.js).
+- Unsupported, partial, or ambiguous title markup is a no-op. Add or amend a strict adapter only after cross-theme negative fixtures and browser availability evidence; do not widen `core/product-title.js`, which is retained for preview only.
 - The badge uses `/api/public/ratings?productIds=<id>` instead of the full review payload. That keeps badge-only PDPs off the heavy review-section fetch/render path. See [[ADR_0024_Badge_Review_Surface_Separation]].
 - Star glyphs render via a shared SVG `<symbol>` sprite (`<use>` into `#renuvex-pr-icon-sprite`), not inline `<path>`. The badge is a real link named by an sr-only `aria-labelledby` span (no `role="figure"`, no static `id`); alignment comes from `data-renuvex-align`. See [[ADR_0019_Icon_Sprite_Rendering]].
 - Admin customization uses the shared production-renderer iframe. The `Ürün`
@@ -64,7 +65,7 @@ and passes it into `injectRatingBadge`; the star color is applied through the
 - [src/widget/rating-badge/index.js](src/widget/rating-badge/index.js)
 - [src/widget/rating-badge/inject.js](src/widget/rating-badge/inject.js)
 - [src/widget/surfaces/rating-badge.surface.js](src/widget/surfaces/rating-badge.surface.js)
-- [src/widget/core/product-title.js](src/widget/core/product-title.js)
+- [src/widget/placement/capability.js](src/widget/placement/capability.js)
 - [src/widget/core/state.js](src/widget/core/state.js)
 
 ## Obsidian Links

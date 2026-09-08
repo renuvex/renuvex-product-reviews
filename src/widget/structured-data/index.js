@@ -9,6 +9,11 @@ import { fetchRatingSummary } from '../core/rating-summary.js';
 import { fetchSettings } from '../core/settings.js';
 import { isAutoPlacementEnabled, isReviewsMountEnabled } from '../themes/current-adapter.js';
 import { buildProductAggregateRatingJsonLd, cleanupStructuredDataDom, injectProductAggregateRatingJsonLd } from './jsonld.js';
+import {
+  getStorefrontContextEpoch,
+  isStorefrontContextCurrent,
+  onStorefrontContextInvalidated,
+} from '../core/context-epoch.js';
 
 var VISIBLE_SURFACE_WAIT_MS = 4000;
 
@@ -45,11 +50,15 @@ function waitForVisibleRatingSurface() {
   return new Promise(function (resolve) {
     var done = false;
     var observer = null;
+    var timer = null;
+    var unsubscribe = onStorefrontContextInvalidated(function () { finish(false); });
 
     function finish(value) {
       if (done) return;
       done = true;
       if (observer) observer.disconnect();
+      if (timer) clearTimeout(timer);
+      unsubscribe();
       resolve(value);
     }
 
@@ -57,14 +66,15 @@ function waitForVisibleRatingSurface() {
       if (hasVisibleRatingSurface()) finish(true);
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
-    setTimeout(function () {
+    timer = setTimeout(function () {
       finish(hasVisibleRatingSurface());
     }, VISIBLE_SURFACE_WAIT_MS);
   });
 }
 
-async function renderInternal(productId, productName) {
+async function renderInternal(productId, productName, expectedEpoch) {
   var startedPathname = currentPathname();
+  var epoch = expectedEpoch || getStorefrontContextEpoch();
   cleanupStructuredDataDom();
 
   var response = await fetchSettings();
@@ -85,12 +95,14 @@ async function renderInternal(productId, productName) {
 
   if (!reviewsSurfaceExpected && !badgeSurfaceExpected) return;
 
-  var summary = await fetchRatingSummary(productId);
-  if (!summary) return;
-
-  if (startedPathname && currentPathname() !== startedPathname) return;
   var visible = await waitForVisibleRatingSurface();
   if (!visible) return;
+  if (!isStorefrontContextCurrent(epoch)) return;
+  if (startedPathname && currentPathname() !== startedPathname) return;
+
+  var summary = await fetchRatingSummary(productId);
+  if (!summary) return;
+  if (!isStorefrontContextCurrent(epoch)) return;
   if (startedPathname && currentPathname() !== startedPathname) return;
 
   injectProductAggregateRatingJsonLd(buildProductAggregateRatingJsonLd({
@@ -101,10 +113,10 @@ async function renderInternal(productId, productName) {
   }));
 }
 
-export async function renderStructuredData(productId, productName) {
+export async function renderStructuredData(productId, productName, expectedEpoch) {
   if (!productId) return;
   try {
-    await renderInternal(productId, productName);
+    await renderInternal(productId, productName, expectedEpoch);
   } catch (err) {
     console.error('[renuvex-pr] structured data surface error:', err);
   }

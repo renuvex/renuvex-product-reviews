@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-17
-updated: 2026-08-09
-last_verified: 2026-08-09
+updated: 2026-08-10
+last_verified: 2026-08-10
 confidence: high
 tags:
   - adr
@@ -26,7 +26,8 @@ source_files:
   - "src/lib/product-snapshots.ts"
   - "src/lib/product-reconciliation.ts"
   - "src/widget/core/storefront-context.js"
-  - "src/widget/listing-badges/collect.js"
+  - "src/widget/placement/capability.js"
+  - "src/widget/listing-badges/index.js"
   - "src/widget/listing-badges/ratings.js"
   - "prisma/models/product-lifecycle.prisma"
 ---
@@ -69,8 +70,9 @@ Where:
 Listing/search badges now prefer the canonical path:
 1. `core/storefront-context.js` records `slug -> { productId, name }` from
    `VIEW_LISTING` and `VIEW_SEARCH_RESULTS`.
-2. `listing-badges/collect.js` merges DOM-discovered slugs with event-provided
-   product ids.
+2. `placement/capability.js` attests an exact product card and resolves identity
+   from the current event map when available; otherwise it retains only the
+   lifecycle-safe slug hint.
 3. `listing-badges/ratings.js` calls `/api/public/ratings?productIds=...` for
    products that have ids.
 4. `/api/public/ratings` groups approved reviews by `Review.productId`.
@@ -140,7 +142,7 @@ fields define identity.
 - [src/lib/product-snapshots.ts](src/lib/product-snapshots.ts)
 - [src/widget/core/storefront-context.js](src/widget/core/storefront-context.js)
 - [src/widget/core/state.js](src/widget/core/state.js)
-- [src/widget/listing-badges/collect.js](src/widget/listing-badges/collect.js)
+- [src/widget/placement/capability.js](src/widget/placement/capability.js)
 - [src/widget/listing-badges/ratings.js](src/widget/listing-badges/ratings.js)
 - [src/widget/listing-badges/index.js](src/widget/listing-badges/index.js)
 - [prisma/models/reviews.prisma](prisma/models/reviews.prisma)

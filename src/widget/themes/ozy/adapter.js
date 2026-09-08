@@ -1,28 +1,46 @@
-// themes/ozy/adapter.js - verified Ozy theme fallback adapter.
+// themes/ozy/adapter.js - Ozy placement adapter.
 //
 // ikas has no stable storefront section data-* contract today. Storefront Events
-// provide page/product context; DOM selectors remain a theme fallback.
+// provide page/product context; strict DOM selectors provide placement proof.
 
 import {
   THEME_LISTING_TITLE_SELECTOR,
   THEME_PRODUCT_TITLE_SELECTOR,
   THEME_MODAL_SELECTOR,
   THEME_MODAL_TITLE_SELECTOR,
-  THEME_SINGLE_PRODUCT_CONTAINER,
-  THEME_SINGLE_PRODUCT_NAME_LINK,
-  THEME_BANNER_CONTAINERS,
-  THEME_PRODUCT_CONTAINERS,
+  THEME_STRICT_PRODUCT_CONTAINERS,
 } from './theme.js';
 
 export var ozyThemeAdapter = {
   key: 'ozy',
+  runtimeDetectable: true,
 
-  findListingContainers: function () {
-    return Array.from(document.querySelectorAll(THEME_PRODUCT_CONTAINERS));
+  findStrictProductTitles: function () {
+    return Array.from(document.querySelectorAll(THEME_PRODUCT_TITLE_SELECTOR));
   },
 
-  findListingTitle: function (scope) {
-    return scope.querySelector(THEME_LISTING_TITLE_SELECTOR);
+  matchesStrictProductTitle: function (element) {
+    return !!(element && element.matches && element.matches(THEME_PRODUCT_TITLE_SELECTOR));
+  },
+
+  findStrictListingContainers: function () {
+    return Array.from(document.querySelectorAll(THEME_STRICT_PRODUCT_CONTAINERS));
+  },
+
+  findStrictListingTitles: function (container) {
+    return container ? Array.from(container.querySelectorAll(THEME_LISTING_TITLE_SELECTOR)) : [];
+  },
+
+  matchesStrictListingTitle: function (element) {
+    return !!(element && element.matches && element.matches(THEME_LISTING_TITLE_SELECTOR));
+  },
+
+  findStrictModals: function () {
+    return Array.from(document.querySelectorAll(THEME_MODAL_SELECTOR));
+  },
+
+  matchesStrictModalTitle: function (element) {
+    return !!(element && element.matches && element.matches(THEME_MODAL_TITLE_SELECTOR));
   },
 
   findProductTitle: function (productName) {
@@ -36,39 +54,8 @@ export var ozyThemeAdapter = {
     return candidates[0] || null;
   },
 
-  findModal: function () {
-    return document.querySelector(THEME_MODAL_SELECTOR);
-  },
-
   findModalTitle: function (modal) {
     return modal ? modal.querySelector(THEME_MODAL_TITLE_SELECTOR) : null;
-  },
-
-  isNavigationLink: function (a) {
-    return !!(a.closest('header') || a.closest('nav'));
-  },
-
-  isCartLink: function (a) {
-    return !!(a.closest('[class*="basket"]') || a.closest('[class*="cart"]'));
-  },
-
-  isBannerLink: function (a) {
-    return !!a.closest(THEME_BANNER_CONTAINERS);
-  },
-
-  isDisallowedSingleProductLink: function (a, currentSlug, slug) {
-    if (a.closest(THEME_SINGLE_PRODUCT_CONTAINER) && !a.closest(THEME_SINGLE_PRODUCT_NAME_LINK)) {
-      return true;
-    }
-    return slug === currentSlug && !!a.closest(THEME_SINGLE_PRODUCT_NAME_LINK);
-  },
-
-  findSingleProductContainer: function () {
-    return document.querySelector(THEME_SINGLE_PRODUCT_CONTAINER);
-  },
-
-  isInsideSingleProductContainer: function (el) {
-    return !!(el && el.closest && el.closest(THEME_SINGLE_PRODUCT_CONTAINER));
   },
 
   // Optional badge mount-point override for themes whose card layout breaks

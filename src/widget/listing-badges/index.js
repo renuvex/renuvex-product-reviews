@@ -5,17 +5,27 @@ import { fetchSettings } from '../core/settings.js';
 import { getIconFromSettings } from '../icons/index.js';
 import { SIZE_MAP, ensureBadgeTokens } from '../core/badge.js';
 import { isAutoPlacementEnabled } from '../themes/current-adapter.js';
-import { collectProductTargets } from './collect.js';
 import { fetchRatings } from './ratings.js';
-import { clearBadgePlaceholders, disconnectListingBadgeRemovalObservers, injectBadges, reserveBadgeSlots } from './inject.js';
+import {
+  clearStrictBadgePlaceholders,
+  disconnectStrictListingObservers,
+  injectStrictBadges,
+  reserveStrictBadgeSlots,
+} from './strict-inject.js';
+import { collectListingPlacementProofs, validateListingPlacementProof } from '../placement/capability.js';
+import { getStorefrontContextEpoch, isStorefrontContextCurrent } from '../core/context-epoch.js';
+import {
+  markListingProofRequestsInFlight,
+  settleListingProofRequests,
+} from '../core/listing-proof-request-state.js';
 
 function cleanupListingBadges() {
-  disconnectListingBadgeRemovalObservers();
+  disconnectStrictListingObservers();
   document.querySelectorAll('[data-renuvex-listing-badge]').forEach(function(el) { el.remove(); });
   document.querySelectorAll('[data-renuvex-badge]').forEach(function(el) {
     el.removeAttribute('data-renuvex-badge');
   });
-  clearBadgePlaceholders();
+  clearStrictBadgePlaceholders();
 }
 
 export async function renderListingBadges() {
@@ -24,6 +34,7 @@ export async function renderListingBadges() {
   ls.rendered = true;
   ls.inProgress = true;
   try {
+    var epoch = getStorefrontContextEpoch();
     var doCleanup = ls.navCleanup;
     if (doCleanup) ls.navCleanup = false;
 
@@ -39,13 +50,8 @@ export async function renderListingBadges() {
       return;
     }
 
-    // ADR_0022 + ADR_0023 capability gate (top-level). Skip ALL heavy work
-    // (DOM walk via collectProductTargets, /api/public/ratings network call,
-    // ensureBadgeTokens, placeholder reservation) on themes that have not
-    // been allowlisted for auto-placement. The defense-in-depth gates inside
-    // inject.js reserveBadgeSlots / injectBadges remain — they catch direct
-    // programmatic callers — but the entry function gate is what stops the
-    // wasted work on every category page visit by unsupported-theme merchants.
+    // Skip all heavy work until a valid placement policy is applied. Strict
+    // proofs below independently gate the ratings request and DOM mutation.
     if (!isAutoPlacementEnabled()) {
       if (doCleanup) cleanupListingBadges();
       ls.rendered = false;
@@ -56,10 +62,19 @@ export async function renderListingBadges() {
     // reviewStarColor). Listing rozetleri PDP render.js'e bağlı olmadan kendi
     // yıldız renk değişkenini kurar — soğuk listing girişinde de doğru renk.
     // Dolu + boş yıldız (outline) tek --renuvex-pr-review-star-color'dan beslenir.
-    var productTargets = collectProductTargets();
+    var placementProofs = collectListingPlacementProofs(epoch);
+    var productTargets = {};
+    placementProofs.forEach(function (proof) {
+      if (!productTargets[proof.slug] || (!productTargets[proof.slug].productId && proof.productId)) {
+        productTargets[proof.slug] = { productId: proof.productId, name: proof.productName };
+      }
+    });
     var slugs = Object.keys(productTargets);
     if (!slugs.length) { ls.rendered = false; return; }
-    var ratingsPromise = fetchRatings(productTargets).catch(function() { return {}; });
+    markListingProofRequestsInFlight(placementProofs);
+    var ratingsPromise = fetchRatings(productTargets).catch(function() {
+      return { ratings: {}, resolvedTargets: {} };
+    });
 
     var reviewsSettings = widgets.reviews || {};
     var iconPair = getIconFromSettings(reviewsSettings);
@@ -85,22 +100,27 @@ export async function renderListingBadges() {
     }
     ensureBadgeTokens(sizes, mobileSizes);
 
-    var slugNameMap = {};
-    slugs.forEach(function(slug) {
-      slugNameMap[slug] = productTargets[slug] ? productTargets[slug].name : null;
-    });
-
     // Remove old badges before reserving slots for the new page/listing.
     if (doCleanup) {
       cleanupListingBadges();
     }
 
     // Reserve stable vertical space while rating data is still in flight, then
-    // replace placeholders with real badges in injectBadges().
-    reserveBadgeSlots(slugNameMap);
+    // replace placeholders only when the same proofs remain current.
+    reserveStrictBadgeSlots(placementProofs);
 
-    var ratings = await ratingsPromise;
-    injectBadges(slugNameMap, ratings, iconPair, badgeSettings);
+    var ratingResult = await ratingsPromise;
+    if (!isStorefrontContextCurrent(epoch)) {
+      clearStrictBadgePlaceholders();
+      return;
+    }
+    settleListingProofRequests(
+      placementProofs,
+      ratingResult.ratings,
+      ratingResult.resolvedTargets,
+      validateListingPlacementProof,
+    );
+    injectStrictBadges(placementProofs, ratingResult.ratings, iconPair, badgeSettings);
   } finally {
     ls.inProgress = false;
     if (ls.queued) {

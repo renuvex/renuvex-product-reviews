@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-09
-last_verified: 2026-08-09
+updated: 2026-08-10
+last_verified: 2026-08-10
 confidence: high
 tags:
   - widget
@@ -20,16 +20,17 @@ related:
   - "[[ADR_0016_Rating_Visual_System]]"
   - "[[ADR_0017_Badge_Architecture]]"
   - "[[ADR_0019_Icon_Sprite_Rendering]]"
+  - "[[ADR_0038_Runtime_Attested_Storefront_Placement]]"
 source_files:
   - "src/widget/listing-badges/index.js"
-  - "src/widget/listing-badges/dom.js"
-  - "src/widget/listing-badges/collect.js"
   - "src/widget/listing-badges/ratings.js"
   - "src/widget/listing-badges/inject.js"
+  - "src/widget/listing-badges/strict-inject.js"
   - "src/widget/core/badge.js"
   - "src/widget/core/helpers.js"
-  - "src/widget/core/link-scope.js"
   - "src/widget/core/listing-viewport-gate.js"
+  - "src/widget/core/context-epoch.js"
+  - "src/widget/placement/capability.js"
   - "src/widget/observer.js"
   - "src/widget/core/storefront-context.js"
   - "src/app/api/public/ratings/route.ts"
@@ -39,26 +40,26 @@ source_files:
   - "src/widget/themes/ozy/adapter.js"
   - "src/widget/themes/ozy/theme.js"
   - "tests/widget-network-smoke.spec.ts"
+  - "tests/widget-placement-capability.spec.ts"
   - "tests/widget-harness.ts"
 ---
 
 # Listing Rating Widget
 
 ## Summary
-Star+count badge injected into product cards on collection / search / category pages. Drives social proof outside the PDP. Implemented under [src/widget/listing-badges/](src/widget/listing-badges/). As of Phase 2 implementation work on 2026-05-17, listing badges are lazy-loaded through the surface registry instead of being part of the initial runtime.
+Star+count badge injected into strictly attested product cards on collection, search, homepage, and slider surfaces. It is lazy-loaded through the surface registry. ADR 0038 separates product identity from DOM placement: policy selects a placement provider, then that provider must return an exact card/title/mount proof before any ratings request.
 
 ## Components
 | File | Role |
 |---|---|
-| [index.js](src/widget/listing-badges/index.js) | Bootstrap (decide if current page is a listing page) |
-| [dom.js](src/widget/listing-badges/dom.js) | Scoped link discovery from theme product containers, with `main` fallback instead of whole-document scans |
-| [core/link-scope.js](src/widget/core/link-scope.js) | Shared scoped link collection used by listing badges and the MutationObserver re-render gate |
-| [collect.js](src/widget/listing-badges/collect.js) | Build product targets from scoped candidate links and merge Storefront Events product ids |
+| [index.js](src/widget/listing-badges/index.js) | Collect strict proofs, batch rating reads, revalidate proofs, and inject |
+| [placement/capability.js](src/widget/placement/capability.js) | Select the permitted adapter and produce exact, ephemeral card/link/title/mount proofs |
 | [ratings.js](src/widget/listing-badges/ratings.js) | Bulk fetch `/api/public/ratings?productIds=...`; falls back to slug only when no product id exists |
-| [inject.js](src/widget/listing-badges/inject.js) | Insert star+count badge into each card |
+| [strict-inject.js](src/widget/listing-badges/strict-inject.js) | Production insertion from a still-current proof; never rediscovers a generic target |
+| [inject.js](src/widget/listing-badges/inject.js) | Preview-only fixture insertion helper |
 | [listing-badge.surface.js](src/widget/surfaces/listing-badge.surface.js) | Lazy surface descriptor for page/listing/search contexts |
 | [core/listing-viewport-gate.js](src/widget/core/listing-viewport-gate.js) | Near-viewport gate for below-the-fold listing/product-slider badge hydration |
-| [themes/ozy/adapter.js](src/widget/themes/ozy/adapter.js) | Ozy fallback placement adapter for container/title/ignore rules |
+| [themes/ozy/adapter.js](src/widget/themes/ozy/adapter.js) | Explicitly runtime-detectable Ozy adapter with bounded strict selectors |
 
 ## API
 - Primary endpoint: `GET /api/public/ratings?storeId=<id>&productIds=a,b,c` ([src/app/api/public/ratings/route.ts](src/app/api/public/ratings/route.ts)).
@@ -69,8 +70,8 @@ Star+count badge injected into product cards on collection / search / category p
 
 ## Identity Contract
 - Canonical review product identity is `(storeId, productId)`; see [[ADR_0015_Canonical_Product_Identity]].
-- `core/storefront-context.js` records `VIEW_LISTING` and `VIEW_SEARCH_RESULTS` `productDetails[]` as `slug -> { productId, name }`.
-- `slug` and `productName` are display snapshots only. They are still useful for DOM matching and modal title matching, but they are not the primary review join key when `productId` is present.
+- `core/storefront-context.js` records current-epoch `VIEW_LISTING` and `VIEW_SEARCH_RESULTS` `productDetails[]` as `slug -> { productId, name }`.
+- A current event match supplies canonical product identity. A strictly attested card that is not present in the current event map may use the lifecycle-safe slug resolver; DOM title text never becomes canonical identity.
 
 ## Performance notes
 - Single API call per listing page = small fixed cost regardless of # of products on screen.
@@ -78,9 +79,17 @@ Star+count badge injected into product cards on collection / search / category p
   fallback is `no-store` in backend/Worker source and is not written to widget
   session cache because lifecycle evidence can change independently of the slug.
   Live Worker no-store acceptance remains a separate deployment gate.
-- DOM discovery is scoped to theme product containers first, then `main/[role=main]` fallback; it no longer starts from every link in the whole document.
-- MutationObserver re-render checks use the same scoped discovery path, so lazy product-card changes do not trigger a whole-document `document.querySelectorAll('a[href]')` scan.
-- Below-the-fold listing/product-slider candidates are registered with `IntersectionObserver` through [core/listing-viewport-gate.js](src/widget/core/listing-viewport-gate.js). The default `rootMargin` is `900px 0px`: near/above-viewport cards hydrate at current speed, while far below-the-fold cards do not load the `listing-badges-*` chunk or call `/api/public/ratings*` until the shopper scrolls near them. A passive scroll/resize check exists only as a non-polling safety fallback if the observer callback does not fire.
+- Production discovery is bounded to strict containers exposed by explicitly runtime-detectable adapters. There is no `main/[role=main]`, class-substring, whole-document link, or title-text placement fallback.
+- The existing MutationObserver remains the single debounced coordinator. It triggers re-attestation for lazy cards; it is not itself placement authority.
+- The coordinator records only proof-scoped request state in a `WeakMap`: an
+  exact card proof can be `in_flight`, and a successful zero/omitted result can
+  be `empty` for that same DOM identity and context epoch. Carousel/style
+  mutations therefore cannot queue the same slug batch repeatedly while it is
+  running or after a valid empty response. Network/HTTP failures are not marked
+  resolved, while a recycled link, changed slug/product identity, replaced
+  title/mount, or new epoch naturally invalidates the state. No slug rating is
+  written to `sessionStorage`, edge cache, or a cross-card cache.
+- Below-the-fold listing/product-slider candidates are registered with `IntersectionObserver` through [core/listing-viewport-gate.js](src/widget/core/listing-viewport-gate.js). The default `rootMargin` is `400px 0px`: near/above-viewport cards hydrate at current speed, while far below-the-fold cards do not load the `listing-badges-*` chunk or call `/api/public/ratings*` until the shopper scrolls near them. A passive scroll/resize check exists only as a non-polling safety fallback if the observer callback does not fire.
 - Badge slots are reserved before rating data finishes loading and replaced in place when real ratings arrive, reducing listing-card layout shift.
 - Listing badge slots mount as siblings immediately after product title elements by default. There is no publicApiKey allowlist or legacy in-title branch; supported theme exceptions must use the adapter mount-point override.
 
@@ -94,9 +103,7 @@ CSS variable before injecting badges. Badge stars are no longer hardcoded to
 `star:classic`. See [[ADR_0016_Rating_Visual_System]].
 
 ## Notes
-- Card discovery heuristics (in `collect.js`) vary by theme. Edge cases:
-  - Themes that lazy-load cards with IntersectionObserver — handled by our MutationObserver.
-  - Themes that render slugs differently from product URLs — verify slug parsing.
+- Strict signatures vary by adapter. Themes that lazy-load cards are handled by the existing MutationObserver, but an unsupported or ambiguous signature remains a no-op.
 - If a card moves (e.g., theme reflows), the badge may end up in a stale position. Watch for re-injection logic.
 - DOM-only fallback is fail-closed and snapshot-backed. Missing, stale,
   unknown, conflicting, or ambiguous lifecycle evidence produces no badge; it
@@ -104,15 +111,13 @@ CSS variable before injecting badges. Badge stars are no longer hardcoded to
 - Cold direct entry to home/category/search pages once rendered listing badges as `avg (count)` text without star icons. Root cause: the shared star CSS was injected only by the PDP `render.js` path. Fixed 2026-05-17: `core/badge.js` self-injects badge styles via `ensureBadgeStyles()`, independent of the PDP path. See [[Bug_Listing_Badge_Stars_Direct_Load]].
 - The full Phase 1 listing audit checklist lives in [[Phase_1_Widget_Runtime_Audit]].
 
-## Selector Allowlist / Blocklist Risk
+## Placement Safety Contract
 
-Current listing badge placement is guarded by an Ozy fallback adapter:
-
-- Allowlist seed: [THEME_PRODUCT_CONTAINERS](src/widget/themes/ozy/theme.js) limits injection to known product-list, slider, infinite-scroll, single-product, and product-block containers.
-- Blocklist methods in [themes/ozy/adapter.js](src/widget/themes/ozy/adapter.js) skip header/nav, basket/cart, banner/hero/marquee, and most non-title links inside the single-product section.
-- Title detection still uses the adapter title selector first, then generic `productTitle` / `productName` class patterns, exact product-name text, and structural leaf-node fallback in [inject.js](src/widget/listing-badges/inject.js).
-
-This protects against obvious footer/menu/header false positives, but it is not a complete cross-theme contract. If a merchant adds a new section with product-name links, or a theme reuses product-like classes in editorial/menu/footer areas, badges may be injected in unrelated places or missed in valid product cards. Phase 2 moved the rules into a structured adapter/fallback layer, but dev-store/browser verification still has to prove that cold home/category/search, SPA navigation, lazy sliders, and merchant-added sections behave correctly with the ESM split runtime.
+- A public `placementPolicy` selects `provider_verified`, `runtime_attestation`, or `disabled`; it does not carry a second adapter key.
+- Both enabled modes require the same strict target proof. Provider evidence selects an adapter; it does not authorize generic DOM fallback.
+- Ozy is currently the only runtime-detectable adapter. Generic is never a detector, multiple matches are ambiguous, and either case produces no request or mutation.
+- A proof carries the exact card, product link, title, mount point, identity, and context epoch. Injection revalidates those fields after the asynchronous rating response.
+- A new adapter needs a bounded signature, cross-theme negative fixtures, browser availability tests, and an explicit registry opt-in. It does not join runtime scanning merely by existing.
 
 ## Related Source Files
 - [src/widget/listing-badges/](src/widget/listing-badges/)
@@ -133,6 +138,11 @@ This protects against obvious footer/menu/header false positives, but it is not 
 - [[ADR_0015_Canonical_Product_Identity]]
 
 ## Change Log
+- 2026-09-08: Bound listing request coordination to the exact placement proof.
+  Repeated carousel/style mutations no longer fan out duplicate slug reads
+  while a batch is in flight or after a successful empty response; failed
+  requests remain retryable and lifecycle-safe slug results remain uncached.
+- 2026-08-10: ADR 0038 replaced broad production listing discovery with strict proof-carrying placement, current-epoch event identity plus lifecycle-safe slug fallback, and safety-first legacy runtime cutover. The existing observer remains the only listing coordinator; preview keeps a separate fixture helper.
 - 2026-08-09: Corrected the lifecycle identity/cache contract. Slug-only reads
   require one fresh unambiguous active snapshot, never query historical
   `Review.slug`, and remain outside edge/session caches. Live Worker acceptance

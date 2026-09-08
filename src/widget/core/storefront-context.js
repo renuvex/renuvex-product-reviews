@@ -12,7 +12,13 @@
 //   https://builders.ikas.com/docs/storefront-events
 //   Bkz. docs/wiki/07_Ikas/Ikas_Storefront_Events.md ve ADR_0013.
 
-import { renuvexPrProductMap, renuvexPrSlugMap } from './state.js';
+import { clearStorefrontProductMaps, renuvexPrProductMap, renuvexPrSlugMap } from './state.js';
+import {
+  getStorefrontContextEpoch,
+  noteStorefrontProduct,
+  noteStorefrontRoute,
+  onStorefrontContextInvalidated,
+} from './context-epoch.js';
 
 // ── Olay tipi sabitleri — TEK kaynak ─────────────────────────────────────────
 // Resmî olay tipleri (IKAS_EVENT_TYPE): PAGE_VIEW, PRODUCT_VIEW, ADD_TO_CART,
@@ -36,6 +42,7 @@ var IKAS_EVENT = Object.freeze({
 // ── Modül durumu ─────────────────────────────────────────────────────────────
 var initStarted = false;
 var subscribed = false;
+var epochSubscriptionAttached = false;
 
 var latestProduct = null;   // { id, name } | null — son bilinen ürün
 var latestPage = null;      // { pageType } | null — son bilinen sayfa
@@ -56,6 +63,15 @@ var listingViewSubs = [];
 export function initStorefrontContext() {
   if (initStarted) return;
   initStarted = true;
+  if (!epochSubscriptionAttached) {
+    epochSubscriptionAttached = true;
+    onStorefrontContextInvalidated(function () {
+      latestProduct = null;
+      latestPage = null;
+      latestListing = null;
+      clearStorefrontProductMaps();
+    });
+  }
   attachIkasEvents();
   startDomProductDetection();
 }
@@ -101,6 +117,7 @@ export function getCurrentContext() {
   return {
     pageType: latestPage ? latestPage.pageType : null,
     product: getProductContext(),
+    epoch: getStorefrontContextEpoch(),
   };
 }
 
@@ -131,8 +148,10 @@ function handleIkasEvent(event) {
   if (!event) return;
 
   if (event.type === IKAS_EVENT.LISTING_VIEW || event.type === IKAS_EVENT.SEARCH_RESULTS) {
+    noteStorefrontRoute();
     var products = event.data && event.data.productDetails;
     if (Array.isArray(products)) {
+      clearStorefrontProductMaps();
       products.forEach(function (p) {
         var slug = p && (p.slug || (p.metaData && p.metaData.slug));
         if (slug && p.name) {
@@ -145,12 +164,13 @@ function handleIkasEvent(event) {
           };
         }
       });
-      emitListingView({ eventType: event.type, products: products });
+      emitListingView({ eventType: event.type, products: products, epoch: getStorefrontContextEpoch() });
     }
     return;
   }
 
   if (event.type === IKAS_EVENT.PRODUCT_VIEW) {
+    noteStorefrontRoute();
     var pd = event.data && event.data.productDetail;
     var productId = pd && pd.id;
     var productName = pd && pd.name;
@@ -161,6 +181,7 @@ function handleIkasEvent(event) {
   }
 
   if (event.type === IKAS_EVENT.PAGE_VIEW) {
+    noteStorefrontRoute();
     var page = buildPageContext(event);
     if (isDuplicatePageView(page)) return;
     latestPage = page;
@@ -173,6 +194,7 @@ function buildPageContext(event) {
   return {
     pageType: (event.data && event.data.pageType) || null,
     routeKey: getCurrentRouteKey(),
+    epoch: getStorefrontContextEpoch(),
   };
 }
 
@@ -204,9 +226,10 @@ function getCurrentRouteKey() {
 // ── Emit ─────────────────────────────────────────────────────────────────────
 
 function emitProductView(product) {
-  latestProduct = product;
+  var productEpoch = noteStorefrontProduct(product && product.id);
+  latestProduct = Object.assign({}, product, { epoch: productEpoch });
   productViewSubs.forEach(function (cb) {
-    try { cb(product); } catch (err) { console.error('[renuvex-pr] onProductView callback error:', err); }
+    try { cb(latestProduct); } catch (err) { console.error('[renuvex-pr] onProductView callback error:', err); }
   });
 }
 

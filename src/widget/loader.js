@@ -15,7 +15,7 @@ import {
 import { mountMatching, mountSurfaceByKey } from './core/registry.js';
 import { registerCoreSurfaces } from './surfaces/index.js';
 import { scheduleListingBadgeHydration } from './core/listing-viewport-gate.js';
-import { hasListingFallbackCandidates } from './listing-badges/fallback-candidates.js';
+import { hasRuntimeDetectableListingSignature } from './placement/capability.js';
 import {
   isPreviewContext,
   isPreviewRenderMessage,
@@ -117,14 +117,11 @@ function initWidget() {
     mountMatching({ trigger: 'listing-products', listing: listing });
   });
 
-  // 6) Fallback for older storefronts where PAGE_VIEW is missing or late.
-  // ADR_0024: guard against firing on pages with no listing-shaped DOM. The
-  // probe requires at least two same-origin product-like links with nearby media,
-  // which is stricter than the old generic-link check but still conservative.
-  // The listing entry chunk keeps its own settings/theme gates as defense in depth.
+  // 6) Fallback for storefronts where PAGE_VIEW is missing or late. Only an
+  // explicit runtime-detectable adapter signature can schedule hydration.
   setTimeout(function () {
     if (ls.rendered) return;
-    if (!hasListingFallbackCandidates()) return;
+    if (!hasRuntimeDetectableListingSignature()) return;
     scheduleListingBadgeHydration().catch(function (err) {
       console.error('[renuvex-pr] listing badge fallback schedule error:', err);
     });

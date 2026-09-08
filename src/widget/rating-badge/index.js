@@ -16,8 +16,8 @@
 //
 // Gates (ADR_0023 layering):
 // 1. widgets.badge.enabled === false → return (settings layer)
-// 2. !isAutoPlacementEnabled() → return (capability layer, ADR_0022). Defense
-//    in depth; injectRatingBadge also enforces this.
+// 2. !isAutoPlacementEnabled() → return (ADR_0038 policy layer). Defense in
+//    depth; injectRatingBadge also enforces this.
 // 3. No mount/anchor gate — badge is auto-placed by definition.
 
 import { fetchRatingSummary } from '../core/rating-summary.js';
@@ -25,6 +25,11 @@ import { fetchSettings } from '../core/settings.js';
 import { getIconFromSettings } from '../icons/index.js';
 import { isAutoPlacementEnabled } from '../themes/current-adapter.js';
 import { cleanupPdpRatingBadgeDom, injectRatingBadge } from './inject.js';
+import {
+  validatePdpPlacementProof,
+  waitForPdpPlacementProof,
+} from '../placement/capability.js';
+import { getStorefrontContextEpoch, isStorefrontContextCurrent } from '../core/context-epoch.js';
 
 var BADGE_FALLBACK = { enabled: true, size: 'medium' };
 
@@ -41,8 +46,9 @@ function currentPathname() {
   }
 }
 
-async function renderInternal(productId, productName) {
+async function renderInternal(productId, productName, expectedEpoch) {
   var startedPathname = currentPathname();
+  var epoch = expectedEpoch || getStorefrontContextEpoch();
   cleanupPdpRatingBadgeDom();
 
   var response = await fetchSettings();
@@ -53,10 +59,12 @@ async function renderInternal(productId, productName) {
   // Settings-layer gate (ADR_0023): merchant disabled the badge feature.
   if (badgeSettings.enabled === false) return;
 
-  // Capability-layer gate (ADR_0022 defense in depth). injectRatingBadge also
-  // checks this but failing fast here avoids the rating fetch on unsupported
-  // themes — the same logic the listing-badges entry function uses.
+  // ADR_0038 policy gate. Failing fast avoids a rating request before the
+  // selected placement provider has produced a strict target proof.
   if (!isAutoPlacementEnabled()) return;
+
+  var placementProof = await waitForPdpPlacementProof(productId, productName, epoch);
+  if (!placementProof || !validatePdpPlacementProof(placementProof)) return;
 
   // Icon comes from the REVIEWS widget settings (ADR_0016 — one global rating
   // visual; badge and review surfaces share reviewIcon/reviewStarColor).
@@ -67,22 +75,26 @@ async function renderInternal(productId, productName) {
   var summary = await fetchRatingSummary(productId);
   if (!summary) return; // No reviews yet or fetch failed — silent skip.
 
+  if (!isStorefrontContextCurrent(epoch)) return;
   if (startedPathname && currentPathname() !== startedPathname) return;
-  injectRatingBadge(summary.avg, summary.count, productName, badgeSettings, iconPair, productId);
+  if (!validatePdpPlacementProof(placementProof)) return;
+  injectRatingBadge(summary.avg, summary.count, productName, badgeSettings, iconPair, productId, false, placementProof);
 }
 
-export async function renderRatingBadge(productId, productName) {
+export async function renderRatingBadge(productId, productName, expectedEpoch) {
   if (!productId) return;
-  if (inflightByProductId[productId]) return inflightByProductId[productId];
+  var epoch = expectedEpoch || getStorefrontContextEpoch();
+  var inflightKey = String(productId) + '@' + String(epoch);
+  if (inflightByProductId[inflightKey]) return inflightByProductId[inflightKey];
   var promise = (async function () {
     try {
-      await renderInternal(productId, productName);
+      await renderInternal(productId, productName, epoch);
     } catch (err) {
       console.error('[renuvex-pr] rating badge surface error:', err);
     } finally {
-      delete inflightByProductId[productId];
+      delete inflightByProductId[inflightKey];
     }
   })();
-  inflightByProductId[productId] = promise;
+  inflightByProductId[inflightKey] = promise;
   return promise;
 }

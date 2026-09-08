@@ -201,9 +201,9 @@ Merchant settings (DB)
   ↓ /api/public/settings
 Widget runtime (settings.js)
   ↓ applyRuntimeSettings
-  ├─ setThemeAdapterKey (ADR_0022)
-  ├─ setAutoPlacementEnabled (ADR_0022)
-  └─ setReviewsMountEnabled (ADR_0022)
+  ├─ setThemeAdapterKey (adapter selection)
+  ├─ setPlacementPolicy (ADR_0038; canonical production authority)
+  └─ setReviewsMountEnabled (explicit review-mount authority)
   ↓ bootstrap.js → render.js
   ├─ render(): root.style.setProperty('--renuvex-pr-title-size', ...) — widget-root scope
   ├─ listing-badges/index.js: documentElement.setProperty('--renuvex-pr-review-star-color') — global

@@ -5,13 +5,14 @@
 // review widget chunk just to read settings.
 
 import { PUBLIC_API_KEY, API_BASE, READ_API_BASE } from './config.js';
-import { cacheGet, cacheSet } from './cache.js';
+import { cacheGet, cacheRemove, cacheSet } from './cache.js';
 import { fetchWithTimeout } from './fetch.js';
-import { setAutoPlacementEnabled, setReviewsMountEnabled, setThemeAdapterKey } from '../themes/current-adapter.js';
+import { setPlacementPolicy, setReviewsMountEnabled, setThemeAdapterKey } from '../themes/current-adapter.js';
 import { getPreviewSettingsPayload } from './namespace.js';
 import { markWidgetPerf } from './perf-timeline.js';
 
-var SETTINGS_CACHE_KEY = 'renuvex_pr_settings_' + PUBLIC_API_KEY;
+var SETTINGS_CACHE_KEY = 'renuvex_pr_settings_v2_' + PUBLIC_API_KEY;
+var LEGACY_SETTINGS_CACHE_KEY = 'renuvex_pr_settings_' + PUBLIC_API_KEY;
 var THEME_LAZY_SYNC_CACHE_KEY = 'renuvex_pr_theme_lazy_sync_' + PUBLIC_API_KEY;
 var SETTINGS_CACHE_TTL = 5 * 60 * 1000;
 var SETTINGS_CACHE_STALE_TTL = 24 * 60 * 60 * 1000;
@@ -23,15 +24,19 @@ var THEME_LAZY_SYNC_TTL = 30 * 60 * 1000;
 // in-flight promise collapses that race into a single network request.
 var inflightSettings = null;
 
-function applyRuntimeSettings(settings) {
+function applyRuntimeSettings(settings, options) {
+  options = options || {};
   var runtime = settings && settings.runtime ? settings.runtime : {};
   setThemeAdapterKey(runtime.themeAdapterKey);
-  // ADR_0022 — Read explicit booleans from the runtime payload. The server
-  // sends both flags; preview mode also passes them through. If a stale
-  // server somehow omits them, the setters keep the fail-closed defaults
-  // (false), which is the safer regression than accidentally enabling
-  // auto-placement on an unsupported theme.
-  setAutoPlacementEnabled(runtime.autoPlacementEnabled === true);
+  // The versioned policy is the sole production placement authority. Missing,
+  // malformed, unknown-version, and stale policies all resolve to disabled.
+  var validPolicy = setPlacementPolicy(runtime.placementPolicy);
+  if (options.disablePlacement === true) {
+    setPlacementPolicy({ version: 1, mode: 'disabled' });
+  }
+  if (validPolicy && !window.__ikasPreviewMode) {
+    cacheRemove(LEGACY_SETTINGS_CACHE_KEY);
+  }
   setReviewsMountEnabled(runtime.reviewsMountEnabled === true);
   scheduleThemeLazySync(runtime);
   return settings;
@@ -90,7 +95,10 @@ async function loadSettings() {
       var entry = JSON.parse(cached);
       if (entry && entry.t !== undefined) {
         if (entry.notFound) {
-          if (Date.now() - entry.t < SETTINGS_404_TTL) return null;
+          if (Date.now() - entry.t < SETTINGS_404_TTL) {
+            setPlacementPolicy({ version: 1, mode: 'disabled' });
+            return null;
+          }
           cacheSet(SETTINGS_CACHE_KEY, '');
         } else if (entry.v) {
           var cacheAge = Date.now() - entry.t;
@@ -115,13 +123,17 @@ async function loadSettings() {
       if (res.status === 404) {
         cacheSet(SETTINGS_CACHE_KEY, JSON.stringify({ t: Date.now(), notFound: true }));
       }
-      return staleEntry ? applyRuntimeSettings(staleEntry) : null;
+      if (staleEntry) return applyRuntimeSettings(staleEntry, { disablePlacement: true });
+      setPlacementPolicy({ version: 1, mode: 'disabled' });
+      return null;
     }
     var settings = await res.json();
     cacheSet(SETTINGS_CACHE_KEY, JSON.stringify({ t: Date.now(), v: settings }));
     return applyRuntimeSettings(settings);
   } catch (err) {
     console.error('[renuvex-pr] fetchSettings error:', err);
-    return staleEntry ? applyRuntimeSettings(staleEntry) : null;
+    if (staleEntry) return applyRuntimeSettings(staleEntry, { disablePlacement: true });
+    setPlacementPolicy({ version: 1, mode: 'disabled' });
+    return null;
   }
 }

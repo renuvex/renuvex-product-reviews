@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-27
-updated: 2026-08-09
-last_verified: 2026-08-09
+updated: 2026-08-10
+last_verified: 2026-08-10
 confidence: high
 tags:
   - adr
@@ -18,6 +18,7 @@ related:
   - "[[ADR_0017_Badge_Architecture]]"
   - "[[ADR_0018_Widget_Ownership_And_Placement_Resilience]]"
   - "[[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]]"
+  - "[[ADR_0038_Runtime_Attested_Storefront_Placement]]"
   - "[[Ikas_Theme_Limitations]]"
   - "[[Theme_Adapter_Playbook]]"
   - "[[Ikas_Storefront_Script_Capabilities]]"
@@ -31,6 +32,7 @@ source_files:
   - "workers/widget-delivery/src/index.ts"
   - "src/widget/core/settings.js"
   - "src/widget/themes/current-adapter.js"
+  - "src/widget/placement/capability.js"
   - "src/widget/rating-badge/index.js"
   - "src/widget/rating-badge/inject.js"
   - "src/widget/structured-data/index.js"
@@ -41,7 +43,10 @@ source_files:
 # ADR 0022: Placement Allowlist and Storefront-Driven Theme Resync
 
 ## Status
-Accepted (2026-05-27).
+Accepted (2026-05-27); automatic-placement authorization superseded on
+2026-08-10 by [[ADR_0038_Runtime_Attested_Storefront_Placement]]. The pure
+settings read, `themeSyncDue` lazy-resync signal, lazy-sync POST, and explicit
+review-mount decisions in this ADR remain active.
 
 Operational amendment (2026-08-09): the live ikas v1/v2 `Storefront` schema no
 longer exposes the theme fields used by the original allowlist evidence. The
@@ -50,6 +55,14 @@ provider evidence. Renuvex now marks old metadata `legacy_unverifiable`, records
 new observations as `provider_unavailable`, disables automatic placement, and
 preserves only the explicit shadow-isolated review mount. The original allowlist
 can be reactivated only after the provider contract is verified again.
+
+Placement amendment (2026-08-10): `autoPlacementEnabled` is no longer the
+production placement authority. The backend emits the legacy boolean as
+`false` for every version-1 placement policy so retained old runtimes fail
+closed. The current runtime consumes versioned `placementPolicy`, and both
+provider-selected and runtime-detected adapters must produce a strict ephemeral
+target proof before ratings are requested. `themeSyncDue` remains an
+operational resync signal only; it is not placement evidence.
 
 ## Context
 [[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]] closed the **rendering isolation** axis: review-section / lightbox / form-wizard CSS no longer bleeds from arbitrary merchant themes. It explicitly left **placement** open — the supported/unsupported-theme allowlist tracked in [[Open_Questions]] and [[Theme_Adapter_Playbook]]. Today the storefront widget still attempts auto-placement on every theme via the `generic` adapter when `themeAdapterKey === 'generic'`; the public runtime carries only `themeAdapterKey` and `themeAdapterSource`, with no visibility/placement gate.

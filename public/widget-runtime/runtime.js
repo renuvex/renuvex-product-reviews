@@ -1,2 +1,2 @@
-/* Renuvex Product Reviews stable runtime shim - built 2026-07-30T01:09:28.706Z | theme: default */
-import './runtime-CC2YLTM4.js';
+/* Renuvex Product Reviews stable runtime shim - built 2026-09-08T03:09:15.590Z | theme: default */
+import './runtime-7SWRHBZ4.js';

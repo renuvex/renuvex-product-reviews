@@ -9,7 +9,7 @@ export var structuredDataSurface = {
   },
   mount: function (ctx) {
     return loadStructuredDataModule().then(function (mod) {
-      return mod.renderStructuredData(ctx.product.id, ctx.product.name);
+      return mod.renderStructuredData(ctx.product.id, ctx.product.name, ctx.product.epoch);
     });
   },
 };

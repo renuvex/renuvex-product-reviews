@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-09
-last_verified: 2026-08-09
+updated: 2026-08-10
+last_verified: 2026-08-10
 confidence: high
 tags:
   - performance
@@ -16,6 +16,7 @@ related:
   - "[[Bug_Cloud_Name_Silent_Image_Filter]]"
   - "[[ADR_0015_Canonical_Product_Identity]]"
   - "[[ADR_0026_Product_Review_Summary_Read_Model]]"
+  - "[[ADR_0038_Runtime_Attested_Storefront_Placement]]"
 source_files:
   - "prisma/schema.prisma"
   - "prisma/models/reviews.prisma"
@@ -31,6 +32,9 @@ source_files:
   - "src/lib/review-media.ts"
   - "src/lib/review-summary.ts"
   - "src/widget/core/cache.js"
+  - "src/widget/core/listing-proof-request-state.js"
+  - "src/widget/core/settings.js"
+  - "public/widget-runtime/build-manifest.json"
   - "src/app/api/public/settings/route.ts"
   - "src/app/api/public/storefront-theme/lazy-sync/route.ts"
   - "src/lib/storefront-theme-lazy-sync.ts"
@@ -42,6 +46,7 @@ source_files:
   - "workers/widget-delivery/src/index.ts"
   - "tests/unit/widget-asset-cache.test.ts"
   - "tests/unit/widget-worker.test.ts"
+  - "tests/widget-placement-capability.spec.ts"
 ---
 
 # Caching & Performance
@@ -54,7 +59,7 @@ query/index shapes in the listed source files before changing them. Local
 `EXPLAIN ANALYZE` evidence is not a production latency or capacity guarantee.
 
 ## Summary
-Two cache layers matter: (1) Vercel **edge cache** for public read APIs and (2) the widget's **sessionStorage cache** (with in-memory fallback when sessionStorage is unavailable / quota-exceeded). Postgres indexes ([[Database_Schema]]) cover the hot query shapes.
+Three cache boundaries matter: origin response policy, the Cloudflare Worker Cache API for allowlisted public reads, and the widget's `sessionStorage` cache (with an in-memory fallback). Static widget assets have a separate stable-versus-content-hashed contract. Postgres indexes ([[Database_Schema]]) cover the hot query shapes.
 
 ## Admin Review Navigation
 
@@ -169,9 +174,13 @@ proxy for only these GET endpoints:
 - `/api/public/reviews`
 
 The read proxy keeps browser-facing cacheable responses at `Cache-Control:
-public, max-age=0, must-revalidate`, stores eligible 200 JSON responses at the
-Worker edge for 60 seconds, and marks diagnostics with
-`X-Renuvex-Edge-Cache: HIT | MISS | BYPASS`. `ratings-by-slug` is the explicit
+public, max-age=0, must-revalidate`, stores eligible 200 JSON responses with
+`caches.default` for 60 seconds, and marks diagnostics with
+`X-Renuvex-Edge-Cache: HIT | MISS | BYPASS`. Cloudflare Cache API entries are
+local to the data center that handled the request; they are not globally
+replicated. Cache API `cache.put`/`cache.match` also does not implement
+`stale-while-revalidate` or `stale-if-error`, so origin SWR headers must not be
+described as the Worker edge algorithm. `ratings-by-slug` is the explicit
 exception: it always returns `Cache-Control: no-store` with
 `X-Renuvex-Edge-Cache: BYPASS` and is never inserted into the edge cache.
 It does not cache non-200 responses, `Set-Cookie` responses, unknown query
@@ -191,15 +200,29 @@ now treats `200` and `304` as cacheable asset responses so stable files keep
 `public, max-age=31536000, immutable`.
 
 ## Widget client cache
-[src/widget/core/cache.js](src/widget/core/cache.js) wraps `sessionStorage` with an in-memory fallback. Avoids redundant fetches when the user clicks pagination, opens/closes modal, navigates between products in the same tab, etc. **Persists** for the duration of the browser tab (sessionStorage semantics) — cleared when the tab is closed.
+[src/widget/core/cache.js](src/widget/core/cache.js) wraps `sessionStorage` with an in-memory fallback. Avoids redundant fetches when the user clicks pagination, opens/closes modal, navigates between products in the same tab, etc. `sessionStorage` survives reloads in the same tab and normally ends when that tab closes.
 
-Settings have a 5-minute fresh window in the widget and a 24-hour stale tolerance for transient settings fetch failures. Image trust is not a settings field; storefront media rendering uses provider-neutral public descriptors from `/api/public/reviews`.
+Listing mutation dedupe is a separate, proof-scoped runtime mechanism. It
+holds only `in_flight` or successful-empty state for the exact DOM link/proof
+inside a `WeakMap`; it never writes slug ratings to `sessionStorage` or shares
+them across cards. HTTP/network failures are not resolved, and any proof
+identity or context-epoch change makes the prior state inapplicable.
+
+Settings have a 5-minute fresh window and a 24-hour stale tolerance for transient fetch failures. ADR 0038 uses a new v2 cache key. A valid v1 `placementPolicy` removes the old key once; stale v2 settings may preserve non-placement configuration but always force automatic placement to `disabled`. The 5-minute TTL is not a remote revocation timer for JavaScript already running in an open tab, and a legacy runtime can reuse a stale legacy payload for up to 24 hours after a failed refetch. Image trust is not a settings field; storefront media rendering uses provider-neutral public descriptors from `/api/public/reviews`.
 
 Settings reads use `READ_API_BASE`; in production this can be the Worker read
 origin. If the cached settings payload says `runtime.themeSyncDue === true`,
 the widget schedules a non-blocking POST to
 `API_BASE /api/public/storefront-theme/lazy-sync`. That POST is rate-limited,
 never edge-cached, and does not block rendering.
+
+Placement rollout acceptance is response- and artifact-based, not time-based:
+verify the backend origin body, Worker edge body plus `HIT/MISS`, current build
+manifest, immutable runtime hash, and fresh-browser behavior independently.
+Rolling back only the Worker cannot repair an incorrect backend policy or legacy
+boolean. Conversely, retaining the new backend while rolling the runtime back
+keeps fresh legacy consumers safe-disabled because v1 policy responses always
+emit `autoPlacementEnabled: false`.
 
 ## DB query patterns
 See [[Database_Schema]] for index coverage. Notable hot paths:
@@ -260,6 +283,7 @@ See [[Database_Schema]] for index coverage. Notable hot paths:
 - [[ADR_0027_Review_Media_Read_Model]]
 
 ## Change Log
+- 2026-08-10: Documented ADR 0038 settings-cache cutover, stale-placement fail-closed behavior, actual Cloudflare Cache API semantics, artifact-based rollout acceptance, and failure-specific rollback boundaries.
 - 2026-08-09: Live Worker version
   `0bc1674d-331e-4953-a192-7f72c32d0fc4` closed the slug fallback cache gap.
   Immediate and five-minute rechecks returned repeated

@@ -128,6 +128,7 @@ export var renuvexPrSlugMap = {};
 // productId is the stable ikas product UUID; slug/name are display snapshots.
 export var renuvexPrProductMap = {};
 
-// Quick-view modal için son tıklanan ürün slug'ı
-export var lastClickedSlug = null;
-export function setLastClickedSlug(v) { lastClickedSlug = v; }
+export function clearStorefrontProductMaps() {
+  Object.keys(renuvexPrSlugMap).forEach(function (key) { delete renuvexPrSlugMap[key]; });
+  Object.keys(renuvexPrProductMap).forEach(function (key) { delete renuvexPrProductMap[key]; });
+}

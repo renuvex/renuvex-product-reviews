@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-01
-last_verified: 2026-07-30
+updated: 2026-08-10
+last_verified: 2026-08-10
 confidence: high
 source_files:
   - "scripts/build-widget.mjs"
@@ -16,16 +16,16 @@ source_files:
   - "src/widget/core/origins.js"
   - "src/widget/core/lazy-modules.js"
   - "src/widget/core/storefront-context.js"
+  - "src/widget/core/context-epoch.js"
   - "src/widget/core/registry.js"
   - "src/widget/core/settings.js"
   - "src/widget/core/namespace.js"
   - "src/widget/core/rating-summary.js"
-  - "src/widget/core/link-scope.js"
   - "src/widget/core/listing-viewport-gate.js"
+  - "src/widget/placement/capability.js"
   - "src/widget/listing-badges/index.js"
-  - "src/widget/listing-badges/dom.js"
-  - "src/widget/listing-badges/collect.js"
   - "src/widget/listing-badges/ratings.js"
+  - "src/widget/listing-badges/strict-inject.js"
   - "src/widget/preview/scenes.js"
   - "src/widget/preview/index.js"
   - "src/widget/preview/document.js"
@@ -103,7 +103,7 @@ src/widget/
 │  ├─ registry.js                 # Surface registry; supports async lazy mounts.
 │  ├─ lazy-modules.js             # Dynamic import boundaries for widget modules.
 │  ├─ settings.js                 # Shared public settings fetch/cache.
-│  ├─ link-scope.js              # Shared scoped link discovery for listing DOM fallbacks.
+│  ├─ context-epoch.js           # Canonical storefront context invalidation and stale-async guard.
 │  ├─ listing-viewport-gate.js   # Near-viewport gate for below-the-fold listing/product-slider badges.
 │  ├─ state.js                    # Module-level mutable state (currentSettings, currentProductId, ...)
 │  ├─ fetch.js                    # API helpers used by API_BASE/READ_API_BASE callers
@@ -112,6 +112,9 @@ src/widget/
 │  ├─ helpers.js                  # Misc utilities + trusted review image URL helpers
 │  ├─ rating-summary.js           # Shared one-product approved rating summary fetch/cache
 │  └─ badge.js                    # Generic badge primitive
+│
+├─ placement/
+│  └─ capability.js               # Strict PDP/listing/modal placement proofs and revalidation.
 │
 ├─ reviews-section/
 │  ├─ bootstrap.js                # Reviews section entry: settings, mount gate, initial fetch orchestration
@@ -150,11 +153,10 @@ src/widget/
 │  └─ jsonld.js                   # Owned JSON-LD builder, injection, cleanup
 │
 ├─ listing-badges/
-│  ├─ index.js                    # Bootstrap (find product cards on listing pages)
-│  ├─ dom.js                      # Scoped link discovery + visibility helpers
-│  ├─ collect.js                  # Discover candidate cards and merge event product ids
+│  ├─ index.js                    # Strict proof collection, bulk ratings, and guarded injection
 │  ├─ ratings.js                  # Bulk fetch via /api/public/ratings, slug fallback only
-│  └─ inject.js                   # Inject star badges into discovered cards
+│  ├─ strict-inject.js            # Production injection from revalidated proof targets
+│  └─ inject.js                   # Isolated preview fixture injection helper
 │
 ├─ review-layouts/
 │  ├─ index.js                    # Layout registry + meta (`supports` map drives layout-aware settings)
@@ -177,7 +179,7 @@ src/widget/
 └─ themes/
    ├─ current-adapter.js           # Active theme adapter selector.
    └─ ozy/
-      ├─ adapter.js               # Ozy fallback DOM placement adapter.
+      ├─ adapter.js               # Ozy strict placement adapter and runtime signature.
       ├─ theme.js                 # Theme-specific selectors / hooks
       └─ styles.js                # Ozy override placeholder / compatibility re-export
 ```
@@ -232,7 +234,7 @@ Runtime theme selection is not a per-theme bundle split. The live widget receive
 - `review-modal.js` is the photo review detail lightbox, not the review submission wizard. Keep this distinction clear when changing modal behavior. See [[Product_Review_Lightbox]].
 - Review/rating, filter, and UI chrome icons are split under `src/widget/icons/`. Import new code from [icons/index.js](src/widget/icons/index.js); [icons.js](src/widget/icons.js) remains only as a compatibility re-export. `tests/unit/widget-icon-sprite.test.ts` pins the registry to Phosphor 256-grid/currentColor SVGs and rejects old Lucide 24-grid or Unicode X/arrow glyphs.
 - Review image rendering must go through `getTrustedReviewImages()` / `getFirstTrustedReviewImage()` in [helpers.js](src/widget/core/helpers.js). Do not add layout-local `https://` or `data:image` checks.
-- Listing DOM discovery shared by listing badges and the MutationObserver must go through [link-scope.js](src/widget/core/link-scope.js); do not reintroduce whole-document `document.querySelectorAll('a[href]')` scans.
+- Production listing discovery must go through [placement/capability.js](src/widget/placement/capability.js). The existing MutationObserver is only a debounced coordinator; it must not reintroduce whole-document link scans or generic `main`, class-substring, or text-match placement authority.
 - Always test changes both in `/preview` AND on a real ikas storefront — preview mode skips the mutation observer and theme integrations.
 - The widget is **plain JS**. No TS, no React. Don't introduce a framework without rationale (bundle size + cold-start hit).
 
@@ -269,7 +271,8 @@ Runtime theme selection is not a per-theme bundle split. The live widget receive
 - 2026-05-28: Renamed the broad PDP implementation folder to [reviews-section/](src/widget/reviews-section/) and moved the shared PDP title finder to [core/product-title.js](src/widget/core/product-title.js). Public widget mount/API contracts stayed unchanged.
 - 2026-05-27: Added [reviews-section/reviews-api.js](src/widget/reviews-section/reviews-api.js) to make the reviews-section folder boundary explicit: `bootstrap.js` owns review mount orchestration, `reviews-api.js` owns review/media-gallery data access, and `render.js` owns review-section UI interactions.
 - 2026-05-24: Added [icons/star-sprite.js](src/widget/icons/star-sprite.js) — read-only rating stars render via a single injected SVG `<symbol>` sprite referenced by `<use>` instead of inlining `<path>` per star. Renderers (`partialStarsHTML`, `starsHTML`, `renderStarRow`) call `ensureStarSprite` + emit `starUseSvg`; `ICONS` strings stay the single source (admin preview + sprite both derive from them). Related: [[ADR_0019_Icon_Sprite_Rendering]].
-- 2026-05-18: Added [core/link-scope.js](src/widget/core/link-scope.js) so listing badges and the MutationObserver share scoped link discovery; active builds no longer use whole-document `document.querySelectorAll('a[href]')` for listing re-render checks.
+- 2026-08-10: ADR 0038 replaced the production listing fallback chain with strict proof-carrying placement, a canonical context epoch, and a single observer coordinator. The former `core/link-scope.js`, `listing-badges/dom.js`, and `listing-badges/collect.js` paths were removed; preview keeps its explicitly isolated fixture helper.
+- 2026-05-18: Added the former `core/link-scope.js` so listing badges and the MutationObserver shared scoped link discovery; ADR 0038 later replaced that production path.
 - 2026-05-17: Listing badge files now use canonical ikas product ids from Storefront Events for rating fetches; slug remains DOM fallback only. Related: [[ADR_0015_Canonical_Product_Identity]].
 - 2026-05-17: Phase 2 module split implemented and verified. `public/widget.js` is the classic loader, `public/widget-runtime/*` contains ESM runtime/chunks, and lazy boundaries live in `core/lazy-modules.js`.
 - 2026-05-12: Split the storefront icon registry into [review-icons.js](src/widget/icons/review-icons.js), [filter-icons.js](src/widget/icons/filter-icons.js), and [icons/index.js](src/widget/icons/index.js). [icons.js](src/widget/icons.js) now remains as a compatibility re-export.
