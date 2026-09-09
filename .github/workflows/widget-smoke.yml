@@ -70,7 +70,7 @@ jobs:
         run: pnpm budget:widget
 
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
+        run: bash scripts/install-playwright-browser-ci.sh chromium
 
       - name: Run unit and browser smoke tests
         run: pnpm test:ci
@@ -130,7 +130,7 @@ jobs:
         run: pnpm verify:preview-routes
 
       - name: Install Chromium
-        run: pnpm exec playwright install --with-deps chromium
+        run: bash scripts/install-playwright-browser-ci.sh chromium
 
       - name: Run admin dashboard browser contracts
         run: pnpm test:admin-dashboard:built
@@ -173,7 +173,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install Chromium
-        run: pnpm exec playwright install --with-deps chromium
+        run: bash scripts/install-playwright-browser-ci.sh chromium
 
       - name: Run review-center browser tests
         run: pnpm test:review-center
@@ -362,7 +362,7 @@ jobs:
         run: pnpm build:widget
 
       - name: Install Playwright browser
-        run: pnpm exec playwright install --with-deps ${{ matrix.browser }}
+        run: bash scripts/install-playwright-browser-ci.sh "${{ matrix.browser }}"
 
       - name: Run media project
         run: pnpm exec playwright test --config=playwright.media.config.ts tests/widget-media-cross-browser.spec.ts --project=${{ matrix.project }}
@@ -413,7 +413,7 @@ jobs:
         run: pnpm build:widget
 
       - name: Install Playwright browser
-        run: pnpm exec playwright install --with-deps ${{ matrix.browser }}
+        run: bash scripts/install-playwright-browser-ci.sh "${{ matrix.browser }}"
 
       - name: Run critical Product ID placement project
         run: pnpm exec playwright test --config=playwright.placement.config.ts --project=${{ matrix.project }}

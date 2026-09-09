@@ -31,6 +31,7 @@ source_files:
   - ".github/workflows/product-lifecycle-scale.yml"
   - ".github/pull_request_template.md"
   - "scripts/check-generated-artifacts.mjs"
+  - "scripts/install-playwright-browser-ci.sh"
   - "scripts/run-ci-build.mjs"
   - "scripts/run-ci-start.mjs"
   - "scripts/ci-environment.mjs"
@@ -348,6 +349,18 @@ commit SHA, workflow permissions are `contents: read`, checkout credentials are
 not persisted, jobs have timeouts, and superseded runs on the same PR/ref are
 cancelled. No CI job receives a GitHub environment, production secret, or
 provider deployment credential.
+
+All GitHub-hosted Linux browser jobs install Playwright through
+`scripts/install-playwright-browser-ci.sh`. The helper accepts only Playwright's
+`chromium`, `firefox`, and `webkit` browser names. On an ephemeral GitHub
+Actions Linux runner, it moves only the known `google-chrome.list` or
+`google-chrome.sources` file out of APT discovery, and only when that file
+contains Google's Chrome repository URL. The test suite does not use the
+system Chrome channel; it continues to run Playwright's pinned browser build
+and the official `playwright install --with-deps` dependency installation.
+This prevents an unrelated Chrome repository metadata failure from suppressing
+the actual browser tests without weakening their operating-system dependency
+gate. Local and non-Linux installation behavior is unchanged.
 
 The private/free repository cannot currently mark these jobs as technically
 required branch checks. The operational release rule is therefore branch plus
