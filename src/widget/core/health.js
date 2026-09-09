@@ -7,6 +7,12 @@ import { API_BASE, PUBLIC_API_KEY } from './config.js';
 var MAX_HEALTH_EVENTS_PER_SESSION = 8;
 var sentCount = 0;
 var sentKeys = {};
+var PLACEMENT_IDENTITY_EVENTS = {
+  'placement-attestation-miss': true,
+  'identity-resolution-miss': true,
+  'identity-resolution-error': true,
+  'identity-conflict': true,
+};
 
 function getWidgetVersion() {
   try {
@@ -79,23 +85,35 @@ export function markWidgetLoaded() {
 
 export function reportWidgetHealth(type, message, extra) {
   if (typeof window === 'undefined') return;
-  var payloadExtra = Object.assign(
-    {
-      type: type,
-      version: getWidgetVersion(),
-      path: currentPath(),
-    },
-    extra || {},
-  );
+  var isPlacementIdentityEvent = !!PLACEMENT_IDENTITY_EVENTS[type];
+  var payloadExtra = isPlacementIdentityEvent
+    ? {
+        type: type,
+        surface: (extra && extra.surface) || 'unknown',
+        adapterKey: (extra && extra.adapterKey) || 'unknown',
+        reason: (extra && extra.reason) || 'unknown',
+        version: getWidgetVersion(),
+      }
+    : Object.assign(
+        {
+          type: type,
+          version: getWidgetVersion(),
+          path: currentPath(),
+        },
+        extra || {},
+      );
   if (!shouldReport(type, payloadExtra)) return;
-  send({
+  var payload = {
     message: String(message || 'Widget health event').slice(0, 500),
-    url: window.location ? String(window.location.href).slice(0, 2000) : undefined,
-    userAgent: typeof navigator !== 'undefined' ? String(navigator.userAgent || '').slice(0, 500) : undefined,
     publicApiKey: PUBLIC_API_KEY || null,
     timestamp: Date.now(),
     extra: payloadExtra,
-  });
+  };
+  if (!isPlacementIdentityEvent) {
+    payload.url = window.location ? String(window.location.href).slice(0, 2000) : undefined;
+    payload.userAgent = typeof navigator !== 'undefined' ? String(navigator.userAgent || '').slice(0, 500) : undefined;
+  }
+  send(payload);
 }
 
 export function probeWidgetVisibility(root, surface, extra, resolveCurrent, isProbeRelevant) {

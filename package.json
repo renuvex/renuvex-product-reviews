@@ -83,6 +83,8 @@
     "settings:media-gallery:migrate": "node scripts/migrate-widget-settings-media-gallery-keys.mjs",
     "test:widget-smoke": "playwright test --config=playwright.widget.config.ts tests/widget-network-smoke.spec.ts",
     "test:widget-placement": "playwright test --config=playwright.widget.config.ts tests/widget-placement-capability.spec.ts",
+    "test:widget-placement:critical": "playwright test --config=playwright.placement.config.ts --project=chromium-desktop",
+    "test:widget-placement:cross-browser": "playwright test --config=playwright.placement.config.ts",
     "test:widget-runtime": "playwright test --config=playwright.widget.config.ts tests/widget-runtime-smoke.spec.ts",
     "test:widget-interactions": "playwright test --config=playwright.widget.config.ts tests/widget-interaction-smoke.spec.ts",
     "test:widget-media": "playwright test --config=playwright.media.config.ts tests/widget-media-cross-browser.spec.ts --project=chromium-desktop",

@@ -1,80 +1,108 @@
-// Ephemeral request state bound to an exact listing placement proof.
-// This is not a rating cache: entries disappear with their DOM links and are
-// invalidated by any proof identity or storefront epoch change.
+// Ephemeral request state bound to an exact listing DOM candidate. This is not
+// an identity cache: it only suppresses duplicate work for the same live link.
 
+var PROOF_SUPPRESSION_TTL = 5 * 60 * 1000;
 var proofRequestStates = new WeakMap();
 
-function normalizeProductId(value) {
-  return value === undefined || value === null || value === '' ? null : String(value);
-}
-
-function snapshotProof(proof, status) {
+function snapshotCandidate(candidate, status, resolved) {
   return {
     status: status,
-    adapterKey: proof.adapterKey,
-    epoch: proof.epoch,
-    slug: String(proof.slug),
-    productId: normalizeProductId(proof.productId),
-    containerEl: proof.containerEl,
-    cardEl: proof.cardEl,
-    titleEl: proof.titleEl,
-    mountParent: proof.mountPoint && proof.mountPoint.parent,
-    mountAnchor: proof.mountPoint && proof.mountPoint.anchorEl,
+    expiresAt: status === 'empty' || status === 'unresolved'
+      ? Date.now() + PROOF_SUPPRESSION_TTL
+      : null,
+    adapterKey: candidate.adapterKey,
+    epoch: candidate.epoch,
+    listingGeneration: candidate.listingGeneration,
+    slug: String(candidate.slug),
+    eventProductId: candidate.eventProductId || null,
+    identityBlockReason: candidate.identityBlockReason || null,
+    href: candidate.href,
+    titleText: candidate.titleText,
+    containerEl: candidate.containerEl,
+    cardEl: candidate.cardEl,
+    linkEl: candidate.linkEl,
+    titleEl: candidate.titleEl,
+    mountParent: candidate.mountPoint && candidate.mountPoint.parent,
+    mountAnchor: candidate.mountPoint && candidate.mountPoint.anchorEl,
+    resolvedProductId: resolved && resolved.productId ? String(resolved.productId) : null,
+    identitySource: resolved && resolved.identitySource ? resolved.identitySource : null,
   };
 }
 
-function matchesProof(state, proof) {
+function matchesCandidate(state, candidate) {
   return !!(
     state &&
-    proof &&
-    state.adapterKey === proof.adapterKey &&
-    state.epoch === proof.epoch &&
-    state.slug === String(proof.slug) &&
-    state.productId === normalizeProductId(proof.productId) &&
-    state.containerEl === proof.containerEl &&
-    state.cardEl === proof.cardEl &&
-    state.titleEl === proof.titleEl &&
-    state.mountParent === (proof.mountPoint && proof.mountPoint.parent) &&
-    state.mountAnchor === (proof.mountPoint && proof.mountPoint.anchorEl)
+    candidate &&
+    state.adapterKey === candidate.adapterKey &&
+    state.epoch === candidate.epoch &&
+    state.listingGeneration === candidate.listingGeneration &&
+    state.slug === String(candidate.slug) &&
+    state.eventProductId === (candidate.eventProductId || null) &&
+    state.identityBlockReason === (candidate.identityBlockReason || null) &&
+    state.href === candidate.href &&
+    state.titleText === candidate.titleText &&
+    state.containerEl === candidate.containerEl &&
+    state.cardEl === candidate.cardEl &&
+    state.linkEl === candidate.linkEl &&
+    state.titleEl === candidate.titleEl &&
+    state.mountParent === (candidate.mountPoint && candidate.mountPoint.parent) &&
+    state.mountAnchor === (candidate.mountPoint && candidate.mountPoint.anchorEl)
   );
 }
 
-function targetMatchesProof(targetProductId, proof) {
-  return normalizeProductId(targetProductId) === normalizeProductId(proof.productId);
+export function getListingProofRequestStatus(candidate) {
+  var state = candidate && candidate.linkEl ? proofRequestStates.get(candidate.linkEl) : null;
+  if (!matchesCandidate(state, candidate)) return null;
+  if (state.expiresAt && Date.now() >= state.expiresAt) {
+    proofRequestStates.delete(candidate.linkEl);
+    return null;
+  }
+  return state.status;
 }
 
-export function getListingProofRequestStatus(proof) {
-  var state = proof && proof.linkEl ? proofRequestStates.get(proof.linkEl) : null;
-  return matchesProof(state, proof) ? state.status : null;
-}
-
-export function markListingProofRequestsInFlight(proofs) {
-  (proofs || []).forEach(function (proof) {
-    if (!proof || !proof.linkEl) return;
-    proofRequestStates.set(proof.linkEl, snapshotProof(proof, 'in_flight'));
+export function markListingProofRequestsInFlight(candidates) {
+  (candidates || []).forEach(function (candidate) {
+    if (!candidate || !candidate.linkEl) return;
+    proofRequestStates.set(candidate.linkEl, snapshotCandidate(candidate, 'in_flight'));
   });
 }
 
-export function settleListingProofRequests(proofs, ratings, resolvedTargets, isProofCurrent) {
-  (proofs || []).forEach(function (proof) {
-    if (!proof || !proof.linkEl) return;
-    var current = proofRequestStates.get(proof.linkEl);
-    if (!matchesProof(current, proof) || current.status !== 'in_flight') return;
+export function settleListingProofRequests(candidates, outcomes, promoteProof) {
+  var resolved = [];
+  var rejected = [];
 
-    var wasResolved = Object.prototype.hasOwnProperty.call(resolvedTargets || {}, proof.slug) &&
-      targetMatchesProof(resolvedTargets[proof.slug], proof);
-    if (!wasResolved || (typeof isProofCurrent === 'function' && !isProofCurrent(proof))) {
-      proofRequestStates.delete(proof.linkEl);
+  (candidates || []).forEach(function (candidate) {
+    if (!candidate || !candidate.linkEl) return;
+    var current = proofRequestStates.get(candidate.linkEl);
+    if (!matchesCandidate(current, candidate) || current.status !== 'in_flight') return;
+
+    var outcome = outcomes && outcomes[candidate.slug];
+    if (!outcome || outcome.status === 'error') {
+      proofRequestStates.delete(candidate.linkEl);
+      return;
+    }
+    if (outcome.status === 'unresolved') {
+      proofRequestStates.set(candidate.linkEl, snapshotCandidate(candidate, 'unresolved'));
       return;
     }
 
-    var rating = ratings && ratings[proof.slug];
-    if (!rating || rating._empty || Number(rating.count) === 0) {
-      proofRequestStates.set(proof.linkEl, snapshotProof(proof, 'empty'));
+    var proof = typeof promoteProof === 'function'
+      ? promoteProof(candidate, outcome.productId, outcome.identitySource)
+      : null;
+    if (!proof) {
+      proofRequestStates.delete(candidate.linkEl);
+      rejected.push(candidate);
       return;
     }
 
-    // A rendered positive badge becomes the durable state for the current DOM.
-    proofRequestStates.delete(proof.linkEl);
+    if (!outcome.rating || outcome.rating._empty || Number(outcome.rating.count) === 0) {
+      proofRequestStates.set(candidate.linkEl, snapshotCandidate(candidate, 'empty', outcome));
+      return;
+    }
+
+    proofRequestStates.delete(candidate.linkEl);
+    resolved.push({ proof: proof, rating: outcome.rating });
   });
+
+  return { resolved: resolved, rejected: rejected };
 }

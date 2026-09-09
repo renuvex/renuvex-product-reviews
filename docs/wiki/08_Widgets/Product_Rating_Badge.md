@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-10
-last_verified: 2026-08-10
+updated: 2026-09-09
+last_verified: 2026-09-09
 tags:
   - widget
   - badge
@@ -21,6 +21,14 @@ related:
 ---
 
 # Product Rating Badge
+
+## Agent Brief
+
+The PDP badge is a Product ID surface. Production injection requires a current
+strict title/mount proof whose `productId` exactly equals the rating request's
+Product ID. The owned slot and visible badge both expose that same non-empty
+`data-renuvex-product-id`; missing, malformed, stale, or mismatched identity
+produces no badge.
 
 ## Summary
 Small inline star rating and count shown on the product detail page near the product title. The surface entry is [src/widget/rating-badge/index.js](src/widget/rating-badge/index.js), DOM injection lives in [src/widget/rating-badge/inject.js](src/widget/rating-badge/inject.js), and production placement proof lives in [capability.js](src/widget/placement/capability.js). Product `AggregateRating` JSON-LD is no longer owned by this badge; it lives in the independent [[Structured_Data_And_Rich_Snippets]] surface.
@@ -46,6 +54,9 @@ and passes it into `injectRatingBadge`; the star color is applied through the
 ## Where it appears
 - Product detail page only.
 - Anchored next to the exact title/mount pair returned by the selected strict placement provider.
+- `injectRatingBadge` revalidates the proof and requires
+  `productId === placementProof.productId` before mutation. Both the
+  `product-title-rating` slot and its inner badge carry that Product ID.
 - Updated when the product detail loads or SPA-nav fires the observer.
 - The product-title badge is a separate `badge` feature and lazy surface. It is gated by the merchant toggle, versioned placement policy, exact proof, and post-request stale revalidation; it is independent of the review-section mount.
 - The review section is opt-in through `<div data-renuvex-widget="reviews"></div>`. If that mount is missing, the review section does not render, but the PDP title badge can still render. Related bug: [[Bug_Product_Widget_Missing_Auto_Mount]].
@@ -75,6 +86,9 @@ and passes it into `injectRatingBadge`; the star color is applied through the
 - [[Bug_Product_Widget_Missing_Auto_Mount]]
 
 ## Change Log
+- 2026-09-09: Added the final Product ID equality guard and matching Product ID
+  attributes on the PDP owned slot and visible badge. Missing/mismatched
+  identity now fails closed before mutation.
 - 2026-07-30: `alignment`, `showValue`, and `showCount` became active on PDP and
   listing renderers. Badge preview moved to the shared iframe scene registry
   with production PDP/listing injectors, and token insertion order was fixed

@@ -5,7 +5,7 @@ vi.mock('../../src/widget/core/config.js', () => ({
   PUBLIC_API_KEY: 'health-test-key',
 }));
 
-import { probeWidgetVisibility } from '../../src/widget/core/health.js';
+import { probeWidgetVisibility, reportWidgetHealth } from '../../src/widget/core/health.js';
 
 const originalWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');
 const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
@@ -70,6 +70,36 @@ describe('probeWidgetVisibility lifecycle relevance', () => {
     vi.advanceTimersByTime(350);
 
     expect(sendBeacon).not.toHaveBeenCalled();
+  });
+
+  it('emits only low-cardinality fields for placement identity health events', async () => {
+    const sendBeacon = installBrowser('/products/private-slug');
+
+    reportWidgetHealth('identity-resolution-error', 'Resolution failed', {
+      surface: 'listing',
+      adapterKey: 'ozy',
+      reason: 'malformed_response',
+      slug: 'private-slug',
+      productName: 'Private Product',
+      productId: 'private-id',
+    });
+
+    expect(sendBeacon).toHaveBeenCalledTimes(1);
+    const payloadBody = sendBeacon.mock.calls[0][1];
+    expect(payloadBody).toBeInstanceOf(Blob);
+    if (!(payloadBody instanceof Blob)) throw new TypeError('Expected widget health payload to be a Blob');
+    const payload = JSON.parse(await payloadBody.text()) as Record<string, unknown> & {
+      extra: Record<string, unknown>;
+    };
+    expect(payload).not.toHaveProperty('url');
+    expect(payload).not.toHaveProperty('userAgent');
+    expect(payload.extra).toEqual({
+      type: 'identity-resolution-error',
+      surface: 'listing',
+      adapterKey: 'ozy',
+      reason: 'malformed_response',
+      version: 'dev',
+    });
   });
 
   it('still reports a relevant widget that is unexpectedly absent', async () => {

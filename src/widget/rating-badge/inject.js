@@ -24,6 +24,17 @@ import { validatePdpPlacementProof } from '../placement/capability.js';
 
 var ratingBadgeRemovalObserver = null;
 var ratingBadgePositionObserver = null;
+var PDP_SLOT = 'product-title-rating';
+var PDP_HEALTH_SURFACE = 'pdp-badge';
+
+function reportPdpPlacementConflict(reason, message, context) {
+  reportWidgetHealth('dom-conflict', message, {
+    surface: PDP_HEALTH_SURFACE,
+    reason: reason,
+    productName: context.productName,
+    productId: context.productId,
+  });
+}
 
 export function cleanupPdpRatingBadgeDom() {
   if (ratingBadgeRemovalObserver) {
@@ -35,7 +46,7 @@ export function cleanupPdpRatingBadgeDom() {
     ratingBadgePositionObserver = null;
   }
 
-  removeOwnedSlots('product-title-rating');
+  removeOwnedSlots(PDP_SLOT);
 
   var legacyBadge = document.getElementById('renuvex-pr-rating-badge');
   if (legacyBadge) legacyBadge.remove();
@@ -47,13 +58,6 @@ export function cleanupPdpRatingBadgeDom() {
 
 if (typeof window !== 'undefined') {
   window.__renuvexPrCleanupPdpBadge = cleanupPdpRatingBadgeDom;
-}
-
-// SVG yıldız dizisi — rating'e göre yarım yıldız desteği (overlay tekniği).
-// iconPair tek kaynaktan ("Ürün Yorumları" → reviewIcon) gelir; rating-badge/index.js geçirir.
-// Yıldız boyutu .renuvex-pr-rating-badge scope'undaki CSS variable'dan okunur.
-function buildStars(rating, iconPair) {
-  return partialStarsHTML(rating, iconPair);
 }
 
 function getProductBadgeMountPoint(titleEl) {
@@ -75,7 +79,12 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
   // still requires that provider's exact, current target proof. Explicit
   // review mounts and preview rendering use separate contracts.
   if (!isAutoPlacementEnabled()) return;
-  if (!window.__ikasPreviewMode && !validatePdpPlacementProof(placementProof)) return;
+  var normalizedProductId = typeof productId === 'string' ? productId.trim() : '';
+  if (!normalizedProductId || normalizedProductId.length > 128) return;
+  if (!window.__ikasPreviewMode && (
+    !validatePdpPlacementProof(placementProof) || placementProof.productId !== normalizedProductId
+  )) return;
+  var healthContext = { productName: productName || '', productId: normalizedProductId };
 
   if (!avgRating) return;
 
@@ -90,23 +99,13 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
 
   var titleEl = placementProof ? placementProof.titleEl : findProductTitleEl(productName);
   if (!titleEl || !titleEl.parentNode) {
-    reportWidgetHealth('dom-conflict', 'PDP product title could not be found for badge placement', {
-      surface: 'pdp-badge',
-      reason: 'title_not_found',
-      productName: productName || '',
-      productId: productId || '',
-    });
+    reportPdpPlacementConflict('title_not_found', 'PDP badge title not found', healthContext);
     return;
   }
 
   var mountPoint = placementProof ? placementProof.mountPoint : getProductBadgeMountPoint(titleEl);
   if (!mountPoint || !mountPoint.parent) {
-    reportWidgetHealth('dom-conflict', 'PDP badge mount point could not be resolved', {
-      surface: 'pdp-badge',
-      reason: 'mount_not_found',
-      productName: productName || '',
-      productId: productId || '',
-    });
+    reportPdpPlacementConflict('mount_not_found', 'PDP badge mount not found', healthContext);
     return;
   }
 
@@ -124,10 +123,11 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
   }
   ensureBadgeTokens(sizes, mobileSizes);
 
+  var identityContext = { surface: 'pdp', productId: normalizedProductId };
   var slot = createOwnedSlot({
-    slot: 'product-title-rating',
+    slot: PDP_SLOT,
     className: 'renuvex-pr-product-badge-slot',
-    context: { surface: 'pdp', productId: productId || '' },
+    context: identityContext,
   });
 
   var badge = document.createElement('a');
@@ -138,19 +138,20 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
   // (no role=figure override). The star row is decorative (aria-hidden).
   var a11y = buildRatingA11yLabel(avgRating, totalCount);
   badge.setAttribute('aria-labelledby', a11y.id);
-  badge.setAttribute('data-renuvex-surface', 'pdp');
   badge.setAttribute('data-renuvex-rating', String(avgRating));
   badge.setAttribute('data-renuvex-count', String(totalCount));
-  setSlotContext(badge, { surface: 'pdp', productId: productId || '' });
+  setSlotContext(badge, identityContext);
   // Alignment follows the product title, expressed as a data-attr + CSS
   // (Loox-style data-alignment) instead of an inline style.
   var titleAlign = window.getComputedStyle(titleEl).textAlign;
   var titleJustify = titleAlign === 'center' ? 'center' : titleAlign === 'right' ? 'flex-end' : 'flex-start';
   var badgeJustify = resolveBadgeJustify(badgeSettings && badgeSettings.alignment, titleJustify);
-  var alignMap = { 'center': 'center', 'flex-end': 'right', 'flex-start': 'left' };
-  badge.setAttribute('data-renuvex-align', alignMap[badgeJustify] || 'left');
+  badge.setAttribute(
+    'data-renuvex-align',
+    badgeJustify === 'center' ? 'center' : badgeJustify === 'flex-end' ? 'right' : 'left',
+  );
 
-  badge.insertAdjacentHTML('beforeend', a11y.html + buildStars(avgRating, iconPair));
+  badge.insertAdjacentHTML('beforeend', a11y.html + partialStarsHTML(avgRating, iconPair));
 
   var visibleLabel = formatVisibleBadgeLabel(
     { avg: avgRating, count: totalCount },
@@ -178,17 +179,17 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
   slot.appendChild(badge);
   placeOwnedSlot(slot, mountPoint);
   ratingBadgePositionObserver = watchOwnedSlotPosition(slot, mountPoint, {
-    surface: 'pdp-badge',
+    surface: PDP_HEALTH_SURFACE,
     reason: 'position_reanchored',
-    message: 'PDP badge slot reordered after render',
-    extra: { productName: productName || '', productId: productId || '' },
+    message: 'PDP badge slot reanchored',
+    extra: healthContext,
   });
-  probeWidgetVisibility(slot, 'pdp-badge', { productName: productName || '', productId: productId || '' }, function () {
-    return document.querySelector('[data-renuvex-slot="product-title-rating"]');
+  probeWidgetVisibility(slot, PDP_HEALTH_SURFACE, healthContext, function () {
+    return document.querySelector('[data-renuvex-slot="' + PDP_SLOT + '"]');
   });
   if (!selfHealAttempt) {
-    ratingBadgeRemovalObserver = watchOneTimeRemoval(slot, 'pdp-badge', function () {
+    ratingBadgeRemovalObserver = watchOneTimeRemoval(slot, PDP_HEALTH_SURFACE, function () {
       injectRatingBadge(avgRating, totalCount, productName, badgeSettings, iconPair, productId, true, placementProof);
-    }, { productName: productName || '', productId: productId || '' });
+    }, healthContext);
   }
 }

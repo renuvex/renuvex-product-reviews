@@ -56,4 +56,14 @@ describe('storefront placement dependency boundaries', () => {
     expect(events).not.toContain('extractSlug(a.href)');
     expect(events).toContain('captureModalContextFromClick(a)');
   });
+
+  it('keeps slug discovery out of review storage and persistent identity caches', () => {
+    const route = source('src/app/api/public/ratings-by-slug/route.ts');
+    const ratings = source('src/widget/listing-badges/ratings.js');
+    expect(route).not.toContain('prisma.review');
+    expect(route).toContain('resolveSafeSlugProductIds');
+    expect(ratings).toContain('renuvex_pr_ratings_v3_');
+    expect(ratings).not.toContain('renuvex_pr_ratings_v2_');
+    expect(ratings).not.toContain('slugToProductId');
+  });
 });

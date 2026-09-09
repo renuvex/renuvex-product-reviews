@@ -7,7 +7,11 @@ import {
   isStorefrontContextCurrent,
   onStorefrontContextInvalidated,
 } from '../core/context-epoch.js';
-import { renuvexPrProductMap } from '../core/state.js';
+import {
+  getStorefrontListingGeneration,
+  renuvexPrProductConflictMap,
+  renuvexPrProductMap,
+} from '../core/state.js';
 import {
   getPlacementPolicy,
   getRuntimeDetectableThemeAdapters,
@@ -19,6 +23,21 @@ import { getAfterElementMountPoint } from '../core/slot-position.js';
 var attestedProductLinks = new WeakMap();
 var modalContext = null;
 var modalToken = 0;
+var MODAL_CONTEXT_TTL = 10 * 1000;
+
+function removeModalContextBadge(context) {
+  var titleEl = context && context.titleEl;
+  if (!titleEl || typeof titleEl.querySelectorAll !== 'function') return;
+  titleEl.querySelectorAll('[data-renuvex-slot="listing-rating"]').forEach(function (slot) {
+    slot.remove();
+  });
+}
+
+function normalizeProductId(value) {
+  if (typeof value !== 'string') return null;
+  var normalized = value.trim();
+  return normalized && normalized.length <= 128 ? normalized : null;
+}
 
 function isVisible(element) {
   if (!element || !element.isConnected || typeof element.getClientRects !== 'function') return false;
@@ -55,7 +74,14 @@ function isAdapterCurrentlyAuthorized(adapterKey) {
 
 function textMatches(element, expected) {
   if (!expected) return true;
-  return !!(element && element.textContent && element.textContent.trim() === String(expected).trim());
+  if (!element) return false;
+  var clone = element.cloneNode(true);
+  if (clone.querySelectorAll) {
+    clone.querySelectorAll('[data-renuvex-app="product-reviews"]').forEach(function (node) {
+      node.remove();
+    });
+  }
+  return !!(clone.textContent && clone.textContent.trim() === String(expected).trim());
 }
 
 function productMountPoint(adapter, titleEl) {
@@ -196,7 +222,7 @@ function findCardLink(titleEl, container) {
   return null;
 }
 
-function buildListingProofs(adapter, epoch) {
+function buildListingProofs(adapter, epoch, listingGeneration) {
   var proofs = [];
   var seenTitles = [];
   adapter.findStrictListingContainers().forEach(function (container) {
@@ -210,37 +236,49 @@ function buildListingProofs(adapter, epoch) {
       var mountPoint = listingMountPoint(adapter, titleEl);
       if (!mountPoint || !mountPoint.parent) return;
       var eventProduct = renuvexPrProductMap[card.slug] || null;
+      var titleText = titleEl.textContent ? titleEl.textContent.trim() : '';
       proofs.push({
-        kind: 'listing',
+        kind: 'listing-candidate',
+        proofStage: 'candidate',
         adapterKey: adapter.key,
         epoch: epoch,
+        listingGeneration: listingGeneration,
         containerEl: container,
         cardEl: card.cardEl,
         linkEl: card.linkEl,
+        href: card.linkEl.href,
         titleEl: titleEl,
+        titleText: titleText,
         mountPoint: mountPoint,
         slug: card.slug,
-        productId: eventProduct && eventProduct.productId ? String(eventProduct.productId) : null,
-        productName: (eventProduct && eventProduct.name) || titleEl.textContent.trim() || null,
+        eventProductId: normalizeProductId(eventProduct && eventProduct.productId),
+        identityBlockReason: renuvexPrProductConflictMap[card.slug] || null,
+        productName: (eventProduct && eventProduct.name) || titleText || null,
       });
     });
   });
   return proofs;
 }
 
-export function collectListingPlacementProofs(expectedEpoch) {
+export function collectListingPlacementCandidates(expectedEpoch) {
   var epoch = expectedEpoch || getStorefrontContextEpoch();
   if (!isStorefrontContextCurrent(epoch)) return [];
+  var listingGeneration = getStorefrontListingGeneration();
   var selected = selectSingleProof(getCandidateAdapters().map(function (adapter) {
-    return { adapter: adapter, proofs: buildListingProofs(adapter, epoch) };
+    return { adapter: adapter, proofs: buildListingProofs(adapter, epoch, listingGeneration) };
   }));
   if (!selected) return [];
   selected.proofs.forEach(registerAttestedProductLink);
   return selected.proofs;
 }
 
+// Compatibility export for callers that only need strict DOM candidates.
+export function collectListingPlacementProofs(expectedEpoch) {
+  return collectListingPlacementCandidates(expectedEpoch);
+}
+
 export function hasStrictListingPlacementCandidates() {
-  return collectListingPlacementProofs(getStorefrontContextEpoch()).length > 0;
+  return collectListingPlacementCandidates(getStorefrontContextEpoch()).length > 0;
 }
 
 export function hasRuntimeDetectableListingSignature() {
@@ -249,104 +287,226 @@ export function hasRuntimeDetectableListingSignature() {
 
 export function collectRuntimeDetectableListingProofs() {
   var epoch = getStorefrontContextEpoch();
+  var listingGeneration = getStorefrontListingGeneration();
   var selected = selectSingleProof(getRuntimeDetectableThemeAdapters().map(function (adapter) {
-    return { adapter: adapter, proofs: buildListingProofs(adapter, epoch) };
+    return { adapter: adapter, proofs: buildListingProofs(adapter, epoch, listingGeneration) };
   }));
   return selected ? selected.proofs : [];
 }
 
-export function validateListingPlacementProof(proof) {
-  if (!proof || proof.kind !== 'listing' || !isStorefrontContextCurrent(proof.epoch)) return false;
-  if (!isAdapterCurrentlyAuthorized(proof.adapterKey)) return false;
-  var adapter = getThemeAdapterByKey(proof.adapterKey);
-  if (!adapter || !proof.containerEl || !proof.containerEl.isConnected) return false;
-  if (adapter.findStrictListingContainers().indexOf(proof.containerEl) === -1) return false;
-  if (!proof.titleEl || !proof.titleEl.isConnected || !adapter.matchesStrictListingTitle(proof.titleEl)) return false;
-  if (!proof.linkEl || !proof.linkEl.isConnected || sameOriginProductSlug(proof.linkEl) !== proof.slug) return false;
-  if (!proof.containerEl.contains(proof.titleEl) || !proof.containerEl.contains(proof.linkEl)) return false;
-  var currentCard = findCardLink(proof.titleEl, proof.containerEl);
-  if (!currentCard || currentCard.linkEl !== proof.linkEl || currentCard.slug !== proof.slug) return false;
-  if (proof.productId) {
-    var currentEventProduct = renuvexPrProductMap[proof.slug];
-    if (!currentEventProduct || String(currentEventProduct.productId) !== String(proof.productId)) return false;
-  }
-  var mountPoint = listingMountPoint(adapter, proof.titleEl);
+export function validateListingPlacementCandidate(candidate) {
+  if (!candidate || (candidate.kind !== 'listing-candidate' && candidate.kind !== 'listing')) return false;
+  if (!isStorefrontContextCurrent(candidate.epoch)) return false;
+  if (candidate.listingGeneration !== getStorefrontListingGeneration()) return false;
+  if (!isAdapterCurrentlyAuthorized(candidate.adapterKey)) return false;
+  var adapter = getThemeAdapterByKey(candidate.adapterKey);
+  if (!adapter || !candidate.containerEl || !candidate.containerEl.isConnected) return false;
+  if (adapter.findStrictListingContainers().indexOf(candidate.containerEl) === -1) return false;
+  if (!candidate.titleEl || !candidate.titleEl.isConnected || !adapter.matchesStrictListingTitle(candidate.titleEl)) return false;
+  if ((candidate.titleEl.textContent || '').trim() !== candidate.titleText) return false;
+  if (!candidate.linkEl || !candidate.linkEl.isConnected || candidate.linkEl.href !== candidate.href) return false;
+  if (sameOriginProductSlug(candidate.linkEl) !== candidate.slug) return false;
+  if (!candidate.containerEl.contains(candidate.titleEl) || !candidate.containerEl.contains(candidate.linkEl)) return false;
+  var currentCard = findCardLink(candidate.titleEl, candidate.containerEl);
+  if (!currentCard || currentCard.linkEl !== candidate.linkEl || currentCard.slug !== candidate.slug) return false;
+
+  var currentEventProduct = renuvexPrProductMap[candidate.slug] || null;
+  var currentEventProductId = normalizeProductId(currentEventProduct && currentEventProduct.productId);
+  if (candidate.eventProductId !== currentEventProductId) return false;
+  if ((renuvexPrProductConflictMap[candidate.slug] || null) !== (candidate.identityBlockReason || null)) return false;
+
+  var mountPoint = listingMountPoint(adapter, candidate.titleEl);
   return !!(
     mountPoint &&
-    proof.mountPoint &&
-    mountPoint.parent === proof.mountPoint.parent &&
-    mountPoint.anchorEl === proof.mountPoint.anchorEl &&
+    candidate.mountPoint &&
+    mountPoint.parent === candidate.mountPoint.parent &&
+    mountPoint.anchorEl === candidate.mountPoint.anchorEl &&
     mountPoint.parent.isConnected
   );
 }
 
-function registerAttestedProductLink(proof) {
-  if (!validateListingPlacementProof(proof)) return;
-  attestedProductLinks.set(proof.linkEl, {
-    adapterKey: proof.adapterKey,
-    epoch: proof.epoch,
-    slug: proof.slug,
-    productId: proof.productId,
-    productName: proof.productName,
+function sameListingCandidate(left, right) {
+  return !!(
+    left &&
+    right &&
+    left.adapterKey === right.adapterKey &&
+    left.epoch === right.epoch &&
+    left.listingGeneration === right.listingGeneration &&
+    left.containerEl === right.containerEl &&
+    left.cardEl === right.cardEl &&
+    left.linkEl === right.linkEl &&
+    left.href === right.href &&
+    left.titleEl === right.titleEl &&
+    left.titleText === right.titleText &&
+    left.mountPoint &&
+    right.mountPoint &&
+    left.mountPoint.parent === right.mountPoint.parent &&
+    left.mountPoint.anchorEl === right.mountPoint.anchorEl &&
+    left.slug === right.slug &&
+    left.eventProductId === right.eventProductId &&
+    (left.identityBlockReason || null) === (right.identityBlockReason || null)
+  );
+}
+
+export function promoteListingPlacementProof(candidate, productId, identitySource) {
+  var normalizedProductId = normalizeProductId(productId);
+  if (!normalizedProductId || !validateListingPlacementCandidate(candidate)) return null;
+  if (identitySource !== 'storefront_event' && identitySource !== 'lifecycle_resolver') return null;
+
+  if (identitySource === 'storefront_event') {
+    if (!candidate.eventProductId || candidate.eventProductId !== normalizedProductId) return null;
+  } else {
+    if (candidate.identityBlockReason || candidate.eventProductId) return null;
+    if (renuvexPrProductConflictMap[candidate.slug] || renuvexPrProductMap[candidate.slug]) return null;
+  }
+
+  var proof = Object.freeze(Object.assign({}, candidate, {
+    kind: 'listing',
+    proofStage: 'resolved',
+    productId: normalizedProductId,
+    identitySource: identitySource,
+  }));
+  var record = attestedProductLinks.get(candidate.linkEl);
+  if (!record || !sameListingCandidate(record.candidate, candidate)) return null;
+  record.candidate = candidate;
+  record.resolvedProof = proof;
+  return proof;
+}
+
+export function validateListingPlacementProof(proof) {
+  if (!proof || proof.kind !== 'listing' || proof.proofStage !== 'resolved') return false;
+  var productId = normalizeProductId(proof.productId);
+  if (!productId || !validateListingPlacementCandidate(proof)) return false;
+  if (proof.identitySource === 'storefront_event') {
+    return proof.eventProductId === productId && !proof.identityBlockReason;
+  }
+  if (proof.identitySource === 'lifecycle_resolver') {
+    return !proof.eventProductId && !proof.identityBlockReason &&
+      !renuvexPrProductMap[proof.slug] && !renuvexPrProductConflictMap[proof.slug];
+  }
+  return false;
+}
+
+function registerAttestedProductLink(candidate) {
+  if (!validateListingPlacementCandidate(candidate)) return;
+  var existing = attestedProductLinks.get(candidate.linkEl);
+  attestedProductLinks.set(candidate.linkEl, {
+    candidate: candidate,
+    resolvedProof: existing && sameListingCandidate(existing.candidate, candidate) &&
+      validateListingPlacementProof(existing.resolvedProof)
+      ? existing.resolvedProof
+      : null,
   });
+}
+
+export function getResolvedListingPlacementProof(candidate) {
+  if (!candidate || !candidate.linkEl || !validateListingPlacementCandidate(candidate)) return null;
+  var record = attestedProductLinks.get(candidate.linkEl);
+  if (!record || !sameListingCandidate(record.candidate, candidate)) return null;
+  return validateListingPlacementProof(record.resolvedProof) ? record.resolvedProof : null;
 }
 
 export function captureModalContextFromClick(anchor) {
   var attested = anchor ? attestedProductLinks.get(anchor) : null;
+  removeModalContextBadge(modalContext);
   modalToken += 1;
-  if (!attested || !isStorefrontContextCurrent(attested.epoch) || sameOriginProductSlug(anchor) !== attested.slug) {
-    modalContext = null;
-    return null;
-  }
-  var currentProof = collectListingPlacementProofs(attested.epoch).find(function (proof) {
-    return proof.linkEl === anchor && validateListingPlacementProof(proof);
-  });
-  if (!currentProof) {
+  if (!attested || !validateListingPlacementCandidate(attested.candidate)) {
     modalContext = null;
     return null;
   }
   modalContext = {
-    adapterKey: currentProof.adapterKey,
-    epoch: currentProof.epoch,
-    slug: currentProof.slug,
-    productId: currentProof.productId,
-    productName: currentProof.productName,
+    candidate: attested.candidate,
+    adapterKey: attested.candidate.adapterKey,
+    epoch: attested.candidate.epoch,
+    listingGeneration: attested.candidate.listingGeneration,
+    linkEl: anchor,
+    href: attested.candidate.href,
+    slug: attested.candidate.slug,
+    titleText: attested.candidate.titleText,
     token: modalToken,
+    capturedAt: Date.now(),
+    modalEl: null,
+    titleEl: null,
   };
   return modalContext;
 }
 
 export function clearModalPlacementContext() {
+  removeModalContextBadge(modalContext);
   modalToken += 1;
   modalContext = null;
 }
 
 export function reconcileModalPlacementContext() {
-  if (!modalContext || !modalContext.modalEl) return;
-  if (!modalContext.modalEl.isConnected || !isVisible(modalContext.modalEl)) {
+  if (!modalContext) return;
+  if (!isStorefrontContextCurrent(modalContext.epoch) ||
+      Date.now() - modalContext.capturedAt > MODAL_CONTEXT_TTL) {
     clearModalPlacementContext();
+    return;
+  }
+  var adapter = getThemeAdapterByKey(modalContext.adapterKey);
+  if (!adapter) {
+    clearModalPlacementContext();
+    return;
+  }
+  var modals = adapter.findStrictModals().filter(isVisible);
+  if (modals.length > 1) {
+    clearModalPlacementContext();
+    return;
+  }
+  if (modals.length === 0) {
+    if (modalContext.modalEl) clearModalPlacementContext();
+    return;
+  }
+  var modalEl = modals[0];
+  var titleEl = adapter.findModalTitle(modalEl);
+  var exactTitle = !!(
+    titleEl &&
+    isVisible(titleEl) &&
+    adapter.matchesStrictModalTitle(titleEl) &&
+    textMatches(titleEl, modalContext.titleText)
+  );
+  if (modalContext.modalEl) {
+    if (modalContext.modalEl !== modalEl || modalContext.titleEl !== titleEl || !exactTitle) {
+      clearModalPlacementContext();
+    }
+    return;
+  }
+  if (exactTitle) {
+    modalContext.modalEl = modalEl;
+    modalContext.titleEl = titleEl;
   }
 }
 
 export function resolveModalPlacementProof() {
   if (!modalContext || !isStorefrontContextCurrent(modalContext.epoch)) return null;
+  reconcileModalPlacementContext();
+  if (!modalContext || !modalContext.modalEl || !modalContext.titleEl) return null;
+  var attested = modalContext.linkEl ? attestedProductLinks.get(modalContext.linkEl) : null;
+  if (!attested || !sameListingCandidate(attested.candidate, modalContext.candidate) ||
+      !validateListingPlacementProof(attested.resolvedProof)) return null;
+  if (!modalContext.linkEl.isConnected || modalContext.linkEl.href !== modalContext.href) return null;
   var adapter = getThemeAdapterByKey(modalContext.adapterKey);
   if (!adapter) return null;
   var modals = adapter.findStrictModals().filter(isVisible);
-  if (modals.length !== 1) return null;
-  var modalEl = modals[0];
-  var titleEl = adapter.findModalTitle(modalEl);
+  if (modals.length !== 1 || modals[0] !== modalContext.modalEl) return null;
+  var modalEl = modalContext.modalEl;
+  var titleEl = modalContext.titleEl;
+  if (adapter.findModalTitle(modalEl) !== titleEl) return null;
   if (!titleEl || !isVisible(titleEl) || !adapter.matchesStrictModalTitle(titleEl)) return null;
-  if (!textMatches(titleEl, modalContext.productName)) return null;
-  modalContext.modalEl = modalEl;
+  if (!textMatches(titleEl, modalContext.titleText)) return null;
   return {
     kind: 'modal',
     adapterKey: adapter.key,
     epoch: modalContext.epoch,
     token: modalContext.token,
     slug: modalContext.slug,
-    productId: modalContext.productId,
-    productName: modalContext.productName,
+    productId: attested.resolvedProof.productId,
+    identitySource: attested.resolvedProof.identitySource,
+    linkEl: modalContext.linkEl,
+    href: modalContext.href,
+    listingGeneration: modalContext.listingGeneration,
+    titleText: modalContext.titleText,
     modalEl: modalEl,
     titleEl: titleEl,
   };
@@ -358,13 +518,21 @@ export function validateModalPlacementProof(proof) {
   if (!isAdapterCurrentlyAuthorized(proof.adapterKey) || !isVisible(proof.modalEl) || !isVisible(proof.titleEl)) return false;
   var adapter = getThemeAdapterByKey(proof.adapterKey);
   var visibleModals = adapter ? adapter.findStrictModals().filter(isVisible) : [];
+  var attested = proof.linkEl ? attestedProductLinks.get(proof.linkEl) : null;
   return !!(
     adapter &&
+    normalizeProductId(proof.productId) &&
+    proof.listingGeneration === getStorefrontListingGeneration() &&
+    proof.linkEl.isConnected &&
+    proof.linkEl.href === proof.href &&
+    attested &&
+    validateListingPlacementProof(attested.resolvedProof) &&
+    attested.resolvedProof.productId === proof.productId &&
     visibleModals.length === 1 &&
     visibleModals[0] === proof.modalEl &&
     adapter.matchesStrictModalTitle(proof.titleEl) &&
     proof.modalEl.contains(proof.titleEl) &&
-    textMatches(proof.titleEl, proof.productName)
+    textMatches(proof.titleEl, proof.titleText)
   );
 }
 

@@ -108,12 +108,16 @@ export function ensureBadgeStyles() {
 export function createBadgeEl(rating, justify, iconPair) {
   ensureBadgeStyles();
   var meta = arguments[3] || {};
+  var productId = meta.productId === undefined || meta.productId === null
+    ? ''
+    : String(meta.productId).trim();
+  if (!productId || productId.length > 128) return null;
   var badgeSettings = meta.badgeSettings || {};
   var resolvedJustify = resolveBadgeJustify(badgeSettings.alignment, justify);
   var slot = createOwnedSlot({
     slot: 'listing-rating',
     className: 'renuvex-pr-listing-badge-slot',
-    context: { surface: 'listing', slug: meta.slug || '', productId: meta.productId || '' },
+    context: { surface: 'listing', slug: meta.slug || '', productId: productId },
   });
   slot.setAttribute('data-renuvex-listing-badge', '1');
 
@@ -130,7 +134,7 @@ export function createBadgeEl(rating, justify, iconPair) {
   el.setAttribute('data-renuvex-surface', 'listing');
   el.setAttribute('data-renuvex-rating', String(rating.avg));
   el.setAttribute('data-renuvex-count', String(rating.count));
-  setSlotContext(el, { surface: 'listing', slug: meta.slug || '', productId: meta.productId || '' });
+  setSlotContext(el, { surface: 'listing', slug: meta.slug || '', productId: productId });
   // Alignment via data-attr + CSS (Loox-style) instead of an inline style.
   // font-size + icon size come from .renuvex-pr-rating-badge CSS variables.
   var alignMap = { 'center': 'center', 'flex-end': 'right', 'flex-start': 'left' };

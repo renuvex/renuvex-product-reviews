@@ -1,4 +1,4 @@
-name: Media Cross-Browser
+name: Widget Cross-Browser
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: media-cross-browser-${{ github.ref }}
+  group: widget-cross-browser-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -59,11 +59,14 @@ jobs:
       - name: Run media project
         run: pnpm exec playwright test --config=playwright.media.config.ts tests/widget-media-cross-browser.spec.ts --project=${{ matrix.project }}
 
+      - name: Run critical Product ID placement project
+        run: pnpm exec playwright test --config=playwright.placement.config.ts --project=${{ matrix.project }}
+
       - name: Upload failure evidence
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: media-${{ matrix.project }}-results
+          name: widget-cross-browser-${{ matrix.project }}-results
           path: test-results/
           if-no-files-found: ignore
           retention-days: 7

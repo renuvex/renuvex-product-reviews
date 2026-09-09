@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-09
-last_verified: 2026-08-09
+updated: 2026-09-09
+last_verified: 2026-09-09
 confidence: high
 tags:
   - index
@@ -176,6 +176,7 @@ source_files: []
 - [[Phase_3_Widget_Lifecycle_Hardening]]
 - [[Widget_Architecture_Audit]]
 - [[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]]
+- [[Badge_Product_ID_Closeout_Acceptance_2026-09-09]]
 - [[Future_Feature_Ideas]]
 
 ## Templates
@@ -193,4 +194,4 @@ source_files: []
 
 ---
 
-**Last Updated:** 2026-08-09 (Product lifecycle Worker no-store and manual QStash dispatch/readiness gates are live-accepted; Release B, managed-scale/provider quota, conflict operations, and sustained operational gates remain open.)
+**Last Updated:** 2026-09-09 (Badge Product ID closeout is implemented in source; backend/Worker rollout, two live canaries, natural lifecycle continuity, and Sentry alert verification remain open. Product Lifecycle Release B remains separate.)

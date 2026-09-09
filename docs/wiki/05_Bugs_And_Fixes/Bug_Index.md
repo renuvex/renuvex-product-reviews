@@ -3,7 +3,9 @@ type: bug
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-29
+updated: 2026-09-09
+last_verified: 2026-09-09
+confidence: high
 tags:
   - bugs
 related:
@@ -15,12 +17,21 @@ related:
 
 # Bug Index
 
+## Agent Brief
+
+Use this page to locate verified bug records. Keep open issues separate from
+fixed history, and do not mark a runtime issue closed until its required live
+acceptance has passed. The 2026-08 badge availability incident is fixed; its
+Product ID propagation follow-up remains tracked by the separate acceptance
+record.
+
 > Master list of tracked bugs. Add an entry when a real bug is found, with link to a per-bug note. Mark fixed bugs and link to the resolution.
 
 ## Open
 - _None tracked._
 
 ## Recently fixed (verify periodically)
+- 2026-09-08 - [[Bug_Storefront_Badges_Fail_Closed_After_Theme_Schema_Drift]] - PR #35 replaced unavailable Ikas active-theme evidence with strict runtime-attested Ozy placement while preserving fail-closed unknown/ambiguous themes; PR #36 bound request dedupe to exact candidates. Live PDP/category/home placement passed. The separate Product ID propagation closeout is implemented in source and remains rollout-gated.
 - 2026-07-29 - [[Bug_Review_Widget_SPA_Health_Probe_False_Positive]] - Fixed a CI-reproduced false `reviews-widget / missing_after_render` report. The old product widget is intentionally cleared during an SPA route transition, but its delayed visibility probe could fire before the next product event. Review probes now stop only when their route/product lifecycle is no longer relevant; genuine unexpected removal remains observable.
 - 2026-07-04 - [[Bug_AWS_Lightbox_Full_Size_Variant_Selection]] - Fixed a storefront AWS image lightbox bug where small uploaded originals could make every generated variant report the same width, causing the generic picker to choose `thumb_640x854.webp` for the main 1200px modal image. Lightbox main images now prefer the full-size `w*` variant family, and duplicate immutable `srcset` values are suppressed.
 - 2026-07-02 - [[Bug_Offline_Refresh_Unstyled_SVG_Star]] - Verified and fixed an offline refresh / partial-load hardening bug where widget-owned SVG stars and media thumbnails could become huge when CSS/current chunks were missing or delayed. Shared icon output now carries intrinsic `1em` fallback dimensions, and media thumbnail source quality is separated from small HTML display fallback dimensions.
@@ -68,6 +79,9 @@ related:
 - 2026-05-10 - [[Bug_Review_Detail_Lightbox_Risks]] - Public review image URLs are now restricted to trusted Cloudinary assets before storage or storefront render.
 
 ## Change Log
+- 2026-09-09: Ported the 2026-08-09 badge schema-drift incident record and
+  marked the availability regression fixed by PR #35/#36 plus live Ozy checks.
+  Kept the Product ID response propagation as a separate rollout-gated closeout.
 - 2026-07-29: Added [[Bug_Review_Widget_SPA_Health_Probe_False_Positive]] after Playwright trace evidence proved that the full CI browser failure was an intentional SPA retirement reported as `missing_after_render`, not a failed product transition. Added lifecycle-relevance gating plus unit and browser regressions.
 - 2026-07-04: Added [[Bug_AWS_Lightbox_Full_Size_Variant_Selection]] after live storefront inspection showed the modal main image using `thumb_640x854.webp` in a 1200px lightbox. Root cause was small-original AWS variants sharing the same output width; fixed by making the lightbox prefer full-size `w*` variants and suppressing duplicate immutable `srcset`.
 - 2026-07-02: Added and expanded [[Bug_Offline_Refresh_Unstyled_SVG_Star]] after Android Chrome offline refresh screenshots showed partial/no-style widget rendering with oversized stars and media thumbnails. Fixed by adding intrinsic `width="1em" height="1em" focusable="false"` fallback attributes to shared sprite icon use-sites, separating media thumbnail source and display dimensions, and pinning the contract with unit/runtime tests.

@@ -128,7 +128,24 @@ export var renuvexPrSlugMap = {};
 // productId is the stable ikas product UUID; slug/name are display snapshots.
 export var renuvexPrProductMap = {};
 
+// A listing event is an atomic identity generation. Conflicting or malformed
+// event identities are kept separately so the slug resolver cannot silently
+// override contradictory provider evidence.
+export var renuvexPrProductConflictMap = {};
+export var renuvexPrListingGeneration = 0;
+
+export function replaceStorefrontProductMaps(slugMap, productMap, conflictMap) {
+  renuvexPrSlugMap = slugMap || {};
+  renuvexPrProductMap = productMap || {};
+  renuvexPrProductConflictMap = conflictMap || {};
+  renuvexPrListingGeneration += 1;
+  return renuvexPrListingGeneration;
+}
+
+export function getStorefrontListingGeneration() {
+  return renuvexPrListingGeneration;
+}
+
 export function clearStorefrontProductMaps() {
-  Object.keys(renuvexPrSlugMap).forEach(function (key) { delete renuvexPrSlugMap[key]; });
-  Object.keys(renuvexPrProductMap).forEach(function (key) { delete renuvexPrProductMap[key]; });
+  replaceStorefrontProductMaps({}, {}, {});
 }
