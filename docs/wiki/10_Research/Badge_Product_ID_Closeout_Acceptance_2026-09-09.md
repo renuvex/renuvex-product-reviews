@@ -68,6 +68,8 @@ and Sentry alert verification all pass.
 | Work branch | `codex/badge-product-id-closeout` |
 | Product ID implementation | `e7491dff` |
 | CI-origin runtime and budget | `6ccf9ad7` |
+| Documentation evidence | `63202dd3` |
+| Merged closeout | PR #37, merge commit `f70bd7c4fab69af9d084e06d1a57b5250aed7349` |
 | Current local runtime | `widget-runtime/runtime-47TOVECU.js` (CI/production-origin build) |
 | Existing live evidence | PR #35/#36 Ozy PDP, category, and homepage placement passed before this closeout |
 
@@ -106,15 +108,39 @@ modal/title/token and retires stale modal slots.
 | Generated drift | PASS; `build:widget:ci` reproduced the committed runtime with zero drift |
 | Application build | PASS; migration-free Next.js 16.2.1 `build:ci` completed |
 | Wiki audit | PASS with 0 errors; 25 repository-health warnings remain outside this closeout |
-| PR CI | Pending branch publication |
+| PR CI | PASS; Quality Gate run `34380648250` finished with all 13 jobs green after one GitHub-hosted APT mirror retry; Database Compatibility run `34380648240` passed |
+
+## Backend-First Production Evidence
+
+PR #37 merged on 2026-09-09. The linked Vercel production deployment
+`dpl_Ty2ktp2Ug2HsqBs7WQwXwAWipqoQ` reached `READY` for the exact merge commit
+`f70bd7c4fab69af9d084e06d1a57b5250aed7349` and assigned the
+`https://app.renuvex.app` alias. The previous backend rollback boundary remains
+deployment `dpl_CvrfYUUR1iwNFLAPY3B6QeYwswUA` at `a602db8d`.
+
+| Probe | Result |
+|---|---|
+| Origin reviewed product | `/api/public/ratings-by-slug` resolved `premium-shortsg` to Product ID `37fb6e3d-6085-4ac1-b0eb-7aaa63ada934`, `avg: "4.0"`, `count: 93`; HTTP `200`, `Cache-Control: no-store` |
+| Worker reviewed product | Returned the identical Product ID/rating body; HTTP `200`, `Cache-Control: no-store`, `X-Renuvex-Edge-Cache: BYPASS` |
+| Worker zero-review product | Resolved `basic-cap-1` to Product ID `286da97c-ee9d-4d92-98d8-13585822a38a`, `avg: "0.0"`, `count: 0`; HTTP `200`, `no-store`, `BYPASS` |
+| Runtime compatibility | The Worker still serves the pre-closeout PR #35/#36 runtime. It ignores the additive Product ID response field and keeps zero-count results hidden, proving the backend-first compatibility gate before a Worker runtime mutation. |
+
+Post-merge Database Compatibility run `34383106863` passed. Quality Gate run
+`34383106857` failed on both the initial attempt and failed-job rerun before any
+browser test started: the GitHub-hosted Ubuntu runner's preinstalled Google
+Chrome APT repository returned `Hash Sum mismatch` during Playwright's
+`--with-deps` step. A separate CI-only follow-up routes browser installation
+through a narrow runner-source guard; it does not change application or widget
+runtime behavior. This infrastructure failure remains open until that follow-up
+passes its own PR checks.
 
 ## Production Gates
 
 | Gate | Required evidence | Status |
 |---|---|---|
-| Backend deploy | Closeout commit and Vercel deployment ID | PENDING APPROVAL/PR |
-| Origin slug API | Product ID-bearing and zero-review responses; `no-store`; old-runtime compatibility | PENDING |
-| Worker pre-runtime check | Same body through read origin; `X-Renuvex-Edge-Cache: BYPASS`; no HIT | PENDING |
+| Backend deploy | Closeout commit and Vercel deployment ID | PASS; `f70bd7c4`, `dpl_Ty2ktp2Ug2HsqBs7WQwXwAWipqoQ`, `READY` |
+| Origin slug API | Product ID-bearing and zero-review responses; `no-store`; old-runtime compatibility | PASS |
+| Worker pre-runtime check | Same body through read origin; `X-Renuvex-Edge-Cache: BYPASS`; no HIT | PASS |
 | Worker runtime deploy | Approved deployment/version and immutable runtime hash | PENDING EXPLICIT APPROVAL |
 | Canary 1 | Fresh desktop/mobile PDP `/premium-shortsg`, category `/clothing`, homepage scroll, search, slider/infinite-scroll, and quick-view DOM/network/console evidence | PENDING |
 | Lifecycle continuity | One natural daily reconciliation completed without identity drift/conflict | PENDING |

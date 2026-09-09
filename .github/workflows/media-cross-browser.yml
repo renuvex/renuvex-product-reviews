@@ -54,7 +54,7 @@ jobs:
         run: pnpm build:widget
 
       - name: Install Playwright browser
-        run: pnpm exec playwright install --with-deps ${{ matrix.browser }}
+        run: bash scripts/install-playwright-browser-ci.sh "${{ matrix.browser }}"
 
       - name: Run media project
         run: pnpm exec playwright test --config=playwright.media.config.ts tests/widget-media-cross-browser.spec.ts --project=${{ matrix.project }}
