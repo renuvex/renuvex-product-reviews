@@ -66,7 +66,7 @@ and Sentry alert verification all pass.
 | Strict placement | PR #35, `b18c0e08d00c480b6006d7e8cbca031df7188aca` |
 | Request dedupe | PR #36, `cac45aec64b57b087089f1792f0add50238619f2` |
 | Work branch | `codex/badge-product-id-closeout` |
-| Current local runtime | `widget-runtime/runtime-KF3HKT4B.js` |
+| Current local runtime | `widget-runtime/runtime-47TOVECU.js` (CI/production-origin build) |
 | Existing live evidence | PR #35/#36 Ozy PDP, category, and homepage placement passed before this closeout |
 
 ## Source Contract
@@ -89,7 +89,7 @@ modal/title/token and retires stale modal slots.
 
 | Gate | Result |
 |---|---|
-| Widget build | PASS; manifest entry `runtime-KF3HKT4B.js` |
+| Widget build | PASS; CI/production-origin manifest entry `runtime-47TOVECU.js` |
 | Focused public API/health/static units | PASS, 79 tests |
 | Full unit suite | PASS, 124 files / 822 tests |
 | Widget network smoke | PASS, 37 tests |
@@ -98,7 +98,7 @@ modal/title/token and retires stale modal slots.
 | Admin preview smoke | PASS, 6 tests |
 | Full placement capability | PASS, 43 tests |
 | Five-browser critical matrix | PASS, 20 tests across Chromium, Firefox, desktop WebKit, Pixel Android, and iPhone WebKit |
-| Performance budget | PASS; rating-badge static graph `64,954 / 65,000` bytes and all other limits passed |
+| Performance budget | PASS; rating-badge static graph `64,837 / 65,000` bytes and all other limits passed |
 | Worker contract | PASS, 11 tests; types generated; Wrangler deploy dry-run passed without deployment |
 | Typecheck / lint | PASS; TypeScript clean, ESLint 0 errors with 7 pre-existing React warnings |
 | Generated drift / application build / wiki audit | Pending final clean-tree verification |
