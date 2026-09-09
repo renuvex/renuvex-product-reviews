@@ -21,6 +21,8 @@ related:
   - "[[Theme_Adapter_Playbook]]"
   - "[[Ikas_Storefront_Events]]"
   - "[[Ikas_Storefront_Script_Capabilities]]"
+  - "[[Badge_Product_ID_Closeout_Acceptance_2026-09-09]]"
+  - "[[Bug_Quick_View_Badge_Listing_Generation_Rollover]]"
 source_files:
   - "src/lib/storefront-theme.ts"
   - "src/widget/core/settings.js"
@@ -61,11 +63,15 @@ explicit Shadow DOM review mount and admin preview remain separate contracts.
 
 ## Status
 
-Accepted on 2026-08-10. PR #35 established the strict placement baseline and
-PR #36 bound duplicate-request suppression to the exact candidate; both are in
-`origin/main` and their Ozy PDP/category/home placement was live-checked. The
-2026-09-09 Product ID propagation closeout is implemented in source but is not
-Production-accepted until the backend-first and Worker gates in this ADR pass.
+Accepted on 2026-08-10. PR #35 established the strict placement baseline, PR
+#36 bound duplicate-request suppression to the exact candidate, and PR #37
+merged Product ID propagation. PR #38 restored deterministic browser CI; main
+Quality Gate `34389119540` passed. The Product ID backend and first approved
+Worker runtime are live. Its first canary passed PDP/category/home placement but
+exposed a quick-view availability regression during same-route listing event
+replacement. The strict fix is local on `codex/badge-quick-view-closeout`; this
+fix is committed as `e34017bc` and all local gates pass. This closeout is not
+Production-accepted until the follow-up rollout and all gates in this ADR pass.
 This ADR supersedes only the automatic-placement authorization and
 legacy-runtime portions of [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]].
 ADR 0022's pure settings read, `themeSyncDue`, lazy sync, and explicit
@@ -194,6 +200,14 @@ modal/title instance for a bounded token. Closing, hiding, replacing, retitling,
 or multiplying the modal retires the context and removes its old badge slot, so
 a recycled modal cannot retain or reuse another Product ID.
 
+The clicked Product ID is sealed from a valid proof or current event identity.
+A later listing generation may replace the candidate only when the exact
+adapter/epoch/container/card/link/href/slug/title/mount target is unchanged and
+the current valid proof has the same sealed Product ID. A generation rollover
+without a sealed ID, a different ID, or any changed target remains a no-op. This
+permits Ozy's same-route event enrichment without weakening card-recycling or
+wrong-product defenses.
+
 JSON-LD is emitted only after a real visible eligible Renuvex rating/review
 surface exists. Placement policy alone is insufficient.
 
@@ -278,6 +292,8 @@ Source and browser gates must prove:
 - provider-verified and runtime-attested Ozy both require exact targets;
 - broad H1, class-substring, banner, unrelated title, untrusted modal click,
   recycled card/modal, identity conflict, and stale async responses are no-ops;
+- quick-view survives same-target listing-generation enrichment only for an
+  already sealed identical Product ID; changed/unsealed identity is a no-op;
 - slow valid DOM can mount while the context remains current;
 - every visible PDP/listing/modal badge and its owned slot carry the same
   non-empty Product ID;

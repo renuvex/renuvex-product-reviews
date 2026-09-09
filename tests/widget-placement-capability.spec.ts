@@ -385,6 +385,65 @@ test('a modal opened while slug identity is resolving receives only the promoted
   expect(identity).toEqual({ slotProductId: 'product-1', badgeProductId: 'product-1' });
 });
 
+test('a resolved quick-view survives same-link Product ID event enrichment', async ({ page }) => {
+  const log = await setupProductListingFallbackPage(page, {
+    listingMarkup: `<section class="category-products-main">
+      <article><a id="enriched-card" href="/premium-shorts" onclick="event.preventDefault();setTimeout(function(){document.body.insertAdjacentHTML('beforeend','<div class=&quot;add-to-basket-modal&quot;><h1 class=&quot;product-name&quot;>Premium Shorts</h1></div>')},0)"><h2 class="product-name">Premium Shorts</h2></a></article>
+    </section>`,
+    ikasEvents: [{ type: 'PAGE_VIEW', data: { pageType: 'CATEGORY' } }],
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await expect.poll(() => countListingBadges(page), { timeout: 6000 }).toBe(1);
+  expect(countUrls(log, '/api/public/ratings-by-slug')).toBe(1);
+
+  await page.click('#enriched-card');
+  await page.evaluate(() => {
+    const emit = (window as Window & { __renuvexEmitIkasEvent?: (event: unknown) => void }).__renuvexEmitIkasEvent;
+    emit?.({ type: 'VIEW_LISTING', data: { productDetails: [
+      { id: 'product-1', name: 'Premium Shorts', slug: 'premium-shorts' },
+    ] } });
+  });
+
+  const modalSlot = page.locator('.add-to-basket-modal [data-renuvex-slot="listing-rating"]');
+  await expect.poll(() => modalSlot.count(), { timeout: 6000 }).toBe(1);
+  await expect(modalSlot).toHaveAttribute('data-renuvex-product-id', 'product-1');
+  await expect(modalSlot.locator('.renuvex-pr-rating-badge--listing')).toHaveAttribute('data-renuvex-product-id', 'product-1');
+});
+
+test('a quick-view cannot cross an event generation with a different Product ID', async ({ page }) => {
+  await setupProductListingFallbackPage(page, {
+    listingMarkup: `<section class="category-products-main">
+      <article><a id="changed-id-card" href="/premium-shorts" onclick="event.preventDefault();setTimeout(function(){document.body.insertAdjacentHTML('beforeend','<div class=&quot;add-to-basket-modal&quot;><h1 class=&quot;product-name&quot;>Premium Shorts</h1></div>')},0)"><h2 class="product-name">Premium Shorts</h2></a></article>
+    </section>`,
+    ikasEvents: [
+      { type: 'PAGE_VIEW', data: { pageType: 'CATEGORY' } },
+      { type: 'VIEW_LISTING', data: { productDetails: [
+        { id: 'product-1', name: 'Premium Shorts', slug: 'premium-shorts' },
+      ] } },
+    ],
+    ratingsHandler: async (route) => {
+      const ids = new URL(route.request().url()).searchParams.get('productIds')?.split(',') ?? [];
+      const data = Object.fromEntries(ids.map((id) => [id, { avg: '4.8', count: 12 }]));
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data }) });
+    },
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await expect.poll(() => countListingBadges(page), { timeout: 6000 }).toBe(1);
+
+  await page.click('#changed-id-card');
+  await page.evaluate(() => {
+    const emit = (window as Window & { __renuvexEmitIkasEvent?: (event: unknown) => void }).__renuvexEmitIkasEvent;
+    emit?.({ type: 'VIEW_LISTING', data: { productDetails: [
+      { id: 'replacement-product', name: 'Premium Shorts', slug: 'premium-shorts' },
+    ] } });
+  });
+
+  await expect.poll(async () => (await listingBadgeIdentities(page))[0]?.slotProductId, { timeout: 6000 })
+    .toBe('replacement-product');
+  await expect(page.locator('.add-to-basket-modal')).toHaveCount(1);
+  await expect(page.locator('.add-to-basket-modal [data-renuvex-slot="listing-rating"]')).toHaveCount(0);
+});
+
 test('carousel mutations do not duplicate an in-flight or resolved-empty slug read', async ({ page }) => {
   const log = await setupProductListingFallbackPage(page, {
     ratingsBySlugHandler: async (route) => {

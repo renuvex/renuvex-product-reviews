@@ -63,6 +63,12 @@ test('event Product ID remains exact through listing and quick-view placement', 
   expect(countUrls(log, '/api/public/ratings-by-slug')).toBe(0);
 
   await page.click('#quick-view-card');
+  await page.evaluate((productId) => {
+    const emit = (window as Window & { __renuvexEmitIkasEvent?: (event: unknown) => void }).__renuvexEmitIkasEvent;
+    emit?.({ type: 'VIEW_LISTING', data: { productDetails: [
+      { id: productId, name: 'Premium Shorts', slug: 'premium-shorts' },
+    ] } });
+  }, PRODUCT_ID);
   const modalSlot = page.locator('.add-to-basket-modal [data-renuvex-slot="listing-rating"]');
   await expect.poll(() => modalSlot.count()).toBe(1);
   await expect(modalSlot).toHaveAttribute('data-renuvex-product-id', PRODUCT_ID);

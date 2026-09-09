@@ -325,13 +325,12 @@ export function validateListingPlacementCandidate(candidate) {
   );
 }
 
-function sameListingCandidate(left, right) {
+function sameListingTarget(left, right) {
   return !!(
     left &&
     right &&
     left.adapterKey === right.adapterKey &&
     left.epoch === right.epoch &&
-    left.listingGeneration === right.listingGeneration &&
     left.containerEl === right.containerEl &&
     left.cardEl === right.cardEl &&
     left.linkEl === right.linkEl &&
@@ -342,7 +341,14 @@ function sameListingCandidate(left, right) {
     right.mountPoint &&
     left.mountPoint.parent === right.mountPoint.parent &&
     left.mountPoint.anchorEl === right.mountPoint.anchorEl &&
-    left.slug === right.slug &&
+    left.slug === right.slug
+  );
+}
+
+function sameListingCandidate(left, right) {
+  return !!(
+    sameListingTarget(left, right) &&
+    left.listingGeneration === right.listingGeneration &&
     left.eventProductId === right.eventProductId &&
     (left.identityBlockReason || null) === (right.identityBlockReason || null)
   );
@@ -414,15 +420,12 @@ export function captureModalContextFromClick(anchor) {
     modalContext = null;
     return null;
   }
+  var clickedProductId = validateListingPlacementProof(attested.resolvedProof)
+    ? attested.resolvedProof.productId
+    : attested.candidate.eventProductId;
   modalContext = {
     candidate: attested.candidate,
-    adapterKey: attested.candidate.adapterKey,
-    epoch: attested.candidate.epoch,
-    listingGeneration: attested.candidate.listingGeneration,
-    linkEl: anchor,
-    href: attested.candidate.href,
-    slug: attested.candidate.slug,
-    titleText: attested.candidate.titleText,
+    productId: clickedProductId || null,
     token: modalToken,
     capturedAt: Date.now(),
     modalEl: null,
@@ -439,12 +442,13 @@ export function clearModalPlacementContext() {
 
 export function reconcileModalPlacementContext() {
   if (!modalContext) return;
-  if (!isStorefrontContextCurrent(modalContext.epoch) ||
+  var candidate = modalContext.candidate;
+  if (!candidate || !isStorefrontContextCurrent(candidate.epoch) ||
       Date.now() - modalContext.capturedAt > MODAL_CONTEXT_TTL) {
     clearModalPlacementContext();
     return;
   }
-  var adapter = getThemeAdapterByKey(modalContext.adapterKey);
+  var adapter = getThemeAdapterByKey(candidate.adapterKey);
   if (!adapter) {
     clearModalPlacementContext();
     return;
@@ -464,7 +468,7 @@ export function reconcileModalPlacementContext() {
     titleEl &&
     isVisible(titleEl) &&
     adapter.matchesStrictModalTitle(titleEl) &&
-    textMatches(titleEl, modalContext.titleText)
+    textMatches(titleEl, candidate.titleText)
   );
   if (modalContext.modalEl) {
     if (modalContext.modalEl !== modalEl || modalContext.titleEl !== titleEl || !exactTitle) {
@@ -479,14 +483,22 @@ export function reconcileModalPlacementContext() {
 }
 
 export function resolveModalPlacementProof() {
-  if (!modalContext || !isStorefrontContextCurrent(modalContext.epoch)) return null;
+  var candidate = modalContext && modalContext.candidate;
+  if (!candidate || !isStorefrontContextCurrent(candidate.epoch)) return null;
   reconcileModalPlacementContext();
   if (!modalContext || !modalContext.modalEl || !modalContext.titleEl) return null;
-  var attested = modalContext.linkEl ? attestedProductLinks.get(modalContext.linkEl) : null;
-  if (!attested || !sameListingCandidate(attested.candidate, modalContext.candidate) ||
-      !validateListingPlacementProof(attested.resolvedProof)) return null;
-  if (!modalContext.linkEl.isConnected || modalContext.linkEl.href !== modalContext.href) return null;
-  var adapter = getThemeAdapterByKey(modalContext.adapterKey);
+  var attested = attestedProductLinks.get(candidate.linkEl);
+  var resolvedProof = attested && attested.resolvedProof;
+  if (!validateListingPlacementProof(resolvedProof)) return null;
+  if (!sameListingCandidate(attested.candidate, candidate)) {
+    if (!modalContext.productId ||
+        !sameListingTarget(candidate, attested.candidate) ||
+        resolvedProof.productId !== modalContext.productId) return null;
+    candidate = modalContext.candidate = attested.candidate;
+  }
+  if (modalContext.productId && modalContext.productId !== resolvedProof.productId) return null;
+  modalContext.productId = resolvedProof.productId;
+  var adapter = getThemeAdapterByKey(candidate.adapterKey);
   if (!adapter) return null;
   var modals = adapter.findStrictModals().filter(isVisible);
   if (modals.length !== 1 || modals[0] !== modalContext.modalEl) return null;
@@ -494,19 +506,19 @@ export function resolveModalPlacementProof() {
   var titleEl = modalContext.titleEl;
   if (adapter.findModalTitle(modalEl) !== titleEl) return null;
   if (!titleEl || !isVisible(titleEl) || !adapter.matchesStrictModalTitle(titleEl)) return null;
-  if (!textMatches(titleEl, modalContext.titleText)) return null;
+  if (!textMatches(titleEl, candidate.titleText)) return null;
   return {
     kind: 'modal',
     adapterKey: adapter.key,
-    epoch: modalContext.epoch,
+    epoch: candidate.epoch,
     token: modalContext.token,
-    slug: modalContext.slug,
-    productId: attested.resolvedProof.productId,
-    identitySource: attested.resolvedProof.identitySource,
-    linkEl: modalContext.linkEl,
-    href: modalContext.href,
-    listingGeneration: modalContext.listingGeneration,
-    titleText: modalContext.titleText,
+    slug: candidate.slug,
+    productId: modalContext.productId,
+    identitySource: resolvedProof.identitySource,
+    linkEl: candidate.linkEl,
+    href: candidate.href,
+    listingGeneration: candidate.listingGeneration,
+    titleText: candidate.titleText,
     modalEl: modalEl,
     titleEl: titleEl,
   };
@@ -527,6 +539,7 @@ export function validateModalPlacementProof(proof) {
     proof.linkEl.href === proof.href &&
     attested &&
     validateListingPlacementProof(attested.resolvedProof) &&
+    modalContext.productId === proof.productId &&
     attested.resolvedProof.productId === proof.productId &&
     visibleModals.length === 1 &&
     visibleModals[0] === proof.modalEl &&
