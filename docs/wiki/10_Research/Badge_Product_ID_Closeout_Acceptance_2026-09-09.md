@@ -131,8 +131,11 @@ browser test started: the GitHub-hosted Ubuntu runner's preinstalled Google
 Chrome APT repository returned `Hash Sum mismatch` during Playwright's
 `--with-deps` step. A separate CI-only follow-up routes browser installation
 through a narrow runner-source guard; it does not change application or widget
-runtime behavior. This infrastructure failure remains open until that follow-up
-passes its own PR checks.
+runtime behavior. PR #38 Quality Gate run `34385396805` passed all 12 jobs on
+commit `e7adc045`, including every Chromium/WebKit install and the browser tests
+that the broken repository metadata had previously suppressed. This closes the
+runner-source incident at PR level; the final merge SHA still requires its
+normal `main` Quality Gate.
 
 ## Production Gates
 
