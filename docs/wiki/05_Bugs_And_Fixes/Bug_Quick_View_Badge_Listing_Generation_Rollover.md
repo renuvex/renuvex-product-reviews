@@ -85,8 +85,9 @@ only after safe promotion.
 
 ## Open Production Gates
 
-The fix is source-only on `codex/badge-quick-view-closeout`. It still requires
-PR/CI, automatic backend deployment verification, separately approved Worker
+The fix is commit `e34017bc` on `codex/badge-quick-view-closeout`; all local
+quality and reproducibility gates pass. It still requires PR/CI, automatic
+backend deployment verification, separately approved Worker
 deployment, and a fresh live Ozy quick-view canary. Keep this bug `active` until
 the modal displays exactly one slot and badge carrying the same non-empty
 Product ID as the clicked card, with exact title adjacency and no forbidden

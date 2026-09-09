@@ -70,8 +70,8 @@ Quality Gate `34389119540` passed. The Product ID backend and first approved
 Worker runtime are live. Its first canary passed PDP/category/home placement but
 exposed a quick-view availability regression during same-route listing event
 replacement. The strict fix is local on `codex/badge-quick-view-closeout`; this
-closeout is not Production-accepted until the follow-up rollout and all gates in
-this ADR pass.
+fix is committed as `e34017bc` and all local gates pass. This closeout is not
+Production-accepted until the follow-up rollout and all gates in this ADR pass.
 This ADR supersedes only the automatic-placement authorization and
 legacy-runtime portions of [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]].
 ADR 0022's pure settings read, `themeSyncDue`, lazy sync, and explicit

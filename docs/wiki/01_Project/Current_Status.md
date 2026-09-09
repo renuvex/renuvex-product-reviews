@@ -36,7 +36,8 @@ through PR #37/#38 and the backend plus first approved Worker runtime are live.
 The first live canary passed PDP/category/home surfaces but exposed a quick-view
 availability regression during same-route listing-generation replacement. Its
 strict same-target/same-Product-ID fix is locally verified on
-`codex/badge-quick-view-closeout`; merge/CI, replacement Worker rollout, a
+`codex/badge-quick-view-closeout` at `e34017bc`; all local gates pass. PR/CI,
+replacement Worker rollout, a
 complete first canary, natural lifecycle reconciliation, the second canary, and
 Sentry alert verification remain open.
 The review-request email V5 plus Multi-Product Batch/Envelope V3.2 packages are
@@ -110,7 +111,8 @@ Active development on the production test store. Core review, image, Mux video, 
   `a025a9a4-216d-470b-b67c-9167d58f538a` are live. Desktop PDP, category, and
   homepage/slider/infinite-scroll checks passed. Actual Ozy quick-view stayed
   fail-closed but unavailable after a same-route listing generation replaced
-  the clicked attestation. The source fix on `codex/badge-quick-view-closeout`
+  the clicked attestation. Source commit `e34017bc` on
+  `codex/badge-quick-view-closeout`
   allows rebinding only for the exact unchanged target and already sealed same
   Product ID; different, missing, or unproven identity remains fail-closed.
   Production is not closed: merge and CI this follow-up, obtain separate Worker

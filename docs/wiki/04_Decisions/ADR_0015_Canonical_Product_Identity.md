@@ -52,7 +52,7 @@ The canonical identity decision is merged and live through the first approved
 Product ID runtime rollout. Production closeout remains open because that
 rollout exposed a quick-view availability bug during a same-route listing
 generation rollover. The strict source fix is locally verified but not yet
-deployed or live-accepted.
+deployed or live-accepted; its implementation commit is `e34017bc`.
 
 ## Date
 2026-05-17

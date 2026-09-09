@@ -76,8 +76,8 @@ canary, and Sentry alert verification all pass.
 | Merged closeout | PR #37, merge commit `f70bd7c4fab69af9d084e06d1a57b5250aed7349` |
 | CI recovery | PR #38, merge commit `6f3b169d5921f1bd13dae7626fb4975e2cc00465` |
 | First deployed Product ID runtime | `widget-runtime/runtime-47TOVECU.js` |
-| Quick-view follow-up | `codex/badge-quick-view-closeout` from exact `origin/main` `6f3b169d`; source-only, not deployed |
-| Current follow-up runtime candidate | `widget-runtime/runtime-U5U3V66L.js`, SHA-256 `d9ff0341bffc3bbfa2b0064a67a149bc13feaea477e050b9e73dc313b339ee8c` (local CI-origin build; commit still pending) |
+| Quick-view follow-up | `codex/badge-quick-view-closeout` from exact `origin/main` `6f3b169d`; implementation commit `e34017bc`; not deployed |
+| Current follow-up runtime candidate | `widget-runtime/runtime-U5U3V66L.js`, SHA-256 `d9ff0341bffc3bbfa2b0064a67a149bc13feaea477e050b9e73dc313b339ee8c`, committed at `e34017bc` |
 | Existing live evidence | PR #35/#36 Ozy PDP, category, and homepage placement passed before this closeout |
 
 ## Source Contract
@@ -124,7 +124,7 @@ required before commit and PR.
 | Application build | PASS; migration-free Next.js 16.2.1 `build:ci` completed |
 | Wiki audit | PASS with 0 errors; 25 repository-health warnings remain outside this closeout |
 | PR/main CI | PASS for merged work; PR #37 Quality Gate `34380648250`, Database Compatibility `34380648240`, PR #38 browser gate `34385396805`, and final main Quality Gate `34389119540` all passed |
-| Quick-view follow-up broad gates | PASS before commit: 124 files / 822 unit tests, 144 combined network/runtime/interactions/admin browser tests, TypeScript, lint with 0 errors and 7 pre-existing warnings, codegen no drift, Worker 11-test contract/types/dry-run, budget, wiki audit 0 errors, and diff check. Post-commit `build:ci` and `build:widget:ci` reproducibility remain pending because generated drift is intentionally uncommitted at this stage. |
+| Quick-view follow-up broad gates | PASS: 124 files / 822 unit tests, 144 combined network/runtime/interactions/admin browser tests, TypeScript, lint with 0 errors and 7 pre-existing warnings, codegen no drift, Worker 11-test contract/types/dry-run, budget, wiki audit 0 errors, and diff check. After commit `e34017bc`, full Next.js 16.2.1 `build:ci` and independent `build:widget:ci` both passed with generated widget drift at zero. |
 
 ## Backend-First Production Evidence
 
@@ -202,7 +202,7 @@ rule or project setting was mutated.
 | Worker pre-runtime check | Same body through read origin; `X-Renuvex-Edge-Cache: BYPASS`; no HIT | PASS |
 | First Worker runtime deploy | Approved deployment/version and immutable runtime hash | PASS; version `a025a9a4-216d-470b-b67c-9167d58f538a`, deployment `5c297724-18c4-46b3-8420-9614662f446b`, runtime SHA-256 recorded above |
 | Canary 1 | Fresh desktop/mobile PDP `/premium-shortsg`, category `/clothing`, homepage scroll, search, slider/infinite-scroll, and quick-view DOM/network/console evidence | INCOMPLETE; desktop PDP/category/home/slider/infinite-scroll passed, actual quick-view availability failed, and required mobile/search completion was not claimed |
-| Quick-view follow-up | Exact same-target/same-Product-ID generation rebinding, regression tests, PR/CI, backend and Worker rollout | LOCAL PASS for 45 placement and 20 critical cross-browser tests; broad gates, PR/CI, backend verification, and separately approved Worker replacement remain pending |
+| Quick-view follow-up | Exact same-target/same-Product-ID generation rebinding, regression tests, PR/CI, backend and Worker rollout | SOURCE/LOCAL PASS at `e34017bc`: 45 placement, 20 critical cross-browser, all broad and reproducibility gates pass; PR/CI, backend verification, and separately approved Worker replacement remain pending |
 | Lifecycle continuity | One natural daily reconciliation completed without identity drift/conflict | PENDING |
 | Canary 2 | Repeat the same fresh-session canary after lifecycle reconciliation | PENDING |
 | Sentry alerts | `identity-conflict` first event and other three health types at 10 events / 5 minutes to maintainer email | PENDING EXPLICIT APPROVAL; current read-only org token returned HTTP 401 and no rule was changed |

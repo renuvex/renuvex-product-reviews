@@ -66,8 +66,9 @@ source_files:
   homepage/slider/infinite-scroll checks, but actual Ozy quick-view did not
   render a badge after a same-route listing generation replaced the clicked
   link's attestation. The strict same-target/same-Product-ID rebinding fix is
-  locally verified on `codex/badge-quick-view-closeout`; it is not deployed.
-  Canary 1 therefore remains incomplete. Release B is not part of this work.
+  committed as `e34017bc` on `codex/badge-quick-view-closeout`; all local gates
+  pass, but it is not deployed. Canary 1 therefore remains incomplete. Release
+  B is not part of this work.
 - 2026-09-08: PR #35 strict Ozy runtime placement and PR #36 proof-scoped
   request dedupe are merged; live Ozy PDP/category/home placement was verified.
 - 2026-08-09: Product-lifecycle closure PR #30 and all 64 migrations are
