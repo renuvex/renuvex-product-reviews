@@ -31,10 +31,14 @@ pre-public-launch; AWS review images, Mux video, Cloudflare Worker widget
 delivery, QStash maintenance scheduling, and public read-cache paths are live.
 Remaining public-launch blockers are mainly security hardening, operational
 observability, authenticated dashboard smoke, and product polish.
-The strict Ozy placement baseline from PR #35/#36 is merged and live-checked.
-The Product ID propagation closeout is implemented on
-`codex/badge-product-id-closeout`, but backend/Worker rollout, two live canaries,
-natural lifecycle reconciliation, and Sentry alert verification remain open.
+The strict Ozy placement baseline and Product ID propagation closeout are merged
+through PR #37/#38 and the backend plus first approved Worker runtime are live.
+The first live canary passed PDP/category/home surfaces but exposed a quick-view
+availability regression during same-route listing-generation replacement. Its
+strict same-target/same-Product-ID fix is locally verified on
+`codex/badge-quick-view-closeout`; merge/CI, replacement Worker rollout, a
+complete first canary, natural lifecycle reconciliation, the second canary, and
+Sentry alert verification remain open.
 The review-request email V5 plus Multi-Product Batch/Envelope V3.2 packages are
 deployed as a disabled backend and schema; all 64 Production migrations are
 applied, customer/request/job/attempt lifecycle rows remain zero, and
@@ -100,14 +104,19 @@ Active development on the production test store. Core review, image, Mux video, 
 - Widget-side uncaught errors forwarded to Sentry via a 637-byte (gzip) in-widget reporter and a rate-limited public endpoint (`/api/public/widget-error`). No SDK shipped to the widget bundle; storefront customer privacy and Core Web Vitals preserved. See [[ADR_0010_Widget_Error_Forwarding]].
 
 ## In Progress / Active Follow-Ups
-- Badge Product ID closeout source is implemented from `origin/main`
-  `a602db8d` on `codex/badge-product-id-closeout`. The additive slug API,
-  immutable Product ID proof promotion, v3 Product ID cache, modal/card race
-  guards, telemetry, and critical browser matrix are local/CI-source work.
-  Production is not closed: deploy backend first, verify origin and Worker
-  `no-store/BYPASS`, obtain separate Worker approval, run two live canaries with
-  one natural daily lifecycle reconciliation between them, and verify Sentry
-  alerts. Release B is outside this change. See
+- Badge Product ID closeout PR #37 and CI recovery PR #38 are merged through
+  `origin/main` `6f3b169d`; Vercel deployment
+  `dpl_HW1RreoWvKou1QWcQDr6LJcBECzK` and Worker version
+  `a025a9a4-216d-470b-b67c-9167d58f538a` are live. Desktop PDP, category, and
+  homepage/slider/infinite-scroll checks passed. Actual Ozy quick-view stayed
+  fail-closed but unavailable after a same-route listing generation replaced
+  the clicked attestation. The source fix on `codex/badge-quick-view-closeout`
+  allows rebinding only for the exact unchanged target and already sealed same
+  Product ID; different, missing, or unproven identity remains fail-closed.
+  Production is not closed: merge and CI this follow-up, obtain separate Worker
+  approval, complete the first desktop/mobile/search canary, run one natural
+  daily reconciliation, repeat the canary, and verify Sentry alerts. Release B
+  is outside this change. See
   [[Badge_Product_ID_Closeout_Acceptance_2026-09-09]].
 - Product lifecycle Release A and the closure backend are merged and deployed.
   PR #30 merged the closure at commit

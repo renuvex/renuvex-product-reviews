@@ -17,6 +17,8 @@ related:
   - "[[Ikas_Storefront_Events]]"
   - "[[Listing_Rating_Widget]]"
   - "[[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]]"
+  - "[[Badge_Product_ID_Closeout_Acceptance_2026-09-09]]"
+  - "[[Bug_Quick_View_Badge_Listing_Generation_Rollover]]"
 source_files:
   - "src/app/api/public/ratings/route.ts"
   - "src/app/api/public/ratings-by-slug/route.ts"
@@ -45,6 +47,12 @@ conflicting, or malformed identity produces no badge.
 
 ## Status
 Accepted
+
+The canonical identity decision is merged and live through the first approved
+Product ID runtime rollout. Production closeout remains open because that
+rollout exposed a quick-view availability bug during a same-route listing
+generation rollover. The strict source fix is locally verified but not yet
+deployed or live-accepted.
 
 ## Date
 2026-05-17
@@ -93,6 +101,16 @@ Listing/search badges use the canonical path:
    the DOM.
 5. Both public endpoints read rating summaries only by `productId`; neither
    path queries `Review.slug`.
+
+Quick-view seals the clicked Product ID from a valid resolved proof, or from the
+current event-backed candidate while that proof is still loading. If a
+same-route listing event advances the generation while the modal is open, the
+context may rebind only when the adapter, epoch, exact container/card/link/href,
+slug, title, and mount target are unchanged, the replacement proof is valid,
+and its Product ID equals the sealed clicked Product ID. A generation change
+without a sealed Product ID, or any changed/conflicting Product ID, fails
+closed. A resolver may still finish within the original generation and seal its
+promoted Product ID.
 
 The backward-compatible `/api/public/ratings-by-slug` endpoint remains only as
 a discovery fallback for DOM-only paths where Ikas Events did not provide
@@ -152,6 +170,9 @@ fields define identity.
   failures remain retryable on a later meaningful event or mutation.
 - Visible badge ownership is auditable in the DOM: its Renuvex slot and inner
   badge carry an identical `data-renuvex-product-id`.
+- Quick-view continuity across a listing-generation refresh is identity-bound,
+  not slug-bound: only an exact unchanged target with the already sealed same
+  Product ID may survive the refresh.
 - The local `ProductSnapshot` table is lifecycle evidence. Ikas remains the
   current-product source of truth; webhook misses converge through DB-owned
   reconciliation rather than a request-scoped full backfill.

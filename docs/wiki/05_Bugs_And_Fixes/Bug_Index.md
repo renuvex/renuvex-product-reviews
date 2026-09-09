@@ -21,14 +21,15 @@ related:
 
 Use this page to locate verified bug records. Keep open issues separate from
 fixed history, and do not mark a runtime issue closed until its required live
-acceptance has passed. The 2026-08 badge availability incident is fixed; its
-Product ID propagation follow-up remains tracked by the separate acceptance
-record.
+acceptance has passed. The 2026-08 badge availability incident is fixed. The
+Product ID runtime is live, but its first canary found a separate quick-view
+generation-rollover availability bug; the source fix remains open until its
+production rollout and live modal acceptance pass.
 
 > Master list of tracked bugs. Add an entry when a real bug is found, with link to a per-bug note. Mark fixed bugs and link to the resolution.
 
 ## Open
-- _None tracked._
+- 2026-09-09 - [[Bug_Quick_View_Badge_Listing_Generation_Rollover]] - The first Product ID runtime canary proved PDP/category/homepage placement but actual Ozy quick-view remained blank when a same-route listing event replaced the clicked link's attestation generation. The source fix permits continuity only for the exact unchanged target and sealed same Product ID; local 45-test placement and five-browser critical suites pass. PR/CI, replacement Worker rollout, and live modal acceptance remain open.
 
 ## Recently fixed (verify periodically)
 - 2026-09-08 - [[Bug_Storefront_Badges_Fail_Closed_After_Theme_Schema_Drift]] - PR #35 replaced unavailable Ikas active-theme evidence with strict runtime-attested Ozy placement while preserving fail-closed unknown/ambiguous themes; PR #36 bound request dedupe to exact candidates. Live PDP/category/home placement passed. The separate Product ID propagation closeout is implemented in source and remains rollout-gated.

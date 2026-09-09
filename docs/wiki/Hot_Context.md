@@ -57,13 +57,17 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
-- 2026-09-09: Badge Product ID closeout is implemented locally on
-  `codex/badge-product-id-closeout` from `origin/main` `a602db8d`. Slug is now
-  only one-shot identity discovery; visible PDP/listing/modal badge slots and
-  badges require Product ID. Production closure still needs backend-first
-  deployment, separately approved Worker rollout, two live canaries around one
-  natural lifecycle reconciliation, and Sentry alert verification. Release B
-  is not part of this work.
+- 2026-09-09: Badge Product ID closeout PR #37 and CI runner recovery PR #38 are
+  merged through `origin/main` `6f3b169d`. The Product ID-bearing backend is
+  live at Vercel deployment `dpl_HW1RreoWvKou1QWcQDr6LJcBECzK`; the first
+  approved Worker rollout is version `a025a9a4-216d-470b-b67c-9167d58f538a`.
+  Slug remains only one-shot discovery; every visible badge requires Product ID.
+- 2026-09-09: The first live runtime canary passed desktop PDP, category, and
+  homepage/slider/infinite-scroll checks, but actual Ozy quick-view did not
+  render a badge after a same-route listing generation replaced the clicked
+  link's attestation. The strict same-target/same-Product-ID rebinding fix is
+  locally verified on `codex/badge-quick-view-closeout`; it is not deployed.
+  Canary 1 therefore remains incomplete. Release B is not part of this work.
 - 2026-09-08: PR #35 strict Ozy runtime placement and PR #36 proof-scoped
   request dedupe are merged; live Ozy PDP/category/home placement was verified.
 - 2026-08-09: Product-lifecycle closure PR #30 and all 64 migrations are
@@ -87,9 +91,11 @@ source_files:
   replaced that unavailable provider evidence with a strict runtime-attested
   Ozy adapter. Unknown or ambiguous themes remain fail-closed; explicit review
   mounts remain independent.
-- The remaining badge closeout risk is rollout evidence, not a return to slug
-  identity: the new runtime must never show a Product ID-less badge, and the
-  slug discovery endpoint must remain `no-store/BYPASS` at both origin and edge.
+- The remaining badge closeout risk is the quick-view follow-up rollout and
+  acceptance, not a return to slug identity. Merge/CI, a separately approved
+  replacement Worker rollout, a complete fresh desktop/mobile/search canary,
+  one natural lifecycle reconciliation, a second canary, and Sentry alert
+  verification remain open. The slug endpoint must remain `no-store/BYPASS`.
 - Deferred gaps: unsupported-theme warning UI, authenticated dashboard smoke, Sentry post-deploy health.
 - Review-email V5/V3.2 is deployed but disabled; backup/restore, journal,
   SES/DNS, product/legal, and live acceptance gates remain open.
