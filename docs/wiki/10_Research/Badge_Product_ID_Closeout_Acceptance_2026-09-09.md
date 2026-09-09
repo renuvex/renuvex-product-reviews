@@ -66,6 +66,8 @@ and Sentry alert verification all pass.
 | Strict placement | PR #35, `b18c0e08d00c480b6006d7e8cbca031df7188aca` |
 | Request dedupe | PR #36, `cac45aec64b57b087089f1792f0add50238619f2` |
 | Work branch | `codex/badge-product-id-closeout` |
+| Product ID implementation | `e7491dff` |
+| CI-origin runtime and budget | `6ccf9ad7` |
 | Current local runtime | `widget-runtime/runtime-47TOVECU.js` (CI/production-origin build) |
 | Existing live evidence | PR #35/#36 Ozy PDP, category, and homepage placement passed before this closeout |
 
@@ -101,7 +103,9 @@ modal/title/token and retires stale modal slots.
 | Performance budget | PASS; rating-badge static graph `64,837 / 65,000` bytes and all other limits passed |
 | Worker contract | PASS, 11 tests; types generated; Wrangler deploy dry-run passed without deployment |
 | Typecheck / lint | PASS; TypeScript clean, ESLint 0 errors with 7 pre-existing React warnings |
-| Generated drift / application build / wiki audit | Pending final clean-tree verification |
+| Generated drift | PASS; `build:widget:ci` reproduced the committed runtime with zero drift |
+| Application build | PASS; migration-free Next.js 16.2.1 `build:ci` completed |
+| Wiki audit | PASS with 0 errors; 25 repository-health warnings remain outside this closeout |
 | PR CI | Pending branch publication |
 
 ## Production Gates
