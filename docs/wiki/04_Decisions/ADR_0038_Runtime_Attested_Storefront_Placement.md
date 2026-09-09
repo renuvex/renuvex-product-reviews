@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-08-10
-updated: 2026-09-08
-last_verified: 2026-09-08
+updated: 2026-09-09
+last_verified: 2026-09-09
 confidence: high
 tags:
   - adr
@@ -53,17 +53,23 @@ rating request and revalidate the same proof before mutation.
 
 Product identity and placement proof are separate. Ikas Storefront Events are
 the preferred product/page context. Strict theme DOM evidence answers only
-where placement is safe. Unknown policy versions, ambiguous adapters, broad
-selectors, stale context, and stale settings all fail closed. The explicit
-Shadow DOM review mount and admin preview remain separate contracts.
+where placement is safe. A visible badge additionally requires an immutable
+Product ID proof, and both its owned slot and inner badge carry that Product ID.
+Unknown policy versions, ambiguous adapters, unresolved/conflicting identity,
+broad selectors, stale context, and stale settings all fail closed. The
+explicit Shadow DOM review mount and admin preview remain separate contracts.
 
 ## Status
 
-Accepted for source implementation on 2026-08-10. Production backend and
-Cloudflare Worker rollout require separate acceptance. This ADR supersedes
-only the automatic-placement authorization and legacy-runtime portions of
-[[ADR_0022_Placement_Allowlist_And_Lazy_Resync]]. ADR 0022's pure settings read,
-`themeSyncDue`, lazy sync, and explicit review-mount decisions remain active.
+Accepted on 2026-08-10. PR #35 established the strict placement baseline and
+PR #36 bound duplicate-request suppression to the exact candidate; both are in
+`origin/main` and their Ozy PDP/category/home placement was live-checked. The
+2026-09-09 Product ID propagation closeout is implemented in source but is not
+Production-accepted until the backend-first and Worker gates in this ADR pass.
+This ADR supersedes only the automatic-placement authorization and
+legacy-runtime portions of [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]].
+ADR 0022's pure settings read, `themeSyncDue`, lazy sync, and explicit
+review-mount decisions remain active.
 
 ## Context
 
@@ -145,12 +151,22 @@ fixtures, browser coverage, and a documented live canary.
 
 ### Identity and lifecycle
 
-Storefront Events remain the preferred identity source. Category/search event
-maps provide exact product ids when the card slug is present in the current
-event generation. Ikas has not guaranteed that every future infinite-scroll or
-lazy card appears in a refreshed event payload, so strict cards without event
-membership may use the lifecycle-safe slug resolver. DOM text is never a
-canonical product id.
+Storefront Events remain the preferred identity source. Each category/search
+event atomically replaces the slug-to-ID map and advances a listing generation.
+Repeated rows with the same slug and Product ID are valid; different or
+malformed IDs for one slug mark the generation conflicted and block both direct
+reads and slug discovery. Ikas has not guaranteed that every future
+infinite-scroll or lazy card appears in a refreshed event payload, so a strict
+ID-less card may use the lifecycle-safe slug resolver exactly once. DOM text
+and slug are never canonical product identity.
+
+Listing work is split into two types. A candidate is a strict, current DOM
+placement attestation and may carry an event Product ID or a slug discovery
+input. A resolved proof is immutable and always carries a Product ID. The slug
+endpoint must return `{ productId, avg, count }`; the runtime revalidates the
+candidate before promotion. A Product ID-less legacy response, unexpected key,
+malformed rating/ID, stale proof, or resolver miss cannot produce a visible
+badge. A zero-review response may prove identity but produces no badge.
 
 A single monotonic storefront context epoch owns route/product invalidation.
 A pathname transition invalidates once; the following product event fills the
@@ -164,11 +180,19 @@ legacy broad discovery. PDP late-DOM observation is one generation-bound
 observer, cancelled by context invalidation or a resource-safety watchdog. The
 watchdog is not an Ikas DOM-ready guarantee.
 
-Listing request coordination is bound to the exact ephemeral proof. A
-`WeakMap` suppresses duplicate work for a proof while its bulk request is in
-flight and after a successful empty response. It is not a slug rating cache:
-HTTP/network failures remain retryable, and any link, identity, target, or
-epoch change invalidates the match.
+Listing request coordination is bound to the exact ephemeral candidate. A
+`WeakMap` suppresses duplicate work while its bulk request is in flight and for
+five minutes after a successful empty or unresolved result. HTTP/network
+failures remain retryable, and any link, identity, target, event generation, or
+epoch change invalidates the match. The separate session rating cache is
+`renuvex_pr_ratings_v3_<storeId>`, uses Product ID keys and per-entry five-minute
+TTLs, never reads the v2 slug cache, and never stores slug-to-ID mappings.
+
+Quick-view context preserves the exact clicked attested link. It may wait for
+that link's resolver promotion, but it binds at most one exact visible
+modal/title instance for a bounded token. Closing, hiding, replacing, retitling,
+or multiplying the modal retires the context and removes its old badge slot, so
+a recycled modal cannot retain or reuse another Product ID.
 
 JSON-LD is emitted only after a real visible eligible Renuvex rating/review
 surface exists. Placement policy alone is insufficient.
@@ -206,20 +230,27 @@ runtime hash, and browser behavior are therefore separate rollout evidence.
 ## Rollout and rollback
 
 1. Build backend and runtime from the same commit.
-2. Deploy backend first and verify a v1 policy plus legacy `false` at origin.
-3. Verify the same body and cache diagnostic through the Worker read origin.
+2. Deploy the backend first. Verify the Product ID-bearing slug response at the
+   Vercel origin, including a safely resolved zero-review product and
+   `Cache-Control: no-store`; retained old runtime behavior must stay valid.
+3. Verify the same slug response through the Worker read origin with
+   `X-Renuvex-Edge-Cache: BYPASS` and no cached body.
 4. Deploy the Worker only after separate mutation approval.
 5. In a fresh browser context, verify the manifest/runtime hash, strict Ozy PDP,
-   listing, modal, SPA behavior, and negative surfaces.
+   listing/home/search/slider, modal, SPA behavior, Product ID attributes, and
+   negative surfaces.
+6. Let one natural daily Product Lifecycle reconciliation complete, then repeat
+   the same canary before declaring the closeout Production-verified.
 
 Rollback depends on the failure:
 
 | Failure | Recovery |
 |---|---|
 | Runtime detector/observer/injection regression | Keep the new backend and roll the Worker back; fresh old runtimes remain safe-disabled. |
-| Backend policy serialization or precedence regression | Roll back or fix the backend; a Worker rollback cannot repair the body. |
+| Product ID slug API or backend policy regression | Roll back the Vercel backend; a Worker rollback cannot repair the origin body. |
 | Legacy boolean regression | Emergency backend fix/rollback; do not rely on Worker rollback. |
 | Stale edge policy | Compare origin and edge, then use an explicitly approved purge only if required. |
+| Runtime closeout regression | Roll the Worker only to the known-safe PR #35/#36 runtime; never restore the pre-PR #35 broad selector runtime. |
 | Full old backend plus old Worker | Not an automatic rollback because it restores the broad legacy placement baseline. |
 
 ## Consequences
@@ -246,9 +277,14 @@ Source and browser gates must prove:
   mutation;
 - provider-verified and runtime-attested Ozy both require exact targets;
 - broad H1, class-substring, banner, unrelated title, untrusted modal click,
-  recycled card, and stale async responses are no-ops;
+  recycled card/modal, identity conflict, and stale async responses are no-ops;
 - slow valid DOM can mount while the context remains current;
+- every visible PDP/listing/modal badge and its owned slot carry the same
+  non-empty Product ID;
+- old runtime plus new API ignores the additive Product ID field, while new
+  runtime plus old Product ID-less slug response stays fail-closed;
+- v2 rating cache data is ignored and the Worker never caches slug discovery;
 - one listing observer coordinates debounced strict re-attestation;
 - explicit reviews mount and preview remain unchanged;
-- Worker origin/edge bodies, manifest/runtime hash, and fresh-browser behavior
-  are verified independently.
+- Worker origin/edge bodies, manifest/runtime hash, Sentry identity alerting,
+  two live canaries, and fresh-browser behavior are verified independently.

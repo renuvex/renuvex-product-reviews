@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-10
-last_verified: 2026-08-10
+updated: 2026-09-09
+last_verified: 2026-09-09
 confidence: high
 tags:
   - widget
@@ -46,6 +46,15 @@ source_files:
 
 # Listing Rating Widget
 
+## Agent Brief
+
+Production listing badges are strict Ozy placement plus canonical Product ID
+identity. Storefront Events provide the ID when possible; an ID-less strict card
+may use its slug only to obtain a Product ID from lifecycle evidence. A visible
+badge never uses slug identity: its immutable proof, owned slot, inner badge,
+dedupe marker, request, and session cache all resolve to Product ID. Any
+ambiguity fails closed.
+
 ## Summary
 Star+count badge injected into strictly attested product cards on collection, search, homepage, and slider surfaces. It is lazy-loaded through the surface registry. ADR 0038 separates product identity from DOM placement: policy selects a placement provider, then that provider must return an exact card/title/mount proof before any ratings request.
 
@@ -54,7 +63,7 @@ Star+count badge injected into strictly attested product cards on collection, se
 |---|---|
 | [index.js](src/widget/listing-badges/index.js) | Collect strict proofs, batch rating reads, revalidate proofs, and inject |
 | [placement/capability.js](src/widget/placement/capability.js) | Select the permitted adapter and produce exact, ephemeral card/link/title/mount proofs |
-| [ratings.js](src/widget/listing-badges/ratings.js) | Bulk fetch `/api/public/ratings?productIds=...`; falls back to slug only when no product id exists |
+| [ratings.js](src/widget/listing-badges/ratings.js) | Bulk Product ID rating reads plus one-shot lifecycle-safe slug-to-ID discovery; Product ID-only v3 cache |
 | [strict-inject.js](src/widget/listing-badges/strict-inject.js) | Production insertion from a still-current proof; never rediscovers a generic target |
 | [inject.js](src/widget/listing-badges/inject.js) | Preview-only fixture insertion helper |
 | [listing-badge.surface.js](src/widget/surfaces/listing-badge.surface.js) | Lazy surface descriptor for page/listing/search contexts |
@@ -63,34 +72,40 @@ Star+count badge injected into strictly attested product cards on collection, se
 
 ## API
 - Primary endpoint: `GET /api/public/ratings?storeId=<id>&productIds=a,b,c` ([src/app/api/public/ratings/route.ts](src/app/api/public/ratings/route.ts)).
-- Fallback endpoint: `GET /api/public/ratings-by-slug?storeId=<id>&slugs=a,b,c` ([src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts)) for DOM-only contexts where ikas Events did not provide product ids. A slug resolves only through exactly one fresh, current-generation `active_verified` snapshot with no unknown, stale, or conflict ambiguity; historical `Review.slug` is never queried as identity.
+- Discovery endpoint: `GET /api/public/ratings-by-slug?storeId=<id>&slugs=a,b,c` ([src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts)) only for strict DOM candidates where Ikas Events did not provide Product IDs. A slug resolves only through exactly one fresh, current-generation `active_verified` snapshot with no unknown, stale, tombstone, or conflict ambiguity; historical `Review.slug` is never queried as identity.
 - Server groups approved reviews by `productId`, returns `{ productId: { avg: '4.5', count: 12 } }` on the primary path.
+- The discovery path returns `{ slug: { productId: '...', avg: '4.5', count: 12 } }`. A safely resolved zero-review product returns its Product ID with `avg: '0.0', count: 0`; an unsafe or unresolved slug is omitted.
 - Bulk fetch (one request per batch) instead of per-card requests.
 - Max 100 ids/slugs per request — server-side cap.
 
 ## Identity Contract
 - Canonical review product identity is `(storeId, productId)`; see [[ADR_0015_Canonical_Product_Identity]].
-- `core/storefront-context.js` records current-epoch `VIEW_LISTING` and `VIEW_SEARCH_RESULTS` `productDetails[]` as `slug -> { productId, name }`.
-- A current event match supplies canonical product identity. A strictly attested card that is not present in the current event map may use the lifecycle-safe slug resolver; DOM title text never becomes canonical identity.
+- `core/storefront-context.js` atomically replaces current-epoch `VIEW_LISTING` and `VIEW_SEARCH_RESULTS` maps for every event generation. Same slug/same ID duplicates are valid; same slug/different or malformed IDs block direct reads and discovery.
+- The runtime first creates a strict DOM candidate. A current event match supplies canonical identity; otherwise the slug is only a discovery input. The response must promote that exact still-current candidate to an immutable Product ID proof before insertion.
+- Epoch, event generation, adapter, container, exact link and href slug, title, and mount point are checked again after asynchronous work and immediately before DOM mutation.
+- Quick-view uses the clicked exact attested link and one bound modal/title/token. A hidden, closed, replaced, retitled, or duplicate modal retires the context and removes its old slot.
 
 ## Performance notes
-- Single API call per listing page = small fixed cost regardless of # of products on screen.
+- Requests are bulked in groups of 50. Event-ID and slug-discovery candidates use separate endpoint batches; there is never a request per card.
 - Exact product-id ratings may use the normal public read cache. The slug-only
-  fallback is `no-store` in backend/Worker source and is not written to widget
-  session cache because lifecycle evidence can change independently of the slug.
+  discovery response is `no-store` in backend/Worker source. Resolved rating
+  summaries may enter `renuvex_pr_ratings_v3_<storeId>` only under Product ID,
+  with an independent five-minute timestamp per entry. Slug-to-ID mappings are
+  never persisted, and the v2 slug cache is not read or migrated.
   Live Worker no-store acceptance remains a separate deployment gate.
 - Production discovery is bounded to strict containers exposed by explicitly runtime-detectable adapters. There is no `main/[role=main]`, class-substring, whole-document link, or title-text placement fallback.
 - The existing MutationObserver remains the single debounced coordinator. It triggers re-attestation for lazy cards; it is not itself placement authority.
 - The coordinator records only proof-scoped request state in a `WeakMap`: an
-  exact card proof can be `in_flight`, and a successful zero/omitted result can
-  be `empty` for that same DOM identity and context epoch. Carousel/style
-  mutations therefore cannot queue the same slug batch repeatedly while it is
-  running or after a valid empty response. Network/HTTP failures are not marked
-  resolved, while a recycled link, changed slug/product identity, replaced
-  title/mount, or new epoch naturally invalidates the state. No slug rating is
-  written to `sessionStorage`, edge cache, or a cross-card cache.
+  exact card candidate can be `in_flight`; a successful zero result is `empty`
+  and a safe resolver miss is `unresolved` for five minutes on that same DOM
+  identity. Carousel/style mutations therefore cannot queue the same discovery
+  repeatedly. Network/HTTP/429/5xx/malformed failures are retryable, while a
+  recycled link, changed Product ID or event generation, replaced title/mount,
+  or new epoch invalidates the state.
 - Below-the-fold listing/product-slider candidates are registered with `IntersectionObserver` through [core/listing-viewport-gate.js](src/widget/core/listing-viewport-gate.js). The default `rootMargin` is `400px 0px`: near/above-viewport cards hydrate at current speed, while far below-the-fold cards do not load the `listing-badges-*` chunk or call `/api/public/ratings*` until the shopper scrolls near them. A passive scroll/resize check exists only as a non-polling safety fallback if the observer callback does not fire.
-- Badge slots are reserved before rating data finishes loading and replaced in place when real ratings arrive, reducing listing-card layout shift.
+- Invisible badge placeholders may reserve layout before Product ID resolution,
+  but are not ratings/badges and are removed after settlement. Every visible
+  slot and its inner badge carry matching `data-renuvex-product-id` values.
 - Listing badge slots mount as siblings immediately after product title elements by default. There is no publicApiKey allowlist or legacy in-title branch; supported theme exceptions must use the adapter mount-point override.
 
 ## Settings
@@ -117,6 +132,7 @@ CSS variable before injecting badges. Badge stars are no longer hardcoded to
 - Both enabled modes require the same strict target proof. Provider evidence selects an adapter; it does not authorize generic DOM fallback.
 - Ozy is currently the only runtime-detectable adapter. Generic is never a detector, multiple matches are ambiguous, and either case produces no request or mutation.
 - A proof carries the exact card, product link, title, mount point, identity, and context epoch. Injection revalidates those fields after the asynchronous rating response.
+- Slot discovery, link markers, dedupe, stale retirement, and one-shot self-heal compare Product ID rather than slug.
 - A new adapter needs a bounded signature, cross-theme negative fixtures, browser availability tests, and an explicit registry opt-in. It does not join runtime scanning merely by existing.
 
 ## Related Source Files
@@ -138,6 +154,12 @@ CSS variable before injecting badges. Badge stars are no longer hardcoded to
 - [[ADR_0015_Canonical_Product_Identity]]
 
 ## Change Log
+- 2026-09-09: Closed the source Product ID propagation gap for ID-less strict
+  cards. The slug API now returns the lifecycle-resolved Product ID, candidates
+  are promoted only after full revalidation, visible slot/inner badge ownership
+  is Product ID-stamped, v3 cache keys are Product ID-only, event conflicts fail
+  closed, and quick-view binds one exact modal instance. Production rollout and
+  two-canary acceptance remain separately gated.
 - 2026-09-08: Bound listing request coordination to the exact placement proof.
   Repeated carousel/style mutations no longer fan out duplicate slug reads
   while a batch is in flight or after a successful empty response; failed

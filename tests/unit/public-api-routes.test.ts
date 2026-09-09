@@ -790,6 +790,12 @@ describe('/api/public/ratings-by-slug', () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
+    expect(prismaMock.productSnapshot.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: {
+        storeId: 'store-1',
+        slug: { in: ['premium-shorts', 'linen-shirt'] },
+      },
+    }));
     expect(prismaMock.productReviewSummary.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: {
         storeId: 'store-1',
@@ -799,11 +805,43 @@ describe('/api/public/ratings-by-slug', () => {
     expect(prismaMock.review.groupBy).not.toHaveBeenCalled();
     expect(body).toEqual({
       data: {
-        'premium-shorts': { avg: '4.8', count: 12 },
-        'linen-shirt': { avg: '4.0', count: 2 },
+        'premium-shorts': { productId: 'product-1', avg: '4.8', count: 12 },
+        'linen-shirt': { productId: 'product-2', avg: '4.0', count: 2 },
       },
     });
     expect(response.headers.get('Cache-Control')).toBe('no-store');
+  });
+
+  it('returns canonical identity for a safely resolved product with no reviews', async () => {
+    checkFixedWindowRateLimitMock.mockResolvedValue({ allowed: true });
+    prismaMock.ikasStoreInstallation.findUnique.mockResolvedValue({
+      authorizedAppId: 'app-1',
+      generation: 3,
+      stateVersion: 7,
+      status: 'active',
+    });
+    prismaMock.productSnapshot.findMany.mockResolvedValue([{
+      slug: 'new-product',
+      productId: 'product-new',
+      lifecycleState: 'active_verified',
+      lastVerifiedAt: new Date(),
+      exactEvidenceAuthorizedAppId: 'app-1',
+      exactEvidenceGeneration: 3,
+      exactEvidenceStateVersion: 7,
+    }]);
+    prismaMock.productReviewSummary.findMany.mockResolvedValue([]);
+    const { GET } = await import('@/app/api/public/ratings-by-slug/route');
+
+    const response = await GET(new Request(
+      'https://app.test/api/public/ratings-by-slug?storeId=store-1&slugs=new-product',
+    ));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      data: { 'new-product': { productId: 'product-new', avg: '0.0', count: 0 } },
+    });
+    expect(prismaMock.review.findMany).not.toHaveBeenCalled();
+    expect(prismaMock.review.groupBy).not.toHaveBeenCalled();
   });
 
   it('returns no rating for ambiguous or unverified slug evidence', async () => {
@@ -842,6 +880,82 @@ describe('/api/public/ratings-by-slug', () => {
     await expect(response.json()).resolves.toEqual({ data: {} });
     expect(prismaMock.productReviewSummary.findMany).not.toHaveBeenCalled();
     expect(prismaMock.review.findMany).not.toHaveBeenCalled();
+  });
+
+  it('fails closed for an inactive installation even when a fresh snapshot exists', async () => {
+    checkFixedWindowRateLimitMock.mockResolvedValue({ allowed: true });
+    prismaMock.ikasStoreInstallation.findUnique.mockResolvedValue({
+      authorizedAppId: 'app-1',
+      generation: 3,
+      stateVersion: 7,
+      status: 'uninstalled',
+    });
+    prismaMock.productSnapshot.findMany.mockResolvedValue([{
+      slug: 'premium-shorts',
+      productId: 'product-1',
+      lifecycleState: 'active_verified',
+      lastVerifiedAt: new Date(),
+      exactEvidenceAuthorizedAppId: 'app-1',
+      exactEvidenceGeneration: 3,
+      exactEvidenceStateVersion: 7,
+    }]);
+    const { GET } = await import('@/app/api/public/ratings-by-slug/route');
+
+    const response = await GET(new Request(
+      'https://app.test/api/public/ratings-by-slug?storeId=store-1&slugs=premium-shorts',
+    ));
+
+    await expect(response.json()).resolves.toEqual({ data: {} });
+    expect(prismaMock.productCatalogCoverage.findUnique).not.toHaveBeenCalled();
+    expect(prismaMock.productReviewSummary.findMany).not.toHaveBeenCalled();
+  });
+
+  it('deduplicates and caps slug batches before querying lifecycle evidence', async () => {
+    checkFixedWindowRateLimitMock.mockResolvedValue({ allowed: true });
+    prismaMock.ikasStoreInstallation.findUnique.mockResolvedValue({
+      authorizedAppId: 'app-1', generation: 3, stateVersion: 7, status: 'active',
+    });
+    prismaMock.productSnapshot.findMany.mockResolvedValue([]);
+    const slugs = [' repeated ', 'repeated', ...Array.from({ length: 110 }, (_, index) => `product-${index}`)];
+    const { GET } = await import('@/app/api/public/ratings-by-slug/route');
+
+    const response = await GET(new Request(
+      `https://app.test/api/public/ratings-by-slug?storeId=store-1&slugs=${encodeURIComponent(slugs.join(','))}`,
+    ));
+
+    expect(response.status).toBe(200);
+    const query = prismaMock.productSnapshot.findMany.mock.calls[0][0];
+    expect(query.where.storeId).toBe('store-1');
+    expect(query.where.slug.in).toHaveLength(100);
+    expect(query.where.slug.in.filter((slug: string) => slug === 'repeated')).toHaveLength(1);
+  });
+
+  it('rejects malformed-only slug input before rate limiting or database access', async () => {
+    const { GET } = await import('@/app/api/public/ratings-by-slug/route');
+    const malformed = `${'x'.repeat(201)},%20%20`;
+
+    const response = await GET(new Request(
+      `https://app.test/api/public/ratings-by-slug?storeId=store-1&slugs=${malformed}`,
+    ));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ data: {} });
+    expect(checkFixedWindowRateLimitMock).not.toHaveBeenCalled();
+    expect(prismaMock.productSnapshot.findMany).not.toHaveBeenCalled();
+  });
+
+  it('keeps rate-limit responses no-store and performs no lifecycle read', async () => {
+    checkFixedWindowRateLimitMock.mockResolvedValue({ allowed: false });
+    const { GET } = await import('@/app/api/public/ratings-by-slug/route');
+
+    const response = await GET(new Request(
+      'https://app.test/api/public/ratings-by-slug?storeId=store-1&slugs=premium-shorts',
+    ));
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get('Cache-Control')).toBe('no-store');
+    await expect(response.json()).resolves.toEqual({ data: {} });
+    expect(prismaMock.productSnapshot.findMany).not.toHaveBeenCalled();
   });
 
   it('accepts unchanged active snapshots only under fresh current-generation coverage', async () => {
@@ -891,7 +1005,7 @@ describe('/api/public/ratings-by-slug', () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
-      data: { 'covered-product': { avg: '5.0', count: 2 } },
+      data: { 'covered-product': { productId: 'product-1', avg: '5.0', count: 2 } },
     });
     expect(prismaMock.productCatalogCoverage.findUnique).toHaveBeenCalledWith({
       where: { storeId: 'store-1' },
@@ -2527,5 +2641,96 @@ describe('/api/public/widget-error', () => {
       ip: '203.0.113.5',
     }));
     expect(context.extra.widgetHealth['bad key']).toBeUndefined();
+  });
+
+  it('uses fixed low-cardinality tags and fingerprint for identity health events', async () => {
+    redisMock.incr.mockResolvedValue(1);
+    const { POST } = await import('@/app/api/public/widget-error/route');
+
+    const response = await POST(new Request('https://app.test/api/public/widget-error', {
+      method: 'POST',
+      body: JSON.stringify({
+        message: 'Conflicting storefront product identity',
+        url: 'https://merchant.test/private-product-slug',
+        publicApiKey: 'store-1',
+        extra: {
+          type: 'identity-conflict',
+          surface: 'listing',
+          adapterKey: 'ozy',
+          reason: 'duplicate_slug_product_ids',
+          version: '2026-09-09T10:06:44.278Z',
+          slug: 'private-product-slug',
+          productName: 'Private Product',
+        },
+      }),
+      headers: { 'content-type': 'application/json', 'x-forwarded-for': '203.0.113.5' },
+    }));
+
+    expect(response.status).toBe(200);
+    expect(sentryCaptureExceptionMock).toHaveBeenCalledTimes(1);
+    const [, context] = sentryCaptureExceptionMock.mock.calls[0];
+    expect(context.tags).toEqual({
+      source: 'widget',
+      widgetEventType: 'identity-conflict',
+      widgetSurface: 'listing',
+      widgetAdapter: 'ozy',
+      widgetReason: 'duplicate_slug_product_ids',
+      widgetRuntimeVersion: '2026-09-09T10:06:44.278Z',
+    });
+    expect(context.fingerprint).toEqual([
+      'widget-placement-identity',
+      'identity-conflict',
+      'listing',
+      'ozy',
+      'duplicate_slug_product_ids',
+    ]);
+    expect(context.extra).not.toHaveProperty('url');
+    expect(context.extra).not.toHaveProperty('publicApiKey');
+    expect(context.extra).not.toHaveProperty('ip');
+    expect(context.extra.widgetHealth).not.toHaveProperty('slug');
+    expect(context.extra.widgetHealth).not.toHaveProperty('productName');
+    expect(sentryCaptureExceptionMock.mock.calls[0][0]).toMatchObject({
+      message: 'Widget placement identity event: identity-conflict',
+    });
+  });
+
+  it('collapses unrecognized identity health tag values to unknown', async () => {
+    redisMock.incr.mockResolvedValue(1);
+    const { POST } = await import('@/app/api/public/widget-error/route');
+
+    await POST(new Request('https://app.test/api/public/widget-error', {
+      method: 'POST',
+      body: JSON.stringify({
+        message: 'Private Product / private-product-slug',
+        stack: 'https://merchant.test/private-product-slug',
+        extra: {
+          type: 'identity-resolution-error',
+          surface: 'merchant-12345',
+          adapterKey: 'theme-98765',
+          reason: 'private-product-slug',
+          version: 'runtime-private-product-slug',
+        },
+      }),
+      headers: { 'content-type': 'application/json', 'x-forwarded-for': '203.0.113.5' },
+    }));
+
+    const [error, context] = sentryCaptureExceptionMock.mock.calls[0];
+    expect(error).toMatchObject({ message: 'Widget placement identity event: identity-resolution-error' });
+    expect(error.stack).not.toContain('merchant.test');
+    expect(context.tags).toEqual({
+      source: 'widget',
+      widgetEventType: 'identity-resolution-error',
+      widgetSurface: 'unknown',
+      widgetAdapter: 'unknown',
+      widgetReason: 'unknown',
+      widgetRuntimeVersion: 'unknown',
+    });
+    expect(context.fingerprint).toEqual([
+      'widget-placement-identity',
+      'identity-resolution-error',
+      'unknown',
+      'unknown',
+      'unknown',
+    ]);
   });
 });

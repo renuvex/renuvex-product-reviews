@@ -12,12 +12,18 @@ import {
   injectStrictBadges,
   reserveStrictBadgeSlots,
 } from './strict-inject.js';
-import { collectListingPlacementProofs, validateListingPlacementProof } from '../placement/capability.js';
+import {
+  collectListingPlacementCandidates,
+  getResolvedListingPlacementProof,
+  promoteListingPlacementProof,
+} from '../placement/capability.js';
 import { getStorefrontContextEpoch, isStorefrontContextCurrent } from '../core/context-epoch.js';
 import {
+  getListingProofRequestStatus,
   markListingProofRequestsInFlight,
   settleListingProofRequests,
 } from '../core/listing-proof-request-state.js';
+import { reportWidgetHealth } from '../core/health.js';
 
 function cleanupListingBadges() {
   disconnectStrictListingObservers();
@@ -62,18 +68,44 @@ export async function renderListingBadges() {
     // reviewStarColor). Listing rozetleri PDP render.js'e bağlı olmadan kendi
     // yıldız renk değişkenini kurar — soğuk listing girişinde de doğru renk.
     // Dolu + boş yıldız (outline) tek --renuvex-pr-review-star-color'dan beslenir.
-    var placementProofs = collectListingPlacementProofs(epoch);
+    var placementCandidates = collectListingPlacementCandidates(epoch);
+    if (doCleanup) cleanupListingBadges();
+    reserveStrictBadgeSlots(placementCandidates);
+
+    var requestCandidates = placementCandidates.filter(function (candidate) {
+      var status = getListingProofRequestStatus(candidate);
+      return status !== 'in_flight' && status !== 'empty' && status !== 'unresolved';
+    });
     var productTargets = {};
-    placementProofs.forEach(function (proof) {
-      if (!productTargets[proof.slug] || (!productTargets[proof.slug].productId && proof.productId)) {
-        productTargets[proof.slug] = { productId: proof.productId, name: proof.productName };
+    requestCandidates.forEach(function (candidate) {
+      if (candidate.identityBlockReason) {
+        reportWidgetHealth('identity-conflict', 'Conflicting storefront product identity', {
+          surface: 'listing',
+          adapterKey: candidate.adapterKey,
+          reason: candidate.identityBlockReason,
+        });
+      }
+      var resolvedProof = getResolvedListingPlacementProof(candidate);
+      var productId = resolvedProof ? resolvedProof.productId : candidate.eventProductId;
+      var identitySource = resolvedProof ? resolvedProof.identitySource :
+        candidate.eventProductId ? 'storefront_event' : null;
+      if (!productTargets[candidate.slug] || (!productTargets[candidate.slug].productId && productId)) {
+        productTargets[candidate.slug] = {
+          productId: productId,
+          identitySource: identitySource,
+          identityBlockReason: candidate.identityBlockReason,
+          adapterKey: candidate.adapterKey,
+        };
       }
     });
     var slugs = Object.keys(productTargets);
-    if (!slugs.length) { ls.rendered = false; return; }
-    markListingProofRequestsInFlight(placementProofs);
+    if (!slugs.length) {
+      clearStrictBadgePlaceholders();
+      return;
+    }
+    markListingProofRequestsInFlight(requestCandidates);
     var ratingsPromise = fetchRatings(productTargets).catch(function() {
-      return { ratings: {}, resolvedTargets: {} };
+      return { outcomes: {} };
     });
 
     var reviewsSettings = widgets.reviews || {};
@@ -100,27 +132,24 @@ export async function renderListingBadges() {
     }
     ensureBadgeTokens(sizes, mobileSizes);
 
-    // Remove old badges before reserving slots for the new page/listing.
-    if (doCleanup) {
-      cleanupListingBadges();
-    }
-
-    // Reserve stable vertical space while rating data is still in flight, then
-    // replace placeholders only when the same proofs remain current.
-    reserveStrictBadgeSlots(placementProofs);
-
     var ratingResult = await ratingsPromise;
     if (!isStorefrontContextCurrent(epoch)) {
       clearStrictBadgePlaceholders();
       return;
     }
-    settleListingProofRequests(
-      placementProofs,
-      ratingResult.ratings,
-      ratingResult.resolvedTargets,
-      validateListingPlacementProof,
+    var settlement = settleListingProofRequests(
+      requestCandidates,
+      ratingResult.outcomes,
+      promoteListingPlacementProof,
     );
-    injectStrictBadges(placementProofs, ratingResult.ratings, iconPair, badgeSettings);
+    settlement.rejected.forEach(function (candidate) {
+      reportWidgetHealth('placement-attestation-miss', 'Listing proof changed before placement', {
+        surface: 'listing',
+        adapterKey: candidate.adapterKey,
+        reason: 'stale_after_resolution',
+      });
+    });
+    injectStrictBadges(settlement.resolved, iconPair, badgeSettings);
   } finally {
     ls.inProgress = false;
     if (ls.queued) {

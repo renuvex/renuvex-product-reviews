@@ -10,6 +10,31 @@ const redis = new Redis({
 
 const RATE_LIMIT_MAX = 30;
 const RATE_LIMIT_WINDOW_SEC = 60;
+const PLACEMENT_IDENTITY_EVENT_TYPES = new Set([
+  'placement-attestation-miss',
+  'identity-resolution-miss',
+  'identity-resolution-error',
+  'identity-conflict',
+]);
+const PLACEMENT_IDENTITY_SURFACES = new Set(['listing', 'pdp', 'quick_view', 'unknown']);
+const PLACEMENT_IDENTITY_ADAPTERS = new Set(['ozy', 'unknown']);
+const PLACEMENT_IDENTITY_REASONS = new Set([
+  'duplicate_slug_product_ids',
+  'malformed_event_product_id',
+  'identity_conflict',
+  'stale_after_resolution',
+  'malformed_product_id',
+  'http_429',
+  'http_5xx',
+  'http_error',
+  'malformed_response',
+  'network_error',
+  'unexpected_response_key',
+  'not_resolved',
+  'missing_product_id',
+  'malformed_rating',
+  'unknown',
+]);
 
 async function checkRateLimit(ip: string): Promise<boolean> {
   const key = `renuvex_pr_werr_rl:${ip}`;
@@ -32,6 +57,33 @@ function sanitizeExtra(extra: Record<string, unknown> | undefined) {
     else if (typeof value === 'number' || typeof value === 'boolean') safe[key] = value;
   }
   return safe;
+}
+
+function allowlistedTag(value: unknown, allowed: ReadonlySet<string>): string {
+  if (typeof value !== 'string') return 'unknown';
+  const normalized = value.trim();
+  return allowed.has(normalized) ? normalized : 'unknown';
+}
+
+function runtimeVersionTag(value: unknown): string {
+  if (typeof value !== 'string') return 'unknown';
+  const normalized = value.trim();
+  if (normalized === 'dev') return normalized;
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(normalized)
+    ? normalized
+    : 'unknown';
+}
+
+function placementIdentityTags(extra: Record<string, unknown> | undefined) {
+  const type = allowlistedTag(extra?.type, PLACEMENT_IDENTITY_EVENT_TYPES);
+  if (!PLACEMENT_IDENTITY_EVENT_TYPES.has(type)) return null;
+  return {
+    type,
+    surface: allowlistedTag(extra?.surface, PLACEMENT_IDENTITY_SURFACES),
+    adapterKey: allowlistedTag(extra?.adapterKey, PLACEMENT_IDENTITY_ADAPTERS),
+    reason: allowlistedTag(extra?.reason, PLACEMENT_IDENTITY_REASONS),
+    version: runtimeVersionTag(extra?.version),
+  };
 }
 
 export async function OPTIONS(req: Request) {
@@ -66,26 +118,50 @@ export async function POST(req: Request) {
         ? (b.extra as Record<string, unknown>)
         : undefined;
     const safeExtra = sanitizeExtra(extra);
+    const healthTags = placementIdentityTags(safeExtra);
 
-    const err = new Error(message);
-    if (stack) err.stack = stack;
+    const err = new Error(healthTags ? `Widget placement identity event: ${healthTags.type}` : message);
+    if (stack && !healthTags) err.stack = stack;
 
-    Sentry.captureException(err, {
-      tags: {
-        source: 'widget',
-        widgetEventType: typeof safeExtra?.type === 'string' ? (safeExtra.type as string) : 'unknown',
-      },
-      extra: {
-        url,
-        userAgent,
-        publicApiKey,
-        filename: safeExtra?.filename,
-        lineno: safeExtra?.lineno,
-        colno: safeExtra?.colno,
-        widgetHealth: safeExtra,
-        ip,
-      },
-    });
+    if (healthTags) {
+      Sentry.captureException(err, {
+        tags: {
+          source: 'widget',
+          widgetEventType: healthTags.type,
+          widgetSurface: healthTags.surface,
+          widgetAdapter: healthTags.adapterKey,
+          widgetReason: healthTags.reason,
+          widgetRuntimeVersion: healthTags.version,
+        },
+        fingerprint: [
+          'widget-placement-identity',
+          healthTags.type,
+          healthTags.surface,
+          healthTags.adapterKey,
+          healthTags.reason,
+        ],
+        extra: {
+          widgetHealth: healthTags,
+        },
+      });
+    } else {
+      Sentry.captureException(err, {
+        tags: {
+          source: 'widget',
+          widgetEventType: typeof safeExtra?.type === 'string' ? (safeExtra.type as string) : 'unknown',
+        },
+        extra: {
+          url,
+          userAgent,
+          publicApiKey,
+          filename: safeExtra?.filename,
+          lineno: safeExtra?.lineno,
+          colno: safeExtra?.colno,
+          widgetHealth: safeExtra,
+          ip,
+        },
+      });
+    }
 
     return withWidgetBeaconCors(NextResponse.json({ ok: true }, { status: 200 }), req);
   } catch {

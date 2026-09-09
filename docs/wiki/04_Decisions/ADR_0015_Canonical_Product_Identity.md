@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-17
-updated: 2026-08-10
-last_verified: 2026-08-10
+updated: 2026-09-09
+last_verified: 2026-09-09
 confidence: high
 tags:
   - adr
@@ -33,6 +33,15 @@ source_files:
 ---
 
 # ADR_0015 - Canonical Product Identity
+
+## Agent Brief
+
+The only review identity is `(storeId, productId)`. A listing card slug may be
+used once to discover a Product ID when the current Ikas event omitted it, but
+the slug is never a review join key, rating-cache key, or visible badge
+identity. A visible PDP, listing, or quick-view badge and its owned slot must
+carry the same non-empty `data-renuvex-product-id`; unresolved, stale,
+conflicting, or malformed identity produces no badge.
 
 ## Status
 Accepted
@@ -67,21 +76,32 @@ Where:
   must not be used as the primary join key for review reads when `productId` is
   available.
 
-Listing/search badges now prefer the canonical path:
-1. `core/storefront-context.js` records `slug -> { productId, name }` from
-   `VIEW_LISTING` and `VIEW_SEARCH_RESULTS`.
-2. `placement/capability.js` attests an exact product card and resolves identity
-   from the current event map when available; otherwise it retains only the
-   lifecycle-safe slug hint.
-3. `listing-badges/ratings.js` calls `/api/public/ratings?productIds=...` for
-   products that have ids.
-4. `/api/public/ratings` groups approved reviews by `Review.productId`.
+Listing/search badges use the canonical path:
+1. `core/storefront-context.js` atomically replaces the current
+   `VIEW_LISTING`/`VIEW_SEARCH_RESULTS` map and increments its generation. The
+   same slug plus the same Product ID is valid; the same slug plus different or
+   malformed Product IDs is an identity conflict.
+2. `placement/capability.js` first creates an exact DOM placement candidate.
+   Event-backed candidates use their current-generation Product ID. ID-less
+   candidates carry only a one-shot slug discovery input.
+3. `listing-badges/ratings.js` reads event-backed products through
+   `/api/public/ratings?productIds=...`. The slug endpoint returns the resolved
+   Product ID with its rating summary.
+4. After the response, the runtime revalidates epoch, event generation,
+   adapter, container, exact link/href slug, title, and mount point. Only then
+   does it promote the candidate to an immutable Product ID proof and mutate
+   the DOM.
+5. Both public endpoints read rating summaries only by `productId`; neither
+   path queries `Review.slug`.
 
-The legacy `/api/public/ratings-by-slug` endpoint remains only as a fallback for
-DOM-only paths where ikas Events did not provide product ids. That fallback now
-resolves `slug -> productId` only through fresh, unambiguous product-lifecycle
-evidence. It never reads `Review.slug` as an identity fallback and never lets
-the newest snapshot win an ambiguous slug.
+The backward-compatible `/api/public/ratings-by-slug` endpoint remains only as
+a discovery fallback for DOM-only paths where Ikas Events did not provide
+Product IDs. Its successful shape is
+`{ data: { [slug]: { productId, avg, count } } }`. A safely resolved product
+with no approved reviews still returns its Product ID with `avg: "0.0"` and
+`count: 0`; this proves identity without authorizing a visible badge. Missing,
+stale, unknown, tombstoned, conflicting, or installation-mismatched evidence
+omits that slug entirely.
 
 `ProductSnapshot` evidence is maintained by bounded install/manual/daily
 reconciliation and exact provider reads after ikas product webhook wakeups.
@@ -123,6 +143,15 @@ fields define identity.
 - DOM-only listing fallback resolves a slug only through one fresh
   `active_verified` snapshot. Missing, stale, unknown, or conflicting evidence
   returns no rating rather than attaching historical reviews by slug.
+- Session rating cache entries live under
+  `renuvex_pr_ratings_v3_<storeId>`, are keyed only by Product ID, and expire
+  independently after five minutes. The runtime neither reads/migrates the v2
+  slug cache nor persists slug-to-ID mappings.
+- A successful unresolved proof is suppressed for five minutes only on the
+  same live DOM candidate. HTTP, 429, 5xx, malformed-response, and network
+  failures remain retryable on a later meaningful event or mutation.
+- Visible badge ownership is auditable in the DOM: its Renuvex slot and inner
+  badge carry an identical `data-renuvex-product-id`.
 - The local `ProductSnapshot` table is lifecycle evidence. Ikas remains the
   current-product source of truth; webhook misses converge through DB-owned
   reconciliation rather than a request-scoped full backfill.

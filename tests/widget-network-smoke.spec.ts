@@ -918,7 +918,7 @@ test('product-like links without nearby media do not trigger the listing fallbac
   expect(widgetErrors(log)).toEqual([]);
 });
 
-test('product-like listing DOM triggers the fallback chunk and slug ratings call', async ({ page }) => {
+test('product-like listing DOM resolves through slug and caches only Product IDs', async ({ page }) => {
   await page.addInitScript(({ publicKey }) => {
     sessionStorage.setItem(`renuvex_pr_ratings_${publicKey}`, JSON.stringify({
       t: Date.now(),
@@ -929,11 +929,18 @@ test('product-like listing DOM triggers the fallback chunk and slug ratings call
   await page.goto(`${MERCHANT_ORIGIN}/clothing`);
   await expect.poll(() => countUrls(log, '/api/public/ratings-by-slug'), { timeout: 5000 }).toBe(1);
 
+  await expect.poll(() => page.evaluate((publicKey) => (
+    sessionStorage.getItem(`renuvex_pr_ratings_v3_${publicKey}`)
+  ), PUBLIC_KEY)).not.toBeNull();
   const cached = await page.evaluate((publicKey) => (
-    sessionStorage.getItem(`renuvex_pr_ratings_v2_${publicKey}`)
+    sessionStorage.getItem(`renuvex_pr_ratings_v3_${publicKey}`)
   ), PUBLIC_KEY);
-  expect(cached).not.toBeNull();
-  expect(JSON.parse(cached!).v).toEqual({});
+  const productCache = JSON.parse(cached!);
+  expect(Object.keys(productCache).sort()).toEqual([PRODUCT_ID, 'product-2'].sort());
+  expect(productCache['premium-shorts']).toBeUndefined();
+  expect(await page.evaluate((publicKey) => (
+    sessionStorage.getItem(`renuvex_pr_ratings_v2_${publicKey}`)
+  ), PUBLIC_KEY)).toBeNull();
 
   expect(hasRuntime(log)).toBe(true);
   expect(hasChunk(log, 'listing-badges-')).toBe(true);

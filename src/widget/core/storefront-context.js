@@ -12,7 +12,7 @@
 //   https://builders.ikas.com/docs/storefront-events
 //   Bkz. docs/wiki/07_Ikas/Ikas_Storefront_Events.md ve ADR_0013.
 
-import { clearStorefrontProductMaps, renuvexPrProductMap, renuvexPrSlugMap } from './state.js';
+import { clearStorefrontProductMaps, replaceStorefrontProductMaps } from './state.js';
 import {
   getStorefrontContextEpoch,
   noteStorefrontProduct,
@@ -56,6 +56,17 @@ var productViewSubs = [];
 var pageViewSubs = [];
 var listingViewSubs = [];
 
+function retireListingIdentityDom() {
+  if (typeof document === 'undefined') return;
+  document
+    .querySelectorAll('[data-renuvex-slot="listing-rating"],[data-renuvex-slot="listing-rating-placeholder"]')
+    .forEach(function (slot) { slot.remove(); });
+  document.querySelectorAll('[data-renuvex-badge],[data-renuvex-badge-product-id]').forEach(function (link) {
+    link.removeAttribute('data-renuvex-badge');
+    link.removeAttribute('data-renuvex-badge-product-id');
+  });
+}
+
 // ── Public API ───────────────────────────────────────────────────────────────
 
 // Idempotent. IkasEvents'e abone olur (not-ready ise polling), ve DOM tabanlı
@@ -70,6 +81,7 @@ export function initStorefrontContext() {
       latestPage = null;
       latestListing = null;
       clearStorefrontProductMaps();
+      retireListingIdentityDom();
     });
   }
   attachIkasEvents();
@@ -150,22 +162,44 @@ function handleIkasEvent(event) {
   if (event.type === IKAS_EVENT.LISTING_VIEW || event.type === IKAS_EVENT.SEARCH_RESULTS) {
     noteStorefrontRoute();
     var products = event.data && event.data.productDetails;
-    if (Array.isArray(products)) {
-      clearStorefrontProductMaps();
-      products.forEach(function (p) {
-        var slug = p && (p.slug || (p.metaData && p.metaData.slug));
-        if (slug && p.name) {
-          renuvexPrSlugMap[slug] = p.name;
-        }
-        if (slug && p.id) {
-          renuvexPrProductMap[slug] = {
-            productId: String(p.id),
-            name: p.name || null,
-          };
-        }
-      });
-      emitListingView({ eventType: event.type, products: products, epoch: getStorefrontContextEpoch() });
-    }
+    var normalizedProducts = Array.isArray(products) ? products : [];
+    var slugMap = {};
+    var productMap = {};
+    var conflictMap = {};
+
+    normalizedProducts.forEach(function (p) {
+      var rawSlug = p && (p.slug || (p.metaData && p.metaData.slug));
+      var slug = typeof rawSlug === 'string' ? rawSlug.trim() : '';
+      if (!slug) return;
+      if (p.name) slugMap[slug] = String(p.name);
+
+      if (p.id === undefined || p.id === null || p.id === '') return;
+      var productId = typeof p.id === 'string' ? p.id.trim() : '';
+      if (!productId || productId.length > 128) {
+        conflictMap[slug] = 'malformed_event_product_id';
+        delete productMap[slug];
+        return;
+      }
+      if (conflictMap[slug]) return;
+      if (productMap[slug] && productMap[slug].productId !== productId) {
+        conflictMap[slug] = 'duplicate_slug_product_ids';
+        delete productMap[slug];
+        return;
+      }
+      productMap[slug] = {
+        productId: productId,
+        name: p.name || null,
+      };
+    });
+
+    var listingGeneration = replaceStorefrontProductMaps(slugMap, productMap, conflictMap);
+    retireListingIdentityDom();
+    emitListingView({
+      eventType: event.type,
+      products: normalizedProducts,
+      epoch: getStorefrontContextEpoch(),
+      generation: listingGeneration,
+    });
     return;
   }
 

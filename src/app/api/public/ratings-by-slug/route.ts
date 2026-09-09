@@ -12,6 +12,12 @@ import { reportServerFailure } from '@/lib/server-failures';
 const RATINGS_RATE_LIMIT_MAX = 300;
 const RATINGS_RATE_LIMIT_WINDOW_SEC = 60;
 
+type ResolvedSlugRating = {
+  productId: string;
+  avg: string;
+  count: number;
+};
+
 export async function OPTIONS() {
   return anonymousPublicCorsOptions(['GET']);
 }
@@ -25,7 +31,7 @@ function rateLimitedResponse() {
   return res;
 }
 
-function dataResponse(data: Record<string, { avg: string; count: number }>, status = 200) {
+function dataResponse(data: Record<string, ResolvedSlugRating>, status = 200) {
   const response = withAnonymousPublicCors(NextResponse.json({ data }, { status }));
   response.headers.set('Cache-Control', 'no-store');
   return response;
@@ -33,7 +39,8 @@ function dataResponse(data: Record<string, { avg: string; count: number }>, stat
 
 /**
  * GET /api/public/ratings-by-slug?storeId=<id>&slugs=slug1,slug2,...
- * Returns approved review count and average rating per slug.
+ * Resolves each lifecycle-safe slug to its canonical ikas product id, then
+ * returns the approved review count and average for that id.
  */
 export async function GET(request: Request) {
   try {
@@ -51,9 +58,15 @@ export async function GET(request: Request) {
       return dataResponse({});
     }
 
-    // Max 100 slug — sonsuz sorgu engeli
+    // Bound and deduplicate the public batch before any database read.
+    const seenSlugs = new Set<string>();
     const safeSlugs = slugs
-      .filter((s: string) => typeof s === 'string' && s.length > 0 && s.length <= 200)
+      .map((slug) => slug.trim())
+      .filter((slug) => {
+        if (!slug || slug.length > 200 || seenSlugs.has(slug)) return false;
+        seenSlugs.add(slug);
+        return true;
+      })
       .slice(0, 100);
 
     if (safeSlugs.length === 0) {
@@ -70,7 +83,7 @@ export async function GET(request: Request) {
       return rateLimitedResponse();
     }
 
-    const data: Record<string, { avg: string; count: number }> = {};
+    const data: Record<string, ResolvedSlugRating> = {};
 
     const [snapshots, installation] = await Promise.all([
       prisma.productSnapshot.findMany({
@@ -158,8 +171,9 @@ export async function GET(request: Request) {
       }
 
       for (const slug of Object.keys(slugToProductId)) {
-        const rating = productRatings[slugToProductId[slug]];
-        if (rating) data[slug] = rating;
+        const productId = slugToProductId[slug];
+        const rating = productRatings[productId] ?? { avg: '0.0', count: 0 };
+        data[slug] = { productId, ...rating };
       }
     }
 

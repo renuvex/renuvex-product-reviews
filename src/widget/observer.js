@@ -4,6 +4,7 @@ import { ls } from './core/state.js';
 import { scheduleListingBadgeHydration } from './core/listing-viewport-gate.js';
 import {
   collectListingPlacementProofs,
+  getResolvedListingPlacementProof,
   hasRuntimeDetectableListingSignature,
   reconcileModalPlacementContext,
   resolveModalPlacementProof,
@@ -21,11 +22,15 @@ function hasUnbadgedListingLinks() {
   if (proofs.length) {
     return proofs.some(function (proof) {
       var requestStatus = getListingProofRequestStatus(proof);
-      if (requestStatus === 'in_flight' || requestStatus === 'empty') return false;
-      if (!proof.linkEl.getAttribute('data-renuvex-badge')) return true;
+      if (requestStatus === 'in_flight' || requestStatus === 'empty' || requestStatus === 'unresolved') return false;
+      var resolvedProof = getResolvedListingPlacementProof(proof);
+      if (!resolvedProof) return true;
+      if (proof.linkEl.getAttribute('data-renuvex-badge-product-id') !== resolvedProof.productId) return true;
       var slots = proof.mountPoint.parent.querySelectorAll('[data-renuvex-slot="listing-rating"]');
       return !Array.from(slots).some(function (slot) {
-        return slot.getAttribute('data-renuvex-product-slug') === String(proof.slug);
+        var badge = slot.querySelector('.renuvex-pr-rating-badge--listing');
+        return slot.getAttribute('data-renuvex-product-id') === resolvedProof.productId &&
+          badge && badge.getAttribute('data-renuvex-product-id') === resolvedProof.productId;
       });
     });
   }

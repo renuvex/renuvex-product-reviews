@@ -64,6 +64,7 @@ export type SmokeOptions = {
   settingsStatus?: number;
   settingsAbort?: Parameters<Route['abort']>[0];
   ratingDelayMs?: number;
+  ratingsHandler?: (route: Route) => Promise<void>;
   ratingsBySlugHandler?: (route: Route) => Promise<void>;
   settingsPayload?: unknown;
   widgetRuntimeEntry?: string;
@@ -345,29 +346,41 @@ export function reviewsResponse(hasImages: boolean, hasMore = false, storeId = P
   };
 }
 
-export function ratingsResponse(options: SmokeOptions = {}): unknown {
+export function ratingsResponse(options: SmokeOptions = {}, requestedProductIds?: string[]): unknown {
   const count = options.approvedReviewCount ?? 12;
-  return {
-    data: {
-      [PRODUCT_ID]: {
-        avg: count > 0 ? '4.8' : '0.0',
-        count,
-      },
-      'product-2': {
-        avg: count > 0 ? '4.6' : '0.0',
-        count: count > 0 ? 7 : 0,
-      },
+  const allData = {
+    [PRODUCT_ID]: {
+      avg: count > 0 ? '4.8' : '0.0',
+      count,
     },
+    'product-2': {
+      avg: count > 0 ? '4.6' : '0.0',
+      count: count > 0 ? 7 : 0,
+    },
+  };
+  const data = requestedProductIds
+    ? Object.fromEntries(requestedProductIds.filter((id) => id in allData).map((id) => [id, allData[id as keyof typeof allData]]))
+    : allData;
+  return {
+    data,
   };
 }
 
-function ratingsBySlugResponse(): unknown {
-  return {
-    data: {
-      'premium-shorts': { avg: '4.8', count: 12 },
-      'linen-shirt': { avg: '4.6', count: 7 },
-    },
+function ratingsBySlugResponse(requestedSlugs?: string[]): unknown {
+  const allData = {
+    'premium-shorts': { productId: PRODUCT_ID, avg: '4.8', count: 12 },
+    'linen-shirt': { productId: 'product-2', avg: '4.6', count: 7 },
   };
+  const data = requestedSlugs
+    ? Object.fromEntries(requestedSlugs.filter((slug) => slug in allData).map((slug) => [slug, allData[slug as keyof typeof allData]]))
+    : allData;
+  return {
+    data,
+  };
+}
+
+function requestCsvValues(route: Route, key: string): string[] {
+  return new URL(route.request().url()).searchParams.get(key)?.split(',').filter(Boolean) ?? [];
 }
 
 export async function fulfillLocalPublicAsset(route: Route): Promise<void> {
@@ -451,11 +464,15 @@ export async function setupWidgetRoutes(page: Page, options: SmokeOptions = {}):
     });
   });
   await routeWidgetApi(page, '/api/public/ratings**', async (route) => {
+    if (options.ratingsHandler) {
+      await options.ratingsHandler(route);
+      return;
+    }
     if (options.ratingDelayMs) await new Promise((resolve) => setTimeout(resolve, options.ratingDelayMs));
     await route.fulfill({
       status: 200,
       headers: jsonHeaders(),
-      body: JSON.stringify(ratingsResponse(options)),
+      body: JSON.stringify(ratingsResponse(options, requestCsvValues(route, 'productIds'))),
     });
   });
   await routeWidgetApi(page, '/api/public/reviews**', async (route) => {
@@ -595,7 +612,7 @@ export async function setupGenericLinksPage(page: Page): Promise<RequestLog> {
 
 export async function setupProductListingFallbackPage(page: Page, options: SmokeOptions = {}): Promise<RequestLog> {
   const log = createRequestLog(page);
-  await page.route(`${WIDGET_ORIGIN}/widget.js**`, fulfillLocalPublicAsset);
+  await page.route(`${WIDGET_ORIGIN}/widget.js**`, (route) => fulfillWidgetEntrypoint(route, options.widgetRuntimeEntry));
   await page.route(`${WIDGET_ORIGIN}/widget-runtime/**`, fulfillLocalPublicAsset);
   await page.route('https://media.renuvex.app/**', fulfillImage);
   await routeWidgetApi(page, '/api/public/settings**', async (route) => {
@@ -611,11 +628,15 @@ export async function setupProductListingFallbackPage(page: Page, options: Smoke
   });
   await routeThemeLazySync(page);
   await routeWidgetApi(page, '/api/public/ratings**', async (route) => {
+    if (options.ratingsHandler) {
+      await options.ratingsHandler(route);
+      return;
+    }
     if (options.ratingDelayMs) await new Promise((resolve) => setTimeout(resolve, options.ratingDelayMs));
     await route.fulfill({
       status: 200,
       headers: jsonHeaders(),
-      body: JSON.stringify(ratingsResponse()),
+      body: JSON.stringify(ratingsResponse({}, requestCsvValues(route, 'productIds'))),
     });
   });
   await routeWidgetApi(page, '/api/public/ratings-by-slug**', async (route) => {
@@ -627,7 +648,7 @@ export async function setupProductListingFallbackPage(page: Page, options: Smoke
     await route.fulfill({
       status: 200,
       headers: jsonHeaders(),
-      body: JSON.stringify(ratingsBySlugResponse()),
+      body: JSON.stringify(ratingsBySlugResponse(requestCsvValues(route, 'slugs'))),
     });
   });
   await routeWidgetApi(page, '/api/public/widget-error**', async (route) => {
@@ -676,14 +697,14 @@ async function setupListingProbePage(page: Page, body: string): Promise<RequestL
     await route.fulfill({
       status: 200,
       headers: jsonHeaders(),
-      body: JSON.stringify(ratingsResponse()),
+      body: JSON.stringify(ratingsResponse({}, requestCsvValues(route, 'productIds'))),
     });
   });
   await routeWidgetApi(page, '/api/public/ratings-by-slug**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: jsonHeaders(),
-      body: JSON.stringify(ratingsBySlugResponse()),
+      body: JSON.stringify(ratingsBySlugResponse(requestCsvValues(route, 'slugs'))),
     });
   });
   await routeWidgetApi(page, '/api/public/widget-error**', async (route) => {

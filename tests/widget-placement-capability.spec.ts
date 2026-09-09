@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import {
   MERCHANT_ORIGIN,
   LEGACY_PLACEMENT_RUNTIME_ENTRY,
@@ -12,6 +12,13 @@ import {
   setupWidgetRoutes,
   widgetErrors,
 } from './widget-harness';
+
+async function listingBadgeIdentities(page: Page) {
+  return page.locator('[data-renuvex-slot="listing-rating"]').evaluateAll((slots) => slots.map((slot) => ({
+    slotProductId: slot.getAttribute('data-renuvex-product-id'),
+    badgeProductId: slot.querySelector('.renuvex-pr-rating-badge--listing')?.getAttribute('data-renuvex-product-id') ?? null,
+  })));
+}
 
 test('provider-verified placement requires an exact Ozy PDP target', async ({ page }) => {
   const log = await setupWidgetRoutes(page, {
@@ -152,7 +159,230 @@ test('strict Ozy listing placement does not require product media', async ({ pag
   await expect.poll(() => countListingBadges(page), { timeout: 6000 }).toBe(2);
 
   expect(countUrls(log, '/api/public/ratings-by-slug')).toBe(1);
+  expect(await listingBadgeIdentities(page)).toEqual([
+    { slotProductId: 'product-1', badgeProductId: 'product-1' },
+    { slotProductId: 'product-2', badgeProductId: 'product-2' },
+  ]);
   expect(widgetErrors(log)).toEqual([]);
+});
+
+test('a Product ID-less legacy slug response cannot create a visible badge', async ({ page }) => {
+  const log = await setupProductListingFallbackPage(page, {
+    ratingsBySlugHandler: async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: { 'premium-shorts': { avg: '4.8', count: 12 } } }),
+      });
+    },
+    listingMarkup: '<section class="category-products-main"><article><a href="/premium-shorts"><h2 class="product-name">Premium Shorts</h2></a></article></section>',
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await expect.poll(() => countUrls(log, '/api/public/ratings-by-slug'), { timeout: 6000 }).toBe(1);
+  await page.waitForTimeout(500);
+
+  expect(await countListingBadges(page)).toBe(0);
+  expect(await page.locator('[data-renuvex-slot="listing-rating-placeholder"]').count()).toBe(0);
+});
+
+test('the V2 slug cache is ignored by the Product ID runtime', async ({ page }) => {
+  await page.addInitScript((key) => {
+    sessionStorage.setItem(key, JSON.stringify({
+      t: Date.now(),
+      v: { 'premium-shorts': { avg: '4.8', count: 12 } },
+    }));
+  }, `renuvex_pr_ratings_v2_${PUBLIC_KEY}`);
+  const log = await setupProductListingFallbackPage(page, {
+    ratingsBySlugHandler: async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: {} }) });
+    },
+    listingMarkup: '<section class="category-products-main"><article><a href="/premium-shorts"><h2 class="product-name">Premium Shorts</h2></a></article></section>',
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await expect.poll(() => countUrls(log, '/api/public/ratings-by-slug'), { timeout: 6000 }).toBe(1);
+  await page.waitForTimeout(400);
+
+  expect(await countListingBadges(page)).toBe(0);
+  expect(await page.evaluate((key) => sessionStorage.getItem(key), `renuvex_pr_ratings_v2_${PUBLIC_KEY}`)).not.toBeNull();
+});
+
+test('one resolved Product ID can attest multiple cards for the same product', async ({ page }) => {
+  const log = await setupProductListingFallbackPage(page, {
+    listingMarkup: `<section class="category-products-main">
+      <article><a href="/premium-shorts"><h2 class="product-name">Premium Shorts</h2></a></article>
+      <article><a href="/premium-shorts"><h2 class="product-name">Premium Shorts</h2></a></article>
+    </section>`,
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await expect.poll(() => countListingBadges(page), { timeout: 6000 }).toBe(2);
+
+  expect(countUrls(log, '/api/public/ratings-by-slug')).toBe(1);
+  expect(await listingBadgeIdentities(page)).toEqual([
+    { slotProductId: 'product-1', badgeProductId: 'product-1' },
+    { slotProductId: 'product-1', badgeProductId: 'product-1' },
+  ]);
+});
+
+test('duplicate storefront rows with the same slug and Product ID remain valid', async ({ page }) => {
+  const log = await setupProductListingFallbackPage(page, {
+    listingMarkup: `<section class="category-products-main">
+      <article><a href="/premium-shorts"><h2 class="product-name">Premium Shorts</h2></a></article>
+      <article><a href="/premium-shorts"><h2 class="product-name">Premium Shorts</h2></a></article>
+    </section>`,
+    ikasEvents: [
+      { type: 'PAGE_VIEW', data: { pageType: 'CATEGORY' } },
+      { type: 'VIEW_LISTING', data: { productDetails: [
+        { id: 'product-1', name: 'Premium Shorts', slug: 'premium-shorts' },
+        { id: 'product-1', name: 'Premium Shorts', slug: 'premium-shorts' },
+      ] } },
+    ],
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await expect.poll(() => countListingBadges(page), { timeout: 6000 }).toBe(2);
+
+  expect(countUrls(log, '/api/public/ratings?')).toBe(1);
+  expect(countUrls(log, '/api/public/ratings-by-slug')).toBe(0);
+  expect(await listingBadgeIdentities(page)).toEqual([
+    { slotProductId: 'product-1', badgeProductId: 'product-1' },
+    { slotProductId: 'product-1', badgeProductId: 'product-1' },
+  ]);
+});
+
+const invalidSlugResponseCases = [
+  {
+    name: 'an unexpected response key',
+    fulfill: { status: 200, body: { data: {
+      'premium-shorts': { productId: 'product-1', avg: '4.8', count: 12 },
+      'not-requested': { productId: 'other-product', avg: '5.0', count: 1 },
+    } } },
+  },
+  {
+    name: 'a malformed Product ID',
+    fulfill: { status: 200, body: { data: {
+      'premium-shorts': { productId: '   ', avg: '4.8', count: 12 },
+    } } },
+  },
+  {
+    name: 'a malformed rating',
+    fulfill: { status: 200, body: { data: {
+      'premium-shorts': { productId: 'product-1', avg: '8.0', count: 12 },
+    } } },
+  },
+  {
+    name: 'an HTTP 429 response',
+    fulfill: { status: 429, body: { data: {} } },
+  },
+] as const;
+
+for (const responseCase of invalidSlugResponseCases) {
+  test(`${responseCase.name} cannot create a visible badge`, async ({ page }) => {
+    const log = await setupProductListingFallbackPage(page, {
+      listingMarkup: '<section class="category-products-main"><article><a href="/premium-shorts"><h2 class="product-name">Premium Shorts</h2></a></article></section>',
+      ratingsBySlugHandler: async (route) => {
+        await route.fulfill({
+          status: responseCase.fulfill.status,
+          contentType: 'application/json',
+          body: JSON.stringify(responseCase.fulfill.body),
+        });
+      },
+    });
+    await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+    await expect.poll(() => countUrls(log, '/api/public/ratings-by-slug'), { timeout: 6000 }).toBe(1);
+    await page.waitForTimeout(500);
+
+    expect(await countListingBadges(page)).toBe(0);
+    expect(await page.locator('[data-renuvex-slot="listing-rating-placeholder"]').count()).toBe(0);
+  });
+}
+
+test('mixed event and slug candidates use canonical and discovery batches independently', async ({ page }) => {
+  const log = await setupProductListingFallbackPage(page, {
+    ikasEvents: [
+      { type: 'PAGE_VIEW', data: { pageType: 'CATEGORY' } },
+      { type: 'VIEW_LISTING', data: { productDetails: [
+        { id: 'product-1', name: 'Premium Shorts', slug: 'premium-shorts' },
+        { name: 'Linen Shirt', slug: 'linen-shirt' },
+      ] } },
+    ],
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await expect.poll(() => countListingBadges(page), { timeout: 6000 }).toBe(2);
+
+  expect(countUrls(log, '/api/public/ratings?')).toBe(1);
+  expect(countUrls(log, '/api/public/ratings-by-slug')).toBe(1);
+  expect(await listingBadgeIdentities(page)).toEqual([
+    { slotProductId: 'product-1', badgeProductId: 'product-1' },
+    { slotProductId: 'product-2', badgeProductId: 'product-2' },
+  ]);
+});
+
+test('conflicting event Product IDs block direct reads and slug fallback', async ({ page }) => {
+  const log = await setupProductListingFallbackPage(page, {
+    listingMarkup: '<section class="category-products-main"><article><a href="/premium-shorts"><h2 class="product-name">Premium Shorts</h2></a></article></section>',
+    ikasEvents: [
+      { type: 'PAGE_VIEW', data: { pageType: 'CATEGORY' } },
+      { type: 'VIEW_LISTING', data: { productDetails: [
+        { id: 'product-1', name: 'Premium Shorts', slug: 'premium-shorts' },
+        { id: 'product-2', name: 'Premium Shorts', slug: 'premium-shorts' },
+      ] } },
+    ],
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await page.waitForTimeout(2600);
+
+  expect(await countListingBadges(page)).toBe(0);
+  expect(countUrls(log, '/api/public/ratings?')).toBe(0);
+  expect(countUrls(log, '/api/public/ratings-by-slug')).toBe(0);
+});
+
+test('a rendered card retires its old Product ID synchronously on a new event generation', async ({ page }) => {
+  const log = await setupProductListingFallbackPage(page, {
+    listingMarkup: '<section class="category-products-main"><article><a href="/premium-shorts"><h2 class="product-name">Premium Shorts</h2></a></article></section>',
+    ikasEvents: [
+      { type: 'PAGE_VIEW', data: { pageType: 'CATEGORY' } },
+      { type: 'VIEW_LISTING', data: { productDetails: [
+        { id: 'product-1', name: 'Premium Shorts', slug: 'premium-shorts' },
+      ] } },
+    ],
+    ratingsHandler: async (route) => {
+      const ids = new URL(route.request().url()).searchParams.get('productIds')?.split(',') ?? [];
+      const data = Object.fromEntries(ids.map((id) => [id, { avg: '4.8', count: 12 }]));
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data }) });
+    },
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await expect.poll(() => countListingBadges(page), { timeout: 6000 }).toBe(1);
+
+  const immediate = await page.evaluate(() => {
+    const emit = (window as Window & { __renuvexEmitIkasEvent?: (event: unknown) => void }).__renuvexEmitIkasEvent;
+    emit?.({ type: 'VIEW_LISTING', data: { productDetails: [
+      { id: 'replacement-product', name: 'Premium Shorts', slug: 'premium-shorts' },
+    ] } });
+    return document.querySelectorAll('[data-renuvex-slot="listing-rating"]').length;
+  });
+  expect(immediate).toBe(0);
+  await expect.poll(async () => (await listingBadgeIdentities(page))[0]?.slotProductId, { timeout: 6000 })
+    .toBe('replacement-product');
+  expect(countUrls(log, '/api/public/ratings?')).toBe(2);
+});
+
+test('a modal opened while slug identity is resolving receives only the promoted Product ID', async ({ page }) => {
+  const log = await setupProductListingFallbackPage(page, {
+    ratingDelayMs: 800,
+    listingMarkup: `<section class="category-products-main">
+      <article><a id="trusted-pending-card" href="/premium-shorts" onclick="event.preventDefault();setTimeout(function(){document.body.insertAdjacentHTML('beforeend','<div class=&quot;add-to-basket-modal&quot;><h1 class=&quot;product-name&quot;>Premium Shorts</h1></div>')},0)"><h2 class="product-name">Premium Shorts</h2></a></article>
+    </section>`,
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await expect.poll(() => countUrls(log, '/api/public/ratings-by-slug'), { timeout: 6000 }).toBe(1);
+  await page.click('#trusted-pending-card');
+
+  await expect.poll(() => page.locator('.add-to-basket-modal [data-renuvex-slot="listing-rating"]').count(), { timeout: 6000 }).toBe(1);
+  const identity = await page.locator('.add-to-basket-modal [data-renuvex-slot="listing-rating"]').evaluate((slot) => ({
+    slotProductId: slot.getAttribute('data-renuvex-product-id'),
+    badgeProductId: slot.querySelector('.renuvex-pr-rating-badge--listing')?.getAttribute('data-renuvex-product-id'),
+  }));
+  expect(identity).toEqual({ slotProductId: 'product-1', badgeProductId: 'product-1' });
 });
 
 test('carousel mutations do not duplicate an in-flight or resolved-empty slug read', async ({ page }) => {
@@ -162,7 +392,7 @@ test('carousel mutations do not duplicate an in-flight or resolved-empty slug re
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ data: { 'premium-shorts': { avg: '4.8', count: 12 } } }),
+        body: JSON.stringify({ data: { 'premium-shorts': { productId: 'product-1', avg: '4.8', count: 12 } } }),
       });
     },
   });
@@ -189,7 +419,11 @@ test('a new strict card added during an in-flight batch queues one follow-up rea
       attempts += 1;
       if (attempts === 1) await new Promise((resolve) => setTimeout(resolve, 800));
       const slugs = new URL(route.request().url()).searchParams.get('slugs')?.split(',') ?? [];
-      const data = Object.fromEntries(slugs.map((slug) => [slug, { avg: '4.7', count: 5 }]));
+      const data = Object.fromEntries(slugs.map((slug) => [slug, {
+        productId: `resolved-${slug}`,
+        avg: '4.7',
+        count: 5,
+      }]));
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data }) });
     },
   });
@@ -322,6 +556,24 @@ test('quick-view modal identity comes only from an attested product-card click',
   await expect.poll(() => page.locator('.add-to-basket-modal [data-renuvex-slot="listing-rating"]').count()).toBe(1);
 });
 
+test('a reused modal retires its old Product ID badge when the title changes', async ({ page }) => {
+  await setupProductListingFallbackPage(page, {
+    listingMarkup: `<section class="category-products-main">
+      <article><a id="trusted-card" href="/premium-shorts" onclick="event.preventDefault();setTimeout(function(){document.body.insertAdjacentHTML('beforeend','<div class=&quot;add-to-basket-modal&quot;><h1 class=&quot;product-name&quot;>Premium Shorts</h1></div>')},0)"><h2 class="product-name">Premium Shorts</h2></a></article>
+    </section>`,
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await expect.poll(() => countListingBadges(page), { timeout: 6000 }).toBe(1);
+  await page.click('#trusted-card');
+  await expect.poll(() => page.locator('.add-to-basket-modal [data-renuvex-slot="listing-rating"]').count()).toBe(1);
+
+  await page.locator('.add-to-basket-modal .product-name').evaluate((title) => {
+    title.textContent = 'Recycled Product';
+  });
+
+  await expect.poll(() => page.locator('.add-to-basket-modal [data-renuvex-slot="listing-rating"]').count()).toBe(0);
+});
+
 test('closing a modal invalidates its click context before another modal appears', async ({ page }) => {
   await setupProductListingFallbackPage(page, {
     listingMarkup: `<section class="category-products-main">
@@ -344,6 +596,42 @@ test('closing a modal invalidates its click context before another modal appears
   await page.waitForTimeout(800);
 
   expect(await page.locator('.add-to-basket-modal [data-renuvex-slot="listing-rating"]').count()).toBe(0);
+});
+
+test('multiple visible modals cannot receive a badge from one click context', async ({ page }) => {
+  await setupProductListingFallbackPage(page, {
+    listingMarkup: `<section class="category-products-main">
+      <article><a id="trusted-card" href="/premium-shorts" onclick="event.preventDefault()"><h2 class="product-name">Premium Shorts</h2></a></article>
+    </section>`,
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await expect.poll(() => countListingBadges(page), { timeout: 6000 }).toBe(1);
+  await page.click('#trusted-card');
+  await page.evaluate(() => {
+    document.body.insertAdjacentHTML('beforeend', '<div class="add-to-basket-modal"><h1 class="product-name">Premium Shorts</h1></div>');
+    document.body.insertAdjacentHTML('beforeend', '<div class="add-to-basket-modal"><h1 class="product-name">Premium Shorts</h1></div>');
+  });
+  await page.waitForTimeout(800);
+
+  expect(await page.locator('.add-to-basket-modal [data-renuvex-slot="listing-rating"]').count()).toBe(0);
+  await page.locator('.add-to-basket-modal').first().evaluate((modal) => modal.remove());
+  await page.waitForTimeout(800);
+  expect(await page.locator('.add-to-basket-modal [data-renuvex-slot="listing-rating"]').count()).toBe(0);
+});
+
+test('a replacement modal cannot reuse context closed before slug resolution', async ({ page }) => {
+  const log = await setupProductListingFallbackPage(page, {
+    ratingDelayMs: 800,
+    listingMarkup: `<section class="category-products-main">
+      <article><a id="trusted-card" href="/premium-shorts" onclick="event.preventDefault();setTimeout(function(){document.body.insertAdjacentHTML('beforeend','<div id=&quot;first-modal&quot; class=&quot;add-to-basket-modal&quot;><h1 class=&quot;product-name&quot;>Premium Shorts</h1></div>');setTimeout(function(){document.getElementById('first-modal')?.remove();document.body.insertAdjacentHTML('beforeend','<div id=&quot;replacement-modal&quot; class=&quot;add-to-basket-modal&quot;><h1 class=&quot;product-name&quot;>Premium Shorts</h1></div>')},100)},0)"><h2 class="product-name">Premium Shorts</h2></a></article>
+    </section>`,
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await expect.poll(() => countUrls(log, '/api/public/ratings-by-slug'), { timeout: 6000 }).toBe(1);
+  await page.click('#trusted-card');
+  await page.waitForTimeout(1400);
+
+  expect(await page.locator('#replacement-modal [data-renuvex-slot="listing-rating"]').count()).toBe(0);
 });
 
 test('a modal hidden before its delayed rating response cannot receive a badge', async ({ page }) => {
@@ -438,6 +726,25 @@ test('the retained legacy runtime is safe-disabled by a new backend payload', as
 
   expect(await hasPdpBadge(page)).toBe(false);
   expect(countUrls(log, '/api/public/ratings')).toBe(0);
+});
+
+test('the retained legacy runtime ignores the new slug response Product ID field', async ({ page }) => {
+  const payload = settingsResponse({}) as { runtime: Record<string, unknown> };
+  payload.runtime.autoPlacementEnabled = true;
+  await page.addInitScript(({ key, value }) => {
+    sessionStorage.setItem(key, value);
+  }, {
+    key: `renuvex_pr_settings_${PUBLIC_KEY}`,
+    value: JSON.stringify({ t: Date.now() - (4 * 60 * 1000), v: payload }),
+  });
+  const log = await setupProductListingFallbackPage(page, {
+    settingsAbort: 'failed',
+    widgetRuntimeEntry: LEGACY_PLACEMENT_RUNTIME_ENTRY,
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await expect.poll(() => countListingBadges(page), { timeout: 6000 }).toBe(2);
+
+  expect(countUrls(log, '/api/public/ratings-by-slug')).toBe(1);
 });
 
 test('the retained legacy runtime can keep a fresh pre-cutover true cache entry', async ({ page }) => {

@@ -3,7 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-11
-updated: 2026-07-29
+updated: 2026-09-09
+last_verified: 2026-09-09
 tags:
   - sentry
   - observability
@@ -20,6 +21,14 @@ related:
 ---
 
 # Sentry Operations
+
+## Agent Brief
+
+Use this page for Sentry runtime, privacy, grouping, and alert operations. The
+storefront does not ship the Sentry SDK; it sends bounded reports to the public
+widget-error route. Product ID/placement health events use strict allowlisted
+tags and fixed fingerprints, while external alert creation remains an explicit
+mutation gate.
 
 ## Summary
 Sentry is the observability surface for the Next.js panel app. The organization and project slugs are now under the Renuvex namespace, the Sentry MCP server is wired into the AI tooling, and `@sentry/nextjs` is installed and initialized for Node, Edge, and browser runtimes. The strategy and trade-offs live in [[ADR_0009_Sentry_Observability_Strategy]]; this page is the operational reference.
@@ -91,10 +100,36 @@ However, uncaught widget errors are no longer invisible. A tiny reporter in the 
 ### Filtering widget vs panel issues in Sentry
 - Widget-originated issues: query `tags[source]:widget`
 - Panel-originated issues: query `!tags[source]:widget` (or omit the tag)
-- **All widget health signals collapse into one issue.** dom-conflict, visibility-health, slot-reorder, and title-not-found forward through the same endpoint with an identical server stack (and no client stack), so Sentry fingerprints them into a single issue (e.g. titled "Widget node missing after render"). Differentiate sub-types via the `widgetEventType` tag and the `widgetHealth.reason`/`surface` extras, not the issue title.
+- Ordinary widget exceptions and legacy health signals retain stack-based Sentry
+  grouping. The four Product ID/placement health types below use explicit fixed
+  fingerprints; they no longer collapse into the generic server stack issue.
 - Widget reporter cap: 5 errors per page session, dedupe per (message+stack), 2-second minimum gap between sends
 - Widget runtime context on forwarded reports: route, document visibility/ready state, online status, and failed resource URL/tag when the browser reports a script/chunk load failure.
 - Server rate-limit: 30 reports per IP per 60 seconds (Upstash key prefix `renuvex_pr_werr_rl:`; legacy `ikr_werr_rl:` was pre-namespace-migration)
+
+### Product ID and placement health
+
+The storefront runtime emits four controlled health types through the same
+endpoint without loading the Sentry SDK:
+
+- `placement-attestation-miss`
+- `identity-resolution-miss`
+- `identity-resolution-error`
+- `identity-conflict`
+
+For these types, the client sends only `type`, `surface`, `adapterKey`, `reason`,
+and build version. The server applies exact allowlists for type/surface/adapter/
+reason, accepts only `dev` or the build's ISO timestamp as runtime version, and
+maps everything else to `unknown`. It discards the client URL, user agent,
+message, stack, product name, slug, Product ID, and arbitrary extras before
+capture. Tags are `widgetEventType`, `widgetSurface`, `widgetAdapter`,
+`widgetReason`, and `widgetRuntimeVersion` plus fixed `source:widget`.
+
+The fingerprint is stable by
+`type + surface + adapterKey + reason`. Real JavaScript exceptions continue to
+use their normal stack grouping. After separately approved Sentry mutation,
+`identity-conflict` must notify the maintainer on the first event; the other
+three types must notify at a combined threshold of 10 events in 5 minutes.
 
 ## Phase 1 Widget Post-Test Check
 
@@ -119,7 +154,7 @@ Not blocking, no decision required — operational follow-ups to revisit when th
 
 | # | Improvement | Trigger to act | How |
 |---|---|---|---|
-| 1 | **Alert rules** for new issues. Currently no email/Slack notification on regressions. | First time a real production bug stays unnoticed for >1 hour, or when traffic grows past hobby level. | Sentry UI → Alerts → New Alert Rule. Suggested: `eventCount > 10 in 5m` (regression spike) and `users > 5 in 1h` (broad impact). Route to maintainer email. |
+| 1 | **Product ID/placement alert rules.** Source contract is implemented; external Sentry rules are not yet created. | Product ID closeout rollout, after explicit mutation approval. | Notify maintainer email on the first `identity-conflict`; aggregate `placement-attestation-miss`, `identity-resolution-miss`, and `identity-resolution-error` at 10 events / 5 minutes. Verify each rule with a controlled event before Production closure. |
 | 2 | **Narrow Sentry MCP scope** from organization to project. | When a second Sentry project is added to `renuvex`. With only one project, scope makes no practical difference. | Edit `.mcp.json`: `https://mcp.sentry.dev/mcp/renuvex` -> `https://mcp.sentry.dev/mcp/renuvex/renuvex-product-reviews`. |
 | 3 | **Saved searches** in Sentry UI for `tags[source]:widget` and `!tags[source]:widget`. | First time widget errors start arriving and the dashboard needs to be triaged separately from panel issues. | Sentry UI → Issues → run the query → "Save Search". UI-only, no code or wiki change. |
 
@@ -145,6 +180,9 @@ None of the above is a quality-gate blocker. They exist here so future-you (or f
 - [[Phase_1_Widget_Runtime_Audit]]
 
 ## Change Log
+- 2026-09-09: Added fixed Product ID/placement health fingerprints, strict
+  low-cardinality tag allowlists, runtime-version validation, and privacy
+  filtering. External alert creation/verification remains approval-gated.
 - 2026-07-29: A CI Playwright trace proved that `reviews-widget / missing_after_render` could be false telemetry when SPA navigation intentionally retired the old product before the next product event. Review probes now apply route/product lifecycle relevance without suppressing genuine unexpected removal. See [[Bug_Review_Widget_SPA_Health_Probe_False_Positive]].
 - 2026-05-27: Widget reporter now forwards widget script/chunk resource-load failures and route/visibility/readyState/online context. Classic loader runtime-import failures include the same context, so intermittent "error script" reports after refresh or SPA navigation can be tied to a failed hashed runtime URL instead of remaining browser-only noise.
 - 2026-05-25: RENUVEX-PRODUCT-REVIEWS-6 (`listing-badge` / `missing_after_render`, ~93 events) proven to be a **false positive** — the visibility probe held a stale reference to the pre-self-heal element. Fixed in `core/health.js` (probe re-resolves the live owned node); verified on the dev store (1 report/session → 0). See [[Bug_Listing_Badge_Missing_After_Render]], [[Widget_Architecture]].

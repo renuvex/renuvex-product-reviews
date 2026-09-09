@@ -3,8 +3,8 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-09
-last_verified: 2026-08-09
+updated: 2026-09-09
+last_verified: 2026-09-09
 confidence: high
 source_files: []
 tags:
@@ -17,6 +17,8 @@ related:
   - "[[Yotpo_Style_Widget_Modular_Architecture]]"
   - "[[Yotpo_Protein_Ocean_Widget_Research]]"
   - "[[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]]"
+  - "[[ADR_0038_Runtime_Attested_Storefront_Placement]]"
+  - "[[Badge_Product_ID_Closeout_Acceptance_2026-09-09]]"
 ---
 
 # Current Status - Renuvex Product Reviews
@@ -29,6 +31,10 @@ pre-public-launch; AWS review images, Mux video, Cloudflare Worker widget
 delivery, QStash maintenance scheduling, and public read-cache paths are live.
 Remaining public-launch blockers are mainly security hardening, operational
 observability, authenticated dashboard smoke, and product polish.
+The strict Ozy placement baseline from PR #35/#36 is merged and live-checked.
+The Product ID propagation closeout is implemented on
+`codex/badge-product-id-closeout`, but backend/Worker rollout, two live canaries,
+natural lifecycle reconciliation, and Sentry alert verification remain open.
 The review-request email V5 plus Multi-Product Batch/Envelope V3.2 packages are
 deployed as a disabled backend and schema; all 64 Production migrations are
 applied, customer/request/job/attempt lifecycle rows remain zero, and
@@ -65,8 +71,8 @@ Active development on the production test store. Core review, image, Mux video, 
   - Review submission wizard traps keyboard focus, focuses the active step on open/step change, restores previous focus on close, and provides visible keyboard focus states
   - Review summary filter menu is keyboard-operable: options are buttons with menuitem semantics, the trigger exposes menu state via `aria-haspopup` / `aria-expanded`, focus moves in and out predictably, and tabbing away closes the menu
   - Widget-scope tap-feedback contract ([[ADR_0011_Widget_Touch_Feedback_And_Focus_Modality]]): tarayıcı tap-highlight devre dışı, deterministik `:active` opacity dip, `:focus-visible` ile sadece klavye odak halkası, ve global "son giriş modalitesi" izleyicisi popover/modal kapanışında `restoreFocus` kararını yönetir
-  - Product rating badge (small inline star+count)
-  - Listing-page rating badges (auto-discovers product cards on collection/search pages; Storefront Events path now reads by canonical ikas product id)
+  - Product rating badge with strict PDP proof, exact Product ID equality, and matching Product ID attributes on slot and visible badge
+  - Listing/home/search/slider badges with strict Ozy placement, atomic Storefront Event identity generations, Product ID reads, and lifecycle-safe slug-to-ID discovery only when an event ID is absent
   - Mutation observer for SPA-style theme navigation
   - Route- and identity-aware review reset on SPA product transitions, so stale review cards clear into the existing reserved shell while the new product loads
   - Below-the-fold listing/product-slider badge hydration through `IntersectionObserver`, while critical PDP surfaces stay eager
@@ -94,6 +100,15 @@ Active development on the production test store. Core review, image, Mux video, 
 - Widget-side uncaught errors forwarded to Sentry via a 637-byte (gzip) in-widget reporter and a rate-limited public endpoint (`/api/public/widget-error`). No SDK shipped to the widget bundle; storefront customer privacy and Core Web Vitals preserved. See [[ADR_0010_Widget_Error_Forwarding]].
 
 ## In Progress / Active Follow-Ups
+- Badge Product ID closeout source is implemented from `origin/main`
+  `a602db8d` on `codex/badge-product-id-closeout`. The additive slug API,
+  immutable Product ID proof promotion, v3 Product ID cache, modal/card race
+  guards, telemetry, and critical browser matrix are local/CI-source work.
+  Production is not closed: deploy backend first, verify origin and Worker
+  `no-store/BYPASS`, obtain separate Worker approval, run two live canaries with
+  one natural daily lifecycle reconciliation between them, and verify Sentry
+  alerts. Release B is outside this change. See
+  [[Badge_Product_ID_Closeout_Acceptance_2026-09-09]].
 - Product lifecycle Release A and the closure backend are merged and deployed.
   PR #30 merged the closure at commit
   `37ed06d5182fe6c66b3cf162ac46604bca49b9ce`. Production deployment
@@ -159,15 +174,16 @@ Active development on the production test store. Core review, image, Mux video, 
 - Current script injection relies on DB-tracked script ids because active MCP still does not expose `listStorefrontJSScript`; source intentionally avoids destructive cleanup while ikas docs/MCP disagree. See [[Ikas_Storefront_Script_Capabilities]].
 - Large new storefront surfaces should use the Phase 2 loader/module split pattern and must not be statically imported into the always-loaded runtime. See [[Yotpo_Style_Widget_Modular_Architecture]].
 - DOM-only listing badge fallback resolves only one fresh, unambiguous
-  `active_verified` snapshot before reading by product id. Missing, stale,
-  unknown, or conflicting evidence returns no slug-only rating; direct historical
-  `Review.slug` fallback has been removed in Release A source.
+  `active_verified` snapshot to Product ID before reading its summary. Missing,
+  stale, unknown, tombstoned, or conflicting evidence returns no badge; direct
+  historical `Review.slug` fallback is absent. Production rollout of the new
+  Product ID-bearing response remains gated by the acceptance record.
 - Product lifecycle core is merged, deployed, and expanded-schema verified.
   Truthful dispatch, lifecycle erasure, terminal retention,
   absence/scan/retry, bounded discovery, changed-only persistence, and initial
-  QStash flow control are in Production. Still open are live Worker no-store
-  acceptance, QStash convergence and `--expect=ready`, managed
-  PostgreSQL/provider quota evidence,
+  QStash flow control are in Production. Worker slug `no-store/BYPASS`, one
+  manual QStash convergence, and `--expect=ready` are accepted. Still open are
+  sustained/managed PostgreSQL and provider quota evidence,
   conflict alert/operator workflow, dev-store delete/same-slug/reinstall smoke,
   and every Release B consumer/media/email/admin gate. Do not direct-SQL-delete
   lifecycle rows or claim 5,000 managed/100,000-store readiness. See
@@ -210,6 +226,10 @@ Active development on the production test store. Core review, image, Mux video, 
 2026-08-09
 
 ## Change Log
+- 2026-09-09: Recorded the local Badge Product ID closeout without overstating
+  deployment. PR #35/#36 strict Ozy placement is the live-safe baseline;
+  backend-first rollout, Worker approval, two canaries, lifecycle continuity,
+  and Sentry alert verification remain explicit closure gates.
 - 2026-08-09: PR #30 merged lifecycle closure commit `37ed06d5`. Vercel
   Production deployment `dpl_DL7H2XEMnnvZVD6qg8rzbhhrotoH` applied the 63rd
   and 64th additive migrations. `--expect=expanded` and the full

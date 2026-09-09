@@ -3,8 +3,8 @@ type: ikas
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-10
-last_verified: 2026-08-10
+updated: 2026-09-09
+last_verified: 2026-09-09
 confidence: high
 tags:
   - ikas
@@ -16,6 +16,7 @@ related:
   - "[[Widget_Architecture]]"
   - "[[Theme_Adapter_Playbook]]"
   - "[[ADR_0038_Runtime_Attested_Storefront_Placement]]"
+  - "[[Bug_Storefront_Badges_Fail_Closed_After_Theme_Schema_Drift]]"
 source_files:
   - "src/lib/ikas-client/graphql-requests.ts"
   - "src/lib/storefront-theme.ts"
@@ -35,8 +36,31 @@ source_files:
 
 # ikas Theme Limitations
 
+## Agent Brief
+
+Ikas Storefront Events provide context but no confirmed universal DOM mount.
+Automatic badges therefore require one strict supported-theme adapter plus a
+current target proof. Ozy is the only runtime-detectable adapter; unknown or
+ambiguous themes fail closed. Theme evidence proves placement only, never
+Product ID.
+
 ## Summary
 The widget runs inside arbitrary merchant themes. ikas does not expose a universal stable DOM mount contract today, so Storefront Events provide page/product context while an independent placement provider must prove an exact target. The active-theme fields observed in May 2026 are no longer present in the live v1/v2 schema as of 2026-08-09. Historical provider metadata cannot authorize placement; ADR 0038 permits only verified provider selection or an explicitly opted-in runtime adapter with a current strict signature. Unsupported and ambiguous themes remain fail-closed, while explicit review mounts continue independently.
+
+PR #35 restored supported Ozy badge availability with strict runtime
+attestation and live PDP/category/home checks; it did not restore historical
+theme metadata or generic selectors. Ozy remains the only runtime-detectable
+adapter. PR #36 added exact-candidate request dedupe. See
+[[Bug_Storefront_Badges_Fail_Closed_After_Theme_Schema_Drift]].
+
+## Product Identity Boundary
+
+Theme adapters prove only where a badge may mount. Product identity remains
+`(storeId, productId)`: current Storefront Events provide the ID when present,
+and an ID-less strict card may use its slug once to ask the Product Lifecycle
+resolver for an ID. Slug, title text, theme name, and adapter identity cannot
+become review/cache/badge identity. A visible badge and its owned slot require
+matching Product ID attributes.
 
 ## What we control
 - A single `<script>` per storefront via `StorefrontJSScript`.
@@ -68,7 +92,7 @@ The widget runs inside arbitrary merchant themes. ikas does not expose a univers
 
 ## Theme Integration Points Today
 - [src/widget/themes/ozy/](src/widget/themes/ozy/) - Ozy selectors, adapter behavior, and optional Ozy-specific style overrides.
-- [src/widget/themes/generic/](src/widget/themes/generic/) - conservative fallback adapter for unknown active themes.
+- [src/widget/themes/generic/](src/widget/themes/generic/) - non-authorizing generic compatibility code; it is never a production automatic-placement detector.
 - [src/lib/storefront-theme.ts](src/lib/storefront-theme.ts) - resolves Admin API storefront/theme metadata into public runtime adapter metadata.
 - [src/widget/placement/capability.js](src/widget/placement/capability.js) - strict production PDP/listing/modal target proofs and stale-result revalidation.
 - [src/widget/reviews-section/bootstrap.js](src/widget/reviews-section/bootstrap.js) - product detection fallback.
