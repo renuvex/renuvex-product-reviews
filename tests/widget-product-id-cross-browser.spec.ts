@@ -11,7 +11,6 @@ import {
 
 test.afterEach(async ({ page }) => {
   await page.unrouteAll({ behavior: 'wait' });
-  await page.close();
 });
 
 async function visibleListingIdentities(page: Page) {
