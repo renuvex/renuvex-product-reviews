@@ -615,6 +615,95 @@ test('quick-view modal identity comes only from an attested product-card click',
   await expect.poll(() => page.locator('.add-to-basket-modal [data-renuvex-slot="listing-rating"]').count()).toBe(1);
 });
 
+test('a bound quick-view badge survives the discovery TTL and later DOM mutations', async ({ page }) => {
+  const log = await setupProductListingFallbackPage(page, {
+    listingMarkup: `<section class="category-products-main">
+      <article><a id="trusted-card" href="/premium-shorts" onclick="event.preventDefault();setTimeout(function(){document.body.insertAdjacentHTML('beforeend','<div class=&quot;add-to-basket-modal&quot;><h1 class=&quot;product-name&quot;>Premium Shorts</h1></div>')},0)"><h2 class="product-name">Premium Shorts</h2></a></article>
+    </section>`,
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await expect.poll(() => countListingBadges(page), { timeout: 6000 }).toBe(1);
+  await page.click('#trusted-card');
+  const modalSlot = page.locator('.add-to-basket-modal [data-renuvex-slot="listing-rating"]');
+  await expect.poll(() => modalSlot.count()).toBe(1);
+
+  await page.evaluate(() => {
+    const realNow = Date.now;
+    Date.now = () => realNow() + 11_000;
+    document.body.insertAdjacentHTML('beforeend', '<div id="post-modal-discovery-mutation"></div>');
+    setTimeout(() => { Date.now = realNow; }, 0);
+  });
+  await page.waitForTimeout(800);
+
+  await expect(modalSlot).toHaveCount(1);
+  await expect(modalSlot).toHaveAttribute('data-renuvex-product-id', 'product-1');
+  await expect(modalSlot.locator('.renuvex-pr-rating-badge--listing')).toHaveAttribute('data-renuvex-product-id', 'product-1');
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('an unbound quick-view context still expires after the discovery TTL', async ({ page }) => {
+  await setupProductListingFallbackPage(page, {
+    listingMarkup: `<section class="category-products-main">
+      <article><a id="trusted-card" href="/premium-shorts" onclick="event.preventDefault()"><h2 class="product-name">Premium Shorts</h2></a></article>
+    </section>`,
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await expect.poll(() => countListingBadges(page), { timeout: 6000 }).toBe(1);
+  await page.click('#trusted-card');
+
+  await page.evaluate(() => {
+    const realNow = Date.now;
+    Date.now = () => realNow() + 11_000;
+    document.body.insertAdjacentHTML('beforeend', '<div id="expired-modal-discovery-mutation"></div>');
+    setTimeout(() => { Date.now = realNow; }, 0);
+  });
+  await page.waitForTimeout(400);
+  await page.evaluate(() => {
+    document.body.insertAdjacentHTML('beforeend', '<div class="add-to-basket-modal"><h1 class="product-name">Premium Shorts</h1></div>');
+  });
+  await page.waitForTimeout(800);
+
+  await expect(page.locator('.add-to-basket-modal')).toHaveCount(1);
+  await expect(page.locator('.add-to-basket-modal [data-renuvex-slot="listing-rating"]')).toHaveCount(0);
+});
+
+test('interacting inside the active quick-view keeps its Product ID badge', async ({ page }) => {
+  await setupProductListingFallbackPage(page, {
+    listingMarkup: `<section class="category-products-main">
+      <article><a id="trusted-card" href="/premium-shorts" onclick="event.preventDefault();setTimeout(function(){document.body.insertAdjacentHTML('beforeend','<div class=&quot;add-to-basket-modal&quot;><h1 class=&quot;product-name&quot;>Premium Shorts</h1><button id=&quot;modal-variant&quot; type=&quot;button&quot;>M</button></div>')},0)"><h2 class="product-name">Premium Shorts</h2></a></article>
+    </section>`,
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await expect.poll(() => countListingBadges(page), { timeout: 6000 }).toBe(1);
+  await page.click('#trusted-card');
+  const modalSlot = page.locator('.add-to-basket-modal [data-renuvex-slot="listing-rating"]');
+  await expect.poll(() => modalSlot.count()).toBe(1);
+
+  await page.click('#modal-variant');
+  await page.waitForTimeout(500);
+
+  await expect(modalSlot).toHaveCount(1);
+  await expect(modalSlot).toHaveAttribute('data-renuvex-product-id', 'product-1');
+  await expect(modalSlot.locator('.renuvex-pr-rating-badge--listing')).toHaveAttribute('data-renuvex-product-id', 'product-1');
+});
+
+test('disconnecting the attested card retires the active quick-view badge', async ({ page }) => {
+  await setupProductListingFallbackPage(page, {
+    listingMarkup: `<section class="category-products-main">
+      <article id="trusted-card-shell"><a id="trusted-card" href="/premium-shorts" onclick="event.preventDefault();setTimeout(function(){document.body.insertAdjacentHTML('beforeend','<div class=&quot;add-to-basket-modal&quot;><h1 class=&quot;product-name&quot;>Premium Shorts</h1></div>')},0)"><h2 class="product-name">Premium Shorts</h2></a></article>
+    </section>`,
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await expect.poll(() => countListingBadges(page), { timeout: 6000 }).toBe(1);
+  await page.click('#trusted-card');
+  const modalSlot = page.locator('.add-to-basket-modal [data-renuvex-slot="listing-rating"]');
+  await expect.poll(() => modalSlot.count()).toBe(1);
+
+  await page.locator('#trusted-card-shell').evaluate((card) => card.remove());
+
+  await expect.poll(() => modalSlot.count()).toBe(0);
+});
+
 test('a reused modal retires its old Product ID badge when the title changes', async ({ page }) => {
   await setupProductListingFallbackPage(page, {
     listingMarkup: `<section class="category-products-main">

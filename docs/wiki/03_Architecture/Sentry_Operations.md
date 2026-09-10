@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-11
-updated: 2026-09-09
-last_verified: 2026-09-09
+updated: 2026-09-10
+last_verified: 2026-09-10
 tags:
   - sentry
   - observability
@@ -180,6 +180,11 @@ None of the above is a quality-gate blocker. They exist here so future-you (or f
 - [[Phase_1_Widget_Runtime_Audit]]
 
 ## Change Log
+- 2026-09-10: Badge closeout read-only inspection could not verify production
+  event tags because the configured organization token returned HTTP `401
+  Invalid org token`. No alert, project setting, or token was mutated. Alert
+  creation and controlled delivery verification remain explicit production
+  closure gates.
 - 2026-09-09: Added fixed Product ID/placement health fingerprints, strict
   low-cardinality tag allowlists, runtime-version validation, and privacy
   filtering. External alert creation/verification remains approval-gated.

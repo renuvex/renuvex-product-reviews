@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-08-10
-updated: 2026-09-09
-last_verified: 2026-09-09
+updated: 2026-09-10
+last_verified: 2026-09-10
 confidence: high
 tags:
   - adr
@@ -65,13 +65,16 @@ explicit Shadow DOM review mount and admin preview remain separate contracts.
 
 Accepted on 2026-08-10. PR #35 established the strict placement baseline, PR
 #36 bound duplicate-request suppression to the exact candidate, and PR #37
-merged Product ID propagation. PR #38 restored deterministic browser CI; main
-Quality Gate `34389119540` passed. The Product ID backend and first approved
-Worker runtime are live. Its first canary passed PDP/category/home placement but
-exposed a quick-view availability regression during same-route listing event
-replacement. The strict fix is local on `codex/badge-quick-view-closeout`; this
-fix is committed as `e34017bc` and all local gates pass. This closeout is not
-Production-accepted until the follow-up rollout and all gates in this ADR pass.
+merged Product ID propagation. PR #38 restored deterministic browser CI. PR
+#39 merged the strict same-target/same-Product-ID generation fix; main Quality
+Gate `34401732146`, Vercel deployment
+`dpl_FEZcU1VLA1YzedHp6vRQWWNbnVZF`, and approved Worker version
+`fcb63b3a-eeab-4c19-ad7f-5112b3c95f08` passed. The next live canary proved the
+correct quick-view badge mounted, then removed it at about `14.48 s` while the
+same modal/title nodes remained. The remaining cause was discovery TTL expiry
+after binding. Commit `0705f819` on `codex/badge-quick-view-lifetime` limits the
+TTL to pre-bind discovery and is locally verified. This closeout is not
+Production-accepted until that follow-up rollout and all gates in this ADR pass.
 This ADR supersedes only the automatic-placement authorization and
 legacy-runtime portions of [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]].
 ADR 0022's pure settings read, `themeSyncDue`, lazy sync, and explicit
@@ -148,7 +151,9 @@ to generic discovery after attestation.
   media yet.
 - Quick-view placement requires context captured from an already attested card
   link, exactly one visible strict modal, and an exact matching modal title.
-  Generic clicks and title text alone cannot establish identity.
+  Generic clicks and title text alone cannot establish identity. The bounded
+  discovery TTL applies only before this exact modal binds; it is not a maximum
+  lifetime for a still-valid bound modal.
 
 Ozy is the only runtime-detectable adapter in v1. Generic is never a detector.
 Multiple matching runtime detectors are ambiguous and produce no placement.
@@ -196,9 +201,13 @@ TTLs, never reads the v2 slug cache, and never stores slug-to-ID mappings.
 
 Quick-view context preserves the exact clicked attested link. It may wait for
 that link's resolver promotion, but it binds at most one exact visible
-modal/title instance for a bounded token. Closing, hiding, replacing, retitling,
-or multiplying the modal retires the context and removes its old badge slot, so
-a recycled modal cannot retain or reuse another Product ID.
+modal/title instance for a bounded token. Before binding, an undiscovered modal
+expires after 10 seconds. After binding, elapsed time cannot revoke an otherwise
+valid proof; a non-link interaction within that exact modal preserves context.
+Closing, hiding, replacing, retitling, or multiplying the modal, clicking
+outside its attested flow, or disconnecting/changing the source target retires
+the context and removes its old badge slot, so a recycled modal cannot retain or
+reuse another Product ID.
 
 The clicked Product ID is sealed from a valid proof or current event identity.
 A later listing generation may replace the candidate only when the exact
@@ -294,6 +303,9 @@ Source and browser gates must prove:
   recycled card/modal, identity conflict, and stale async responses are no-ops;
 - quick-view survives same-target listing-generation enrichment only for an
   already sealed identical Product ID; changed/unsealed identity is a no-op;
+- an unbound quick-view expires after its discovery TTL, while an exact bound
+  modal survives that elapsed time and internal non-link interactions until a
+  strict target or identity invalidation occurs;
 - slow valid DOM can mount while the context remains current;
 - every visible PDP/listing/modal badge and its owned slot carry the same
   non-empty Product ID;

@@ -23,7 +23,7 @@ import { getAfterElementMountPoint } from '../core/slot-position.js';
 var attestedProductLinks = new WeakMap();
 var modalContext = null;
 var modalToken = 0;
-var MODAL_CONTEXT_TTL = 10 * 1000;
+var MODAL_DISCOVERY_TTL = 10 * 1000;
 
 function removeModalContextBadge(context) {
   var titleEl = context && context.titleEl;
@@ -294,10 +294,9 @@ export function collectRuntimeDetectableListingProofs() {
   return selected ? selected.proofs : [];
 }
 
-export function validateListingPlacementCandidate(candidate) {
+function validateListingDomTarget(candidate) {
   if (!candidate || (candidate.kind !== 'listing-candidate' && candidate.kind !== 'listing')) return false;
   if (!isStorefrontContextCurrent(candidate.epoch)) return false;
-  if (candidate.listingGeneration !== getStorefrontListingGeneration()) return false;
   if (!isAdapterCurrentlyAuthorized(candidate.adapterKey)) return false;
   var adapter = getThemeAdapterByKey(candidate.adapterKey);
   if (!adapter || !candidate.containerEl || !candidate.containerEl.isConnected) return false;
@@ -310,11 +309,6 @@ export function validateListingPlacementCandidate(candidate) {
   var currentCard = findCardLink(candidate.titleEl, candidate.containerEl);
   if (!currentCard || currentCard.linkEl !== candidate.linkEl || currentCard.slug !== candidate.slug) return false;
 
-  var currentEventProduct = renuvexPrProductMap[candidate.slug] || null;
-  var currentEventProductId = normalizeProductId(currentEventProduct && currentEventProduct.productId);
-  if (candidate.eventProductId !== currentEventProductId) return false;
-  if ((renuvexPrProductConflictMap[candidate.slug] || null) !== (candidate.identityBlockReason || null)) return false;
-
   var mountPoint = listingMountPoint(adapter, candidate.titleEl);
   return !!(
     mountPoint &&
@@ -323,6 +317,16 @@ export function validateListingPlacementCandidate(candidate) {
     mountPoint.anchorEl === candidate.mountPoint.anchorEl &&
     mountPoint.parent.isConnected
   );
+}
+
+export function validateListingPlacementCandidate(candidate) {
+  if (!validateListingDomTarget(candidate)) return false;
+  if (candidate.listingGeneration !== getStorefrontListingGeneration()) return false;
+
+  var currentEventProduct = renuvexPrProductMap[candidate.slug] || null;
+  var currentEventProductId = normalizeProductId(currentEventProduct && currentEventProduct.productId);
+  return candidate.eventProductId === currentEventProductId &&
+    (renuvexPrProductConflictMap[candidate.slug] || null) === (candidate.identityBlockReason || null);
 }
 
 function sameListingTarget(left, right) {
@@ -412,7 +416,9 @@ export function getResolvedListingPlacementProof(candidate) {
   return validateListingPlacementProof(record.resolvedProof) ? record.resolvedProof : null;
 }
 
-export function captureModalContextFromClick(anchor) {
+export function captureModalContextFromClick(anchor, clickTarget) {
+  if (!anchor && modalContext && modalContext.modalEl &&
+      modalContext.modalEl.contains(clickTarget)) return reconcileModalPlacementContext();
   var attested = anchor ? attestedProductLinks.get(anchor) : null;
   removeModalContextBadge(modalContext);
   modalToken += 1;
@@ -443,16 +449,12 @@ export function clearModalPlacementContext() {
 export function reconcileModalPlacementContext() {
   if (!modalContext) return;
   var candidate = modalContext.candidate;
-  if (!candidate || !isStorefrontContextCurrent(candidate.epoch) ||
-      Date.now() - modalContext.capturedAt > MODAL_CONTEXT_TTL) {
+  if (!validateListingDomTarget(candidate) ||
+      (!modalContext.modalEl && Date.now() - modalContext.capturedAt > MODAL_DISCOVERY_TTL)) {
     clearModalPlacementContext();
     return;
   }
   var adapter = getThemeAdapterByKey(candidate.adapterKey);
-  if (!adapter) {
-    clearModalPlacementContext();
-    return;
-  }
   var modals = adapter.findStrictModals().filter(isVisible);
   if (modals.length > 1) {
     clearModalPlacementContext();
@@ -483,10 +485,9 @@ export function reconcileModalPlacementContext() {
 }
 
 export function resolveModalPlacementProof() {
-  var candidate = modalContext && modalContext.candidate;
-  if (!candidate || !isStorefrontContextCurrent(candidate.epoch)) return null;
   reconcileModalPlacementContext();
-  if (!modalContext || !modalContext.modalEl || !modalContext.titleEl) return null;
+  var candidate = modalContext && modalContext.candidate;
+  if (!candidate || !modalContext.modalEl || !modalContext.titleEl) return null;
   var attested = attestedProductLinks.get(candidate.linkEl);
   var resolvedProof = attested && attested.resolvedProof;
   if (!validateListingPlacementProof(resolvedProof)) return null;
@@ -499,7 +500,6 @@ export function resolveModalPlacementProof() {
   if (modalContext.productId && modalContext.productId !== resolvedProof.productId) return null;
   modalContext.productId = resolvedProof.productId;
   var adapter = getThemeAdapterByKey(candidate.adapterKey);
-  if (!adapter) return null;
   var modals = adapter.findStrictModals().filter(isVisible);
   if (modals.length !== 1 || modals[0] !== modalContext.modalEl) return null;
   var modalEl = modalContext.modalEl;

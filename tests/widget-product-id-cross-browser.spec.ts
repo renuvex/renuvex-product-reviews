@@ -11,7 +11,6 @@ import {
 
 test.afterEach(async ({ page }) => {
   await page.unrouteAll({ behavior: 'wait' });
-  await page.close();
 });
 
 async function visibleListingIdentities(page: Page) {
@@ -48,7 +47,7 @@ test('DOM-only listing candidates are promoted to Product ID proofs', async ({ p
 test('event Product ID remains exact through listing and quick-view placement', async ({ page }) => {
   const log = await setupProductListingFallbackPage(page, {
     listingMarkup: `<section class="category-products-main">
-      <article><a id="quick-view-card" href="/premium-shorts" onclick="event.preventDefault();setTimeout(function(){document.body.insertAdjacentHTML('beforeend','<div class=&quot;add-to-basket-modal&quot;><h1 class=&quot;product-name&quot;>Premium Shorts</h1></div>')},0)"><h2 class="product-name">Premium Shorts</h2></a></article>
+      <article><a id="quick-view-card" href="/premium-shorts" onclick="event.preventDefault();setTimeout(function(){document.body.insertAdjacentHTML('beforeend','<div class=&quot;add-to-basket-modal&quot;><h1 class=&quot;product-name&quot;>Premium Shorts</h1><button id=&quot;modal-variant&quot; type=&quot;button&quot;>M</button></div>')},0)"><h2 class="product-name">Premium Shorts</h2></a></article>
     </section>`,
     ikasEvents: [
       { type: 'PAGE_VIEW', data: { pageType: 'CATEGORY' } },
@@ -71,6 +70,16 @@ test('event Product ID remains exact through listing and quick-view placement', 
   }, PRODUCT_ID);
   const modalSlot = page.locator('.add-to-basket-modal [data-renuvex-slot="listing-rating"]');
   await expect.poll(() => modalSlot.count()).toBe(1);
+  await expect(modalSlot).toHaveAttribute('data-renuvex-product-id', PRODUCT_ID);
+  await expect(modalSlot.locator('.renuvex-pr-rating-badge--listing')).toHaveAttribute('data-renuvex-product-id', PRODUCT_ID);
+
+  await page.click('#modal-variant');
+  await page.evaluate(() => {
+    document.body.insertAdjacentHTML('beforeend', '<div id="post-modal-discovery-mutation"></div>');
+  });
+  await page.waitForTimeout(500);
+
+  await expect(modalSlot).toHaveCount(1);
   await expect(modalSlot).toHaveAttribute('data-renuvex-product-id', PRODUCT_ID);
   await expect(modalSlot.locator('.renuvex-pr-rating-badge--listing')).toHaveAttribute('data-renuvex-product-id', PRODUCT_ID);
 });

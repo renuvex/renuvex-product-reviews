@@ -54,7 +54,7 @@ describe('storefront placement dependency boundaries', () => {
     const events = source('src/widget/events.js');
     expect(events).not.toContain('setLastClickedSlug');
     expect(events).not.toContain('extractSlug(a.href)');
-    expect(events).toContain('captureModalContextFromClick(a)');
+    expect(events).toContain('captureModalContextFromClick(a, target)');
   });
 
   it('keeps slug discovery out of review storage and persistent identity caches', () => {

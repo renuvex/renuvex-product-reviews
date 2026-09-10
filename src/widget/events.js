@@ -8,7 +8,7 @@
 
 import { removeOwnedSlots } from './core/slot.js';
 import { noteStorefrontRoute } from './core/context-epoch.js';
-import { captureModalContextFromClick, clearModalPlacementContext } from './placement/capability.js';
+import { captureModalContextFromClick } from './placement/capability.js';
 
 var modalClickAttached = false;
 
@@ -16,12 +16,9 @@ export function attachModalBadgeListener() {
   if (modalClickAttached) return;
   modalClickAttached = true;
   document.addEventListener('click', function(e) {
-    var a = e.target.closest('a[href]');
-    if (!a) {
-      clearModalPlacementContext();
-      return;
-    }
-    captureModalContextFromClick(a);
+    var target = e.target;
+    var a = target && target.closest ? target.closest('a[href]') : null;
+    captureModalContextFromClick(a, target);
   }, true);
 }
 
