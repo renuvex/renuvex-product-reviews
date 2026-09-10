@@ -48,14 +48,13 @@ conflicting, or malformed identity produces no badge.
 ## Status
 Accepted
 
-The canonical identity decision is merged and live. PR #39's strict
-same-target/same-Product-ID generation fix is also merged and deployed through
-`origin/main` `81068849`, but its live canary exposed a second quick-view
-availability issue: the correct badge was removed after the modal-discovery TTL
-even though the bound modal and title were unchanged. Source commit `0705f819`
-limits that TTL to pre-bind discovery and is locally verified. Production
-closeout remains open until this follow-up passes PR/CI, approved Worker
-rollout, both canaries, lifecycle continuity, and Sentry alert verification.
+The canonical identity decision is merged and live. PR #40 merged the final
+bound-modal lifetime fix as main `559a7d4b`; exact Vercel verification,
+approved Worker version `b7e942eb-c638-422f-8e8b-51afffaba4ba`, and complete
+desktop/mobile Canary 1 passed. Every observed visible PDP, listing, search,
+homepage, slider, and quick-view slot/badge carried matching Product ID. The
+broader Production closeout remains open only for one natural lifecycle
+reconciliation, Canary 2, and Sentry alert delivery verification.
 
 ## Date
 2026-05-17

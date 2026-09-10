@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-09-09
-last_verified: 2026-09-09
+updated: 2026-09-10
+last_verified: 2026-09-10
 tags:
   - widget
   - badge
@@ -86,6 +86,10 @@ and passes it into `injectRatingBadge`; the star color is applied through the
 - [[Bug_Product_Widget_Missing_Auto_Mount]]
 
 ## Change Log
+- 2026-09-10: PR #40 and approved Worker rollout completed. Fresh desktop and
+  `412x915` Canary 1 both showed one exact PDP title slot and badge carrying
+  Product ID `37fb6e3d-6085-4ac1-b0eb-7aaa63ada934` with `4.0/93`, and zero
+  forbidden placement or Renuvex widget error.
 - 2026-09-09: Added the final Product ID equality guard and matching Product ID
   attributes on the PDP owned slot and visible badge. Missing/mismatched
   identity now fails closed before mutation.

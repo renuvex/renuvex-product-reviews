@@ -180,6 +180,11 @@ None of the above is a quality-gate blocker. They exist here so future-you (or f
 - [[Phase_1_Widget_Runtime_Audit]]
 
 ## Change Log
+- 2026-09-10: PR #40/Worker Canary 1 produced no Renuvex `widget-error`
+  request, widget request failure, or page exception across desktop and
+  `412x915` badge checks. This does not verify alert delivery: the organization
+  token still returns `401`, and no Sentry rule or controlled event was
+  mutated. Both alert rules remain an explicit final closeout gate.
 - 2026-09-10: Badge closeout read-only inspection could not verify production
   event tags because the configured organization token returned HTTP `401
   Invalid org token`. No alert, project setting, or token was mutated. Alert
