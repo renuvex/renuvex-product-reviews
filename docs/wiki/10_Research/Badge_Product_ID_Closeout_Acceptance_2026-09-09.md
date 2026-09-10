@@ -293,9 +293,22 @@ Fresh Canary 1 evidence:
   during navigation. Neither originated from Renuvex or affected badge/API
   behavior; they are recorded rather than misreported as widget errors.
 
-The local Sentry read-only check could not inspect event tags because the
-configured organization token returned HTTP `401 Invalid org token`. No Sentry
-rule or project setting was mutated.
+Sentry is already installed and receiving production events. A later read-only
+check used the dedicated read/alerts credentials successfully against
+organization `renuvex` and project `renuvex-product-reviews`; the generic
+process organization token still returned `401 Invalid org token`. The only
+existing workflows were `Cron failures (source:cron)` and
+`Media job failures (source:media-job)`. No Badge/Product ID workflow, metric
+detector, project setting, or controlled event was created or changed.
+
+The same read-only check found six `placement-attestation-miss` events in the
+preceding 24 hours. Every event was `listing / ozy /
+stale_after_resolution`; they did not reach 10 events in any five-minute
+window. There were zero `identity-resolution-miss`,
+`identity-resolution-error`, or `identity-conflict` issues. On 2026-09-10 the
+owner explicitly deferred creation and controlled-delivery testing of the two
+Badge/Product ID alerts. A future agent must obtain fresh explicit approval
+before creating rules/detectors or sending controlled production events.
 
 ## Production Gates
 
@@ -311,7 +324,7 @@ rule or project setting was mutated.
 | Bound-modal lifetime follow-up | Discovery TTL is pre-bind only; bound modal survives elapsed time/internal interactions; changed/disconnected identity still retires | DEPLOYED/PASS through PR #40, exact main/Vercel verification, Worker version `b7e942eb-c638-422f-8e8b-51afffaba4ba`, and Canary 1. |
 | Lifecycle continuity | One natural daily reconciliation completed without identity drift/conflict | PENDING |
 | Canary 2 | Repeat the same fresh-session canary after lifecycle reconciliation | PENDING |
-| Sentry alerts | `identity-conflict` first event and other three health types at 10 events / 5 minutes to maintainer email | PENDING EXPLICIT APPROVAL; current read-only org token returned HTTP 401 and no rule was changed |
+| Sentry alerts | `identity-conflict` first event and the other three health types combined at 10 events / 5 minutes to maintainer email | OWNER-DEFERRED on 2026-09-10; Sentry installation/event ingestion and dedicated read access are healthy, but no Badge workflow/detector/control event exists. Fresh explicit approval is required to resume. |
 | Final wiki state | Commit, CI, deployment, runtime hash, both canaries, lifecycle, and alert evidence recorded; status changed to Production verified | PENDING |
 
 For every live visible badge, record the exact Product ID on slot and inner

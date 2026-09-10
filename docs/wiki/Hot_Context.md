@@ -82,9 +82,12 @@ source_files:
   uses strict runtime-attested Ozy instead. Unknown/ambiguous themes fail closed.
 - The bound quick-view lifetime bug is resolved and Canary 1 passed. Badge
   Product ID closeout still requires one post-canary natural lifecycle
-  reconciliation, Canary 2, and approved Sentry alert delivery verification.
-  Slug discovery must stay `no-store/BYPASS`.
-- Deferred: unsupported-theme UI, authenticated dashboard smoke, Sentry health.
+  reconciliation, Canary 2, and Sentry alert delivery verification. Sentry is
+  installed and ingesting events, but the owner deferred the new Badge alert
+  workflows/detector and controlled events on 2026-09-10. Resume only with
+  fresh explicit approval. Slug discovery must stay `no-store/BYPASS`.
+- Deferred: unsupported-theme UI, authenticated dashboard smoke, and Badge
+  alert delivery verification.
 - Review-email backup/journal, SES/DNS, product/legal, and acceptance remain open.
 - Never direct-SQL-clean lifecycle rows; Release B is separately gated.
 

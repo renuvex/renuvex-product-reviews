@@ -28,7 +28,9 @@ Use this page for Sentry runtime, privacy, grouping, and alert operations. The
 storefront does not ship the Sentry SDK; it sends bounded reports to the public
 widget-error route. Product ID/placement health events use strict allowlisted
 tags and fixed fingerprints, while external alert creation remains an explicit
-mutation gate.
+mutation gate. The owner deferred the Badge/Product ID alert mutation and
+controlled-delivery test on 2026-09-10; do not resume them without fresh
+explicit approval.
 
 ## Summary
 Sentry is the observability surface for the Next.js panel app. The organization and project slugs are now under the Renuvex namespace, the Sentry MCP server is wired into the AI tooling, and `@sentry/nextjs` is installed and initialized for Node, Edge, and browser runtimes. The strategy and trade-offs live in [[ADR_0009_Sentry_Observability_Strategy]]; this page is the operational reference.
@@ -154,11 +156,13 @@ Not blocking, no decision required — operational follow-ups to revisit when th
 
 | # | Improvement | Trigger to act | How |
 |---|---|---|---|
-| 1 | **Product ID/placement alert rules.** Source contract is implemented; external Sentry rules are not yet created. | Product ID closeout rollout, after explicit mutation approval. | Notify maintainer email on the first `identity-conflict`; aggregate `placement-attestation-miss`, `identity-resolution-miss`, and `identity-resolution-error` at 10 events / 5 minutes. Verify each rule with a controlled event before Production closure. |
+| 1 | **Product ID/placement alert rules.** Source contract is implemented; external Sentry rules are not created. The owner deferred this operation on 2026-09-10. | Resume only after fresh explicit mutation approval. | Notify maintainer email on the first `identity-conflict`; use one metric detector to aggregate `placement-attestation-miss`, `identity-resolution-miss`, and `identity-resolution-error` at 10 events / 5 minutes. Verify both paths with controlled events before Badge Product ID Production closure. |
 | 2 | **Narrow Sentry MCP scope** from organization to project. | When a second Sentry project is added to `renuvex`. With only one project, scope makes no practical difference. | Edit `.mcp.json`: `https://mcp.sentry.dev/mcp/renuvex` -> `https://mcp.sentry.dev/mcp/renuvex/renuvex-product-reviews`. |
 | 3 | **Saved searches** in Sentry UI for `tags[source]:widget` and `!tags[source]:widget`. | First time widget errors start arriving and the dashboard needs to be triaged separately from panel issues. | Sentry UI → Issues → run the query → "Save Search". UI-only, no code or wiki change. |
 
-None of the above is a quality-gate blocker. They exist here so future-you (or future Claude) does not re-discover them from scratch.
+Items 2 and 3 are not quality-gate blockers. Item 1 remains a final Badge
+Product ID acceptance gate, but it is deliberately paused by owner decision.
+These entries exist so future work does not re-discover them from scratch.
 
 ## Related Source Files
 - [sentry.server.config.ts](sentry.server.config.ts)
@@ -180,16 +184,23 @@ None of the above is a quality-gate blocker. They exist here so future-you (or f
 - [[Phase_1_Widget_Runtime_Audit]]
 
 ## Change Log
+- 2026-09-10: Confirmed read-only that Sentry is installed, production event
+  ingestion works, and dedicated read/alerts credentials can access `renuvex /
+  renuvex-product-reviews`. Existing workflows remain limited to cron and media
+  alerts. The preceding 24 hours contained six non-burst
+  `placement-attestation-miss / listing / ozy / stale_after_resolution` events
+  and no resolution miss/error or identity conflict. The owner deferred new
+  Badge workflows, the combined metric detector, and controlled test events;
+  no Sentry mutation occurred.
 - 2026-09-10: PR #40/Worker Canary 1 produced no Renuvex `widget-error`
   request, widget request failure, or page exception across desktop and
-  `412x915` badge checks. This does not verify alert delivery: the organization
-  token still returns `401`, and no Sentry rule or controlled event was
-  mutated. Both alert rules remain an explicit final closeout gate.
+  `412x915` badge checks. This does not verify alert delivery; no Sentry rule or
+  controlled event was mutated. Both alert paths remain an explicit final
+  closeout gate.
 - 2026-09-10: Badge closeout read-only inspection could not verify production
-  event tags because the configured organization token returned HTTP `401
-  Invalid org token`. No alert, project setting, or token was mutated. Alert
-  creation and controlled delivery verification remain explicit production
-  closure gates.
+  event tags with the generic process organization token because it returned
+  HTTP `401 Invalid org token`. The later dedicated-token check above supersedes
+  that access limitation. No alert, project setting, or token was mutated.
 - 2026-09-09: Added fixed Product ID/placement health fingerprints, strict
   low-cardinality tag allowlists, runtime-version validation, and privacy
   filtering. External alert creation/verification remains approval-gated.

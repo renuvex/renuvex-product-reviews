@@ -113,8 +113,10 @@ Active development on the production test store. Core review, image, Mux video, 
   modal lifetime, internal interaction, cleanup, matching Product IDs, bulk
   requests, and zero Renuvex widget errors. Production is not closed until one
   natural daily reconciliation, Canary 2, and Sentry alert delivery
-  verification pass. Release B is outside this change. See
-  [[Badge_Product_ID_Closeout_Acceptance_2026-09-09]].
+  verification pass. Sentry itself is installed and ingesting events; only the
+  Badge alert rules and controlled-delivery test are owner-deferred as of
+  2026-09-10 and require fresh explicit approval. Release B is outside this
+  change. See [[Badge_Product_ID_Closeout_Acceptance_2026-09-09]].
 - Product lifecycle Release A and the closure backend are merged and deployed.
   PR #30 merged the closure at commit
   `37ed06d5182fe6c66b3cf162ac46604bca49b9ce`. Production deployment
@@ -209,9 +211,10 @@ Active development on the production test store. Core review, image, Mux video, 
 
 ## Next Recommended Steps
 1. Wait for one natural daily Product Lifecycle reconciliation after Canary 1,
-   verify no identity drift/conflict, repeat Canary 2, and verify the approved
-   Sentry alert rules before marking Badge Product ID closeout
-   Production-verified.
+   verify no identity drift/conflict, and repeat Canary 2. Keep the Sentry alert
+   gate open but paused: the owner deferred rule/detector creation and
+   controlled production events on 2026-09-10. Obtain fresh explicit approval
+   before resuming it or marking Badge Product ID closeout Production-verified.
 2. Let only QStash drive production convergence, then require aggregate-only
    `--expect=ready`; do not SQL-backfill lifecycle evidence.
 3. Run the representative managed PostgreSQL 5,000 x 500 benchmark and collect
@@ -234,6 +237,11 @@ Active development on the production test store. Core review, image, Mux video, 
 2026-09-10
 
 ## Change Log
+- 2026-09-10: Recorded that Sentry is already installed, production ingestion
+  and dedicated read access are healthy, and only the Badge/Product ID alert
+  workflows, combined metric detector, and controlled delivery test remain.
+  The owner deferred those external mutations; no Sentry setting or event was
+  changed, and final Badge closeout remains open.
 - 2026-09-10: Recorded PR #40/main CI/Vercel/approved Worker rollout and
   complete desktop/mobile Canary 1. The bound quick-view remained exact beyond
   the former TTL and after internal interaction; lifecycle continuity, Canary
