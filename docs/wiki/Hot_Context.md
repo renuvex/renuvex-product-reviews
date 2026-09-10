@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-09-09
-last_verified: 2026-09-09
+updated: 2026-09-10
+last_verified: 2026-09-10
 confidence: high
 tags:
   - hot-context
@@ -50,25 +50,25 @@ source_files:
 - ikas review/rating app: admin, storefront widget, badges, uploads, moderation, Mux video.
 
 ## Must Know
-- Source/config/tests/runtime win; wiki routes.
+- Source wins; wiki routes.
 - Prompt procedures live in `09_Prompts`; do not create `08_Prompts`.
 - Never document secrets.
-- `package.json` pins Next.js `16.2.1`; older Next.js 15 notes are stale unless re-verified.
+- `package.json` pins Next.js `16.2.1`; older Next.js 15 notes are stale.
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
-- 2026-09-09: Badge Product ID closeout PR #37 and CI runner recovery PR #38 are
-  merged through `origin/main` `6f3b169d`. The Product ID-bearing backend is
-  live at Vercel deployment `dpl_HW1RreoWvKou1QWcQDr6LJcBECzK`; the first
-  approved Worker rollout is version `a025a9a4-216d-470b-b67c-9167d58f538a`.
-  Slug remains only one-shot discovery; every visible badge requires Product ID.
-- 2026-09-09: The first live runtime canary passed desktop PDP, category, and
-  homepage/slider/infinite-scroll checks, but actual Ozy quick-view did not
-  render a badge after a same-route listing generation replaced the clicked
-  link's attestation. The strict same-target/same-Product-ID rebinding fix is
-  committed as `e34017bc` on `codex/badge-quick-view-closeout`; all local gates
-  pass, but it is not deployed. Canary 1 therefore remains incomplete. Release
-  B is not part of this work.
+- 2026-09-10: PR #39 merged/deployed the strict quick-view generation fix
+  through main `81068849`, passing CI, Vercel, and approved Worker version
+  `fcb63b3a-eeab-4c19-ad7f-5112b3c95f08`. PDP/category passed; real quick-view
+  rendered the correct Product ID badge, then removed it while still open.
+- 2026-09-10: Instrumentation kept identical modal/title nodes, saw the badge
+  at `~460 ms`, and removal at `~14.48 s`: the 10-second discovery TTL wrongly
+  continued after bind. Commit `0705f819` makes TTL pre-bind only. Placement
+  `49/49`, five-browser `20/20`, unit `822/822`, build, and Worker dry-run pass;
+  PR/rollout and Canary 1 remain open.
+- 2026-09-09: Badge Product ID closeout PR #37 and CI runner recovery PR #38
+  merged the Product ID-bearing API/runtime baseline. Slug remains only
+  one-shot discovery; every visible badge requires Product ID.
 - 2026-09-08: PR #35 strict Ozy runtime placement and PR #36 proof-scoped
   request dedupe are merged; live Ozy PDP/category/home placement was verified.
 - 2026-08-09: Product-lifecycle closure PR #30 and all 64 migrations are
@@ -92,12 +92,13 @@ source_files:
   replaced that unavailable provider evidence with a strict runtime-attested
   Ozy adapter. Unknown or ambiguous themes remain fail-closed; explicit review
   mounts remain independent.
-- The remaining badge closeout risk is the quick-view follow-up rollout and
-  acceptance, not a return to slug identity. Merge/CI, a separately approved
-  replacement Worker rollout, a complete fresh desktop/mobile/search canary,
-  one natural lifecycle reconciliation, a second canary, and Sentry alert
-  verification remain open. The slug endpoint must remain `no-store/BYPASS`.
-- Deferred gaps: unsupported-theme warning UI, authenticated dashboard smoke, Sentry post-deploy health.
+- The remaining badge closeout risk is the bound quick-view lifetime follow-up,
+  not a return to slug identity. PR/CI, automatic backend verification, a
+  separately approved replacement Worker rollout, a complete fresh
+  desktop/mobile/search canary, one natural lifecycle reconciliation, a second
+  canary, and Sentry alert verification remain open. The slug endpoint must
+  remain `no-store/BYPASS`.
+- Deferred: unsupported-theme UI, authenticated dashboard smoke, Sentry health.
 - Review-email V5/V3.2 is deployed but disabled; backup/restore, journal,
   SES/DNS, product/legal, and live acceptance gates remain open.
 - Product Lifecycle Release A, Worker no-store, one QStash completion, and the

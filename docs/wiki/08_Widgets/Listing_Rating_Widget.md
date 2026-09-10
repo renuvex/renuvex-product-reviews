@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-09-09
-last_verified: 2026-09-09
+updated: 2026-09-10
+last_verified: 2026-09-10
 confidence: high
 tags:
   - widget
@@ -83,7 +83,7 @@ Star+count badge injected into strictly attested product cards on collection, se
 - `core/storefront-context.js` atomically replaces current-epoch `VIEW_LISTING` and `VIEW_SEARCH_RESULTS` maps for every event generation. Same slug/same ID duplicates are valid; same slug/different or malformed IDs block direct reads and discovery.
 - The runtime first creates a strict DOM candidate. A current event match supplies canonical identity; otherwise the slug is only a discovery input. The response must promote that exact still-current candidate to an immutable Product ID proof before insertion.
 - Epoch, event generation, adapter, container, exact link and href slug, title, and mount point are checked again after asynchronous work and immediately before DOM mutation.
-- Quick-view uses the clicked exact attested link and one bound modal/title/token. It seals Product ID from a valid proof or current event identity. A same-route listing generation may rebind only the exact unchanged target to a valid proof with that same sealed Product ID; an unsealed or different ID fails closed. A hidden, closed, replaced, retitled, or duplicate modal retires the context and removes its old slot.
+- Quick-view uses the clicked exact attested link and one bound modal/title/token. It seals Product ID from a valid proof or current event identity. A same-route listing generation may rebind only the exact unchanged target to a valid proof with that same sealed Product ID; an unsealed or different ID fails closed. The 10-second timeout limits only pre-bind modal discovery. Once bound, elapsed time and a non-link interaction inside the exact modal do not revoke identity; a disconnected/changed source, outside attestation break, hidden, closed, replaced, retitled, or duplicate modal retires the context and removes its old slot.
 
 ## Performance notes
 - Requests are bulked in groups of 50. Event-ID and slug-discovery candidates use separate endpoint batches; there is never a request per card.
@@ -154,6 +154,13 @@ CSS variable before injecting badges. Badge stars are no longer hardcoded to
 - [[ADR_0015_Canonical_Product_Identity]]
 
 ## Change Log
+- 2026-09-10: PR #39's generation fix was merged and deployed. Production then
+  showed the correct quick-view Product ID badge disappearing at about
+  `14.48 s` while the modal/title nodes stayed identical. Commit `0705f819`
+  narrows the 10-second timeout to pre-bind discovery, preserves interactions
+  inside the exact bound modal, and keeps disconnected or changed targets
+  fail-closed. Local placement `49/49` and five-browser `20/20` pass; rollout
+  and live lifetime acceptance remain open.
 - 2026-09-09: The first live Product ID runtime canary found that Ozy emitted a
   same-route listing generation after card click, replacing the exact link's
   attestation and leaving quick-view safely blank. The source fix preserves

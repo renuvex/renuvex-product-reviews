@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-17
-updated: 2026-09-09
-last_verified: 2026-09-09
+updated: 2026-09-10
+last_verified: 2026-09-10
 confidence: high
 tags:
   - adr
@@ -48,11 +48,14 @@ conflicting, or malformed identity produces no badge.
 ## Status
 Accepted
 
-The canonical identity decision is merged and live through the first approved
-Product ID runtime rollout. Production closeout remains open because that
-rollout exposed a quick-view availability bug during a same-route listing
-generation rollover. The strict source fix is locally verified but not yet
-deployed or live-accepted; its implementation commit is `e34017bc`.
+The canonical identity decision is merged and live. PR #39's strict
+same-target/same-Product-ID generation fix is also merged and deployed through
+`origin/main` `81068849`, but its live canary exposed a second quick-view
+availability issue: the correct badge was removed after the modal-discovery TTL
+even though the bound modal and title were unchanged. Source commit `0705f819`
+limits that TTL to pre-bind discovery and is locally verified. Production
+closeout remains open until this follow-up passes PR/CI, approved Worker
+rollout, both canaries, lifecycle continuity, and Sentry alert verification.
 
 ## Date
 2026-05-17
@@ -111,6 +114,15 @@ and its Product ID equals the sealed clicked Product ID. A generation change
 without a sealed Product ID, or any changed/conflicting Product ID, fails
 closed. A resolver may still finish within the original generation and seal its
 promoted Product ID.
+
+The 10-second modal-discovery TTL applies only while no exact modal has bound to
+the click context. Once one strict modal/title instance binds, elapsed time is
+not an identity signal: the context remains valid only while the exact
+adapter/epoch/card/link/href/title/mount and sealed Product ID proof continue to
+validate. A non-link interaction inside that same bound modal preserves the
+context; an outside click, changed navigation link, disconnected source card,
+hidden/closed/replaced/retitled modal, duplicate visible modal, changed target,
+or changed Product ID retires it and removes its owned badge.
 
 The backward-compatible `/api/public/ratings-by-slug` endpoint remains only as
 a discovery fallback for DOM-only paths where Ikas Events did not provide
@@ -173,6 +185,9 @@ fields define identity.
 - Quick-view continuity across a listing-generation refresh is identity-bound,
   not slug-bound: only an exact unchanged target with the already sealed same
   Product ID may survive the refresh.
+- Quick-view discovery timeout is not a bound-modal lifetime. Once the exact
+  modal is attested, continued ownership depends on live DOM and Product ID
+  proof validation rather than elapsed wall-clock time.
 - The local `ProductSnapshot` table is lifecycle evidence. Ikas remains the
   current-product source of truth; webhook misses converge through DB-owned
   reconciliation rather than a request-scoped full backfill.
