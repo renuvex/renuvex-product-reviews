@@ -31,13 +31,14 @@ pre-public-launch; AWS review images, Mux video, Cloudflare Worker widget
 delivery, QStash maintenance scheduling, and public read-cache paths are live.
 Remaining public-launch blockers are mainly security hardening, operational
 observability, authenticated dashboard smoke, and product polish.
-Strict Ozy/Product ID placement is live. PR #39's generation fix is deployed
-through main `81068849`, Vercel `dpl_FEZcU1VLA1YzedHp6vRQWWNbnVZF`, and Worker
-`fcb63b3a-eeab-4c19-ad7f-5112b3c95f08`. Its canary showed the correct quick-view
-badge, then removal at `~14.48 s` with unchanged modal/title nodes. Commit
-`0705f819` limits the responsible discovery TTL to pre-bind and is locally
-verified. PR/CI, approved Worker rollout, both canaries, lifecycle continuity,
-and Sentry alert verification remain open.
+Strict Ozy/Product ID placement is live. PR #40 merged the bound-modal lifetime
+fix as main `559a7d4b`; PR/main CI, exact Vercel deployment, approved Worker
+version `b7e942eb-c638-422f-8e8b-51afffaba4ba`, runtime hashes, and complete
+desktop/mobile Canary 1 passed. The former `~14.48 s` quick-view disappearance
+is resolved; the exact badge remained bound for 94 seconds on desktop and
+beyond the former TTL plus an internal interaction at `412x915`. Production
+closeout still requires one natural lifecycle reconciliation, Canary 2, and
+Sentry alert delivery verification.
 The review-request email V5 plus Multi-Product Batch/Envelope V3.2 packages are
 deployed as a disabled backend and schema; all 64 Production migrations are
 applied, customer/request/job/attempt lifecycle rows remain zero, and
@@ -103,22 +104,16 @@ Active development on the production test store. Core review, image, Mux video, 
 - Widget-side uncaught errors forwarded to Sentry via a 637-byte (gzip) in-widget reporter and a rate-limited public endpoint (`/api/public/widget-error`). No SDK shipped to the widget bundle; storefront customer privacy and Core Web Vitals preserved. See [[ADR_0010_Widget_Error_Forwarding]].
 
 ## In Progress / Active Follow-Ups
-- Badge Product ID closeout PR #37/#38 and quick-view generation follow-up PR
-  #39 are merged through `origin/main` `81068849`. PR #39 main CI and Vercel
-  deployment passed, and approved Worker version
-  `fcb63b3a-eeab-4c19-ad7f-5112b3c95f08` is live. The real quick-view then
-  displayed the correct Product ID badge before removing it about `14.48 s`
-  later. Instrumentation proved the modal/title nodes were unchanged and the
-  remaining cause was the 10-second discovery TTL being applied after bind.
-  Commit `0705f819` on `codex/badge-quick-view-lifetime` makes TTL expiry
-  pre-bind only, keeps exact modal-internal interactions alive, and still
-  retires disconnected/changed targets. Local gates include placement `49/49`,
-  five browser targets `20/20`, full unit `822/822`, all widget smoke suites,
-  reproducible generated output, Next.js `build:ci`, and Worker contract/dry
-  run. Production is not closed: PR/CI this follow-up, verify its automatic
-  backend deployment, obtain separate Worker approval, complete the first
-  desktop/mobile/search canary, run one natural daily reconciliation, repeat
-  the canary, and verify Sentry alerts. Release B is outside this change. See
+- Badge Product ID closeout runtime work is merged through PR #40/main
+  `559a7d4b`. PR run `34425217861` and main run `34425766672` passed; Vercel
+  `dpl_gm1mn5TsUdvmJyvHitv3gnhoEuYh` is `READY/PROMOTED`; approved Worker
+  version `b7e942eb-c638-422f-8e8b-51afffaba4ba` serves
+  `runtime-NTBNXPCD.js` at 100% traffic. Canary 1 passed desktop and measured
+  `412x915` PDP/category/home/search/quick-view checks, including beyond-TTL
+  modal lifetime, internal interaction, cleanup, matching Product IDs, bulk
+  requests, and zero Renuvex widget errors. Production is not closed until one
+  natural daily reconciliation, Canary 2, and Sentry alert delivery
+  verification pass. Release B is outside this change. See
   [[Badge_Product_ID_Closeout_Acceptance_2026-09-09]].
 - Product lifecycle Release A and the closure backend are merged and deployed.
   PR #30 merged the closure at commit
@@ -188,7 +183,8 @@ Active development on the production test store. Core review, image, Mux video, 
   `active_verified` snapshot to Product ID before reading its summary. Missing,
   stale, unknown, tombstoned, or conflicting evidence returns no badge; direct
   historical `Review.slug` fallback is absent. The Product ID-bearing response
-  is live; final runtime acceptance remains gated by the closeout record.
+  is live and Canary 1 passed; final Production verification remains gated by
+  lifecycle continuity, Canary 2, and Sentry alert delivery.
 - Product lifecycle core is merged, deployed, and expanded-schema verified.
   Truthful dispatch, lifecycle erasure, terminal retention,
   absence/scan/retry, bounded discovery, changed-only persistence, and initial
@@ -212,11 +208,10 @@ Active development on the production test store. Core review, image, Mux video, 
 - [[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]] - product absence is a tombstone, reappearing ids conflict, and bounded reconciliation plus live readiness gates consumer enforcement.
 
 ## Next Recommended Steps
-1. Open and merge the `0705f819` quick-view lifetime follow-up through CI,
-   verify the exact Vercel commit, then obtain separate approval for the new
-   Worker runtime. Complete Canary 1, wait for one natural daily lifecycle
-   reconciliation, repeat Canary 2, and verify the Sentry alert rules before
-   marking Badge Product ID closeout Production-verified.
+1. Wait for one natural daily Product Lifecycle reconciliation after Canary 1,
+   verify no identity drift/conflict, repeat Canary 2, and verify the approved
+   Sentry alert rules before marking Badge Product ID closeout
+   Production-verified.
 2. Let only QStash drive production convergence, then require aggregate-only
    `--expect=ready`; do not SQL-backfill lifecycle evidence.
 3. Run the representative managed PostgreSQL 5,000 x 500 benchmark and collect
@@ -239,6 +234,10 @@ Active development on the production test store. Core review, image, Mux video, 
 2026-09-10
 
 ## Change Log
+- 2026-09-10: Recorded PR #40/main CI/Vercel/approved Worker rollout and
+  complete desktop/mobile Canary 1. The bound quick-view remained exact beyond
+  the former TTL and after internal interaction; lifecycle continuity, Canary
+  2, and Sentry alert delivery remain open.
 - 2026-09-10: Recorded PR #39/main CI/Vercel/Worker rollout and the subsequent
   live quick-view lifetime diagnosis. The badge mounted with the correct
   Product ID, then disappeared at about `14.48 s` because discovery TTL was

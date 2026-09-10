@@ -22,17 +22,19 @@ related:
 Use this page to locate verified bug records. Keep open issues separate from
 fixed history, and do not mark a runtime issue closed until its required live
 acceptance has passed. The 2026-08 badge availability incident is fixed. The
-Product ID runtime and PR #39's quick-view generation fix are live. The next
-canary found that the correct badge was removed after discovery TTL while the
-same modal remained open; commit `0705f819` is locally verified but remains
-open until its production rollout and live modal lifetime acceptance pass.
+Product ID runtime and PR #39's quick-view generation fix are live. PR #40 and
+the approved replacement Worker fixed the remaining bound-modal discovery TTL
+bug; desktop and `412x915` live lifetime acceptance passed. The broader Product
+ID closeout still tracks lifecycle continuity, Canary 2, and Sentry alerts in
+its acceptance record.
 
 > Master list of tracked bugs. Add an entry when a real bug is found, with link to a per-bug note. Mark fixed bugs and link to the resolution.
 
 ## Open
-- 2026-09-10 - [[Bug_Quick_View_Badge_Listing_Generation_Rollover]] - PR #39 fixed and deployed the same-generation rollover boundary. A production diagnostic then proved the correct Product ID badge mounted but was removed at about `14.48 s` because the 10-second discovery TTL still applied after modal binding. Commit `0705f819` makes TTL pre-bind only; placement `49/49` and five-browser `20/20` pass. PR/CI, replacement Worker rollout, and live modal lifetime acceptance remain open.
+- None currently recorded.
 
 ## Recently fixed (verify periodically)
+- 2026-09-10 - [[Bug_Quick_View_Badge_Listing_Generation_Rollover]] - PR #39 fixed same-target/same-ID generation rollover; PR #40 made discovery TTL pre-bind only. Main/Vercel/approved Worker rollout completed, and desktop plus `412x915` live quick-view canaries retained one exact Product ID badge beyond the former TTL and after internal interaction, with clean close cleanup.
 - 2026-09-08 - [[Bug_Storefront_Badges_Fail_Closed_After_Theme_Schema_Drift]] - PR #35 replaced unavailable Ikas active-theme evidence with strict runtime-attested Ozy placement while preserving fail-closed unknown/ambiguous themes; PR #36 bound request dedupe to exact candidates. Live PDP/category/home placement passed. The separate Product ID propagation closeout is implemented in source and remains rollout-gated.
 - 2026-07-29 - [[Bug_Review_Widget_SPA_Health_Probe_False_Positive]] - Fixed a CI-reproduced false `reviews-widget / missing_after_render` report. The old product widget is intentionally cleared during an SPA route transition, but its delayed visibility probe could fire before the next product event. Review probes now stop only when their route/product lifecycle is no longer relevant; genuine unexpected removal remains observable.
 - 2026-07-04 - [[Bug_AWS_Lightbox_Full_Size_Variant_Selection]] - Fixed a storefront AWS image lightbox bug where small uploaded originals could make every generated variant report the same width, causing the generic picker to choose `thumb_640x854.webp` for the main 1200px modal image. Lightbox main images now prefer the full-size `w*` variant family, and duplicate immutable `srcset` values are suppressed.

@@ -66,15 +66,14 @@ explicit Shadow DOM review mount and admin preview remain separate contracts.
 Accepted on 2026-08-10. PR #35 established the strict placement baseline, PR
 #36 bound duplicate-request suppression to the exact candidate, and PR #37
 merged Product ID propagation. PR #38 restored deterministic browser CI. PR
-#39 merged the strict same-target/same-Product-ID generation fix; main Quality
-Gate `34401732146`, Vercel deployment
-`dpl_FEZcU1VLA1YzedHp6vRQWWNbnVZF`, and approved Worker version
-`fcb63b3a-eeab-4c19-ad7f-5112b3c95f08` passed. The next live canary proved the
-correct quick-view badge mounted, then removed it at about `14.48 s` while the
-same modal/title nodes remained. The remaining cause was discovery TTL expiry
-after binding. Commit `0705f819` on `codex/badge-quick-view-lifetime` limits the
-TTL to pre-bind discovery and is locally verified. This closeout is not
-Production-accepted until that follow-up rollout and all gates in this ADR pass.
+#39 merged the strict same-target/same-Product-ID generation fix. PR #40 then
+merged the bound-modal lifetime fix as main `559a7d4b`; PR/main CI, exact
+Vercel deployment `dpl_gm1mn5TsUdvmJyvHitv3gnhoEuYh`, approved Worker version
+`b7e942eb-c638-422f-8e8b-51afffaba4ba`, runtime hashes, and complete
+desktop/mobile Canary 1 passed. The correct quick-view badge remained bound
+beyond the former discovery TTL and after internal interaction. This closeout
+is not Production-accepted until one natural lifecycle reconciliation, Canary
+2, and Sentry alert delivery verification pass.
 This ADR supersedes only the automatic-placement authorization and
 legacy-runtime portions of [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]].
 ADR 0022's pure settings read, `themeSyncDue`, lazy sync, and explicit
@@ -264,6 +263,12 @@ runtime hash, and browser behavior are therefore separate rollout evidence.
    negative surfaces.
 6. Let one natural daily Product Lifecycle reconciliation complete, then repeat
    the same canary before declaring the closeout Production-verified.
+
+Steps 1-5 passed for PR #40/main `559a7d4b`, Vercel
+`dpl_gm1mn5TsUdvmJyvHitv3gnhoEuYh`, Worker deployment
+`b5a4945b-622f-4dce-a046-7ab3ac44bc64`, and runtime
+`runtime-NTBNXPCD.js`. Step 6 and Sentry alert delivery verification remain
+open; see [[Badge_Product_ID_Closeout_Acceptance_2026-09-09]].
 
 Rollback depends on the failure:
 

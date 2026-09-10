@@ -40,16 +40,15 @@ source_files:
 
 ## Agent Brief
 
-This is the single acceptance ledger for the Badge Product ID closeout. PR
-#37/#38 and PR #39 plus their backend/Worker rollouts are complete. PR #39 fixed
-the same-route generation boundary, and its live canary proved the correct
-quick-view Product ID badge mounted. The badge then disappeared at about
-`14.48 s` while the same modal/title nodes remained, exposing a second
-availability boundary: discovery TTL was still applied after binding. Commit
-`0705f819` fixes that source boundary but does not equal Production closure.
-Keep this record open until its PR/CI and approved Worker rollout, a complete
-first canary, one natural Product Lifecycle reconciliation, the second canary,
-and Sentry alert verification all pass.
+This is the single acceptance ledger for the Badge Product ID closeout. PR #40
+merged the bound-modal lifetime fix as main `559a7d4b`; PR and main CI, exact
+Vercel deployment, separately approved Worker deployment, runtime hashes, and
+the complete first desktop/mobile canary now pass. The former `~14.48 s`
+quick-view disappearance is resolved: the exact Product ID badge remained
+bound for 94 seconds on desktop and beyond the former TTL plus an internal
+modal interaction at `412x915`. Keep this record open until one natural Product
+Lifecycle reconciliation, Canary 2, and Sentry alert delivery verification all
+pass.
 
 ## Scope And Invariant
 
@@ -80,8 +79,8 @@ and Sentry alert verification all pass.
 | First deployed Product ID runtime | `widget-runtime/runtime-47TOVECU.js` |
 | Quick-view generation follow-up | PR #39; implementation `e34017bc`, docs `c4f3edbd`, merge `81068849`; deployed to Vercel and Worker |
 | PR #39 runtime | `widget-runtime/runtime-U5U3V66L.js`, SHA-256 `d9ff0341bffc3bbfa2b0064a67a149bc13feaea477e050b9e73dc313b339ee8c` |
-| Bound-modal lifetime follow-up | `codex/badge-quick-view-lifetime` from exact `origin/main` `81068849`; implementation commit `0705f819`; Playwright fixture-teardown commit `0851bd58`; PR and deployment pending |
-| Current runtime candidate | `widget-runtime/runtime-NTBNXPCD.js`, SHA-256 `255893670c8ec36517802fa32e12feb1a609d96358bf98f43c92af4218ed9e35`; stable SHA-256 `8574dffac188277751ef435d17c6dd15c7acce3b0382fd4b304fe65e25b526e4`; loader SHA-256 `1cc976dbebbc9238ac894a2c2c37ad6743178da88ffb6fcbf1006a2941b2c998` |
+| Bound-modal lifetime follow-up | PR #40; implementation `0705f819`; Playwright fixture teardown `0851bd58`; documentation `e3da31d9`; merged as `559a7d4be329911c255213cf9e16c17a7c5a4777` |
+| Current live runtime | `widget-runtime/runtime-NTBNXPCD.js`, SHA-256 `255893670c8ec36517802fa32e12feb1a609d96358bf98f43c92af4218ed9e35`; stable SHA-256 `8574dffac188277751ef435d17c6dd15c7acce3b0382fd4b304fe65e25b526e4`; loader SHA-256 `1cc976dbebbc9238ac894a2c2c37ad6743178da88ffb6fcbf1006a2941b2c998`; manifest SHA-256 `e0ad4ed5dee8bce5271eca8dc3f11457970b6d3dc8c15575bd8962fab14a8f94` |
 | Existing live evidence | PR #35/#36 Ozy PDP, category, and homepage placement passed before this closeout |
 
 ## Source Contract
@@ -131,7 +130,7 @@ risk-focused and broad local gates below before PR.
 | Application build | PASS; migration-free Next.js 16.2.1 `build:ci` completed |
 | Wiki audit | PASS with 0 errors; 25 repository-health warnings remain outside this closeout |
 | PR/main CI | PASS for merged work; PR #37 Quality Gate `34380648250`, Database Compatibility `34380648240`, PR #38 browser gate `34385396805`, and final main Quality Gate `34389119540` all passed |
-| Bound-modal lifetime broad gates | PASS at `0705f819`: full unit `124` files / `822/822`; network `37/37`; runtime `62/62`; interactions `39/39`; admin preview `6/6`; TypeScript; lint with `0` errors and `7` pre-existing warnings; codegen and generated widget drift zero; Worker `11/11` contract/types/dry-run; budget; `build:widget:ci`; full Next.js 16.2.1 `build:ci`; and wiki audit with `0` errors / `25` unrelated repository-health warnings. A later combined high-load local rerun timed out two unrelated 5-second unit cases; both immediately passed targeted `10/10`, so this runner fluctuation is recorded rather than hidden. PR CI remains pending at this line. |
+| Bound-modal lifetime broad gates | PASS at `0705f819`: full unit `124` files / `822/822`; network `37/37`; runtime `62/62`; interactions `39/39`; admin preview `6/6`; TypeScript; lint with `0` errors and `7` pre-existing warnings; codegen and generated widget drift zero; Worker `11/11` contract/types/dry-run; budget; `build:widget:ci`; full Next.js 16.2.1 `build:ci`; and wiki audit with `0` errors / `25` unrelated repository-health warnings. A later combined high-load local rerun timed out two unrelated 5-second unit cases; both immediately passed targeted `10/10`, so this runner fluctuation is recorded rather than hidden. PR #40 run `34425217861` passed all 12 jobs; main run `34425766672` passed the exact merge SHA. |
 
 ## Backend-First Production Evidence
 
@@ -152,6 +151,15 @@ PR #39 then merged as
 the `https://app.renuvex.app` alias. Origin and Worker slug probes remained
 identical and retained `Cache-Control: no-store` plus Worker
 `X-Renuvex-Edge-Cache: BYPASS` for reviewed and zero-review products.
+
+PR #40 merged as
+`559a7d4be329911c255213cf9e16c17a7c5a4777`. PR Quality Gate run
+`34425217861` passed all 12 jobs, and main run `34425766672` passed the exact
+merge SHA. Vercel production deployment
+`dpl_gm1mn5TsUdvmJyvHitv3gnhoEuYh` reached `READY` and `PROMOTED` for that
+commit on `https://app.renuvex.app`. Post-deploy origin and Worker probes again
+returned identical Product ID-bearing bodies; origin and Worker were
+`no-store`, and the Worker remained `X-Renuvex-Edge-Cache: BYPASS`.
 
 | Probe | Result |
 |---|---|
@@ -237,9 +245,53 @@ a later natural DOM mutation invoked reconciliation. It was not title-node
 replacement, slug identity, or Product ID mismatch.
 
 Commit `0705f819` changes the timeout to pre-bind discovery only and preserves
-non-link interaction inside the exact bound modal. No second Worker mutation
-has occurred; `runtime-NTBNXPCD.js` remains a local candidate pending PR/CI,
-Vercel verification, and separate Worker approval.
+non-link interaction inside the exact bound modal. PR #40 merged and deployed
+that source through the backend and the separately approved Worker rollout
+below.
+
+### PR #40 Worker rollout and Canary 1
+
+After explicit approval, `pnpm worker:widget:deploy` completed with exit `0`
+and moved 100% of Worker traffic to version
+`b7e942eb-c638-422f-8e8b-51afffaba4ba` in deployment
+`b5a4945b-622f-4dce-a046-7ab3ac44bc64`. Live `widget.js`, stable runtime,
+immutable runtime, and manifest hashes matched the merged artifacts. The
+retained PR #35/#36 rollback version remains
+`e83a40d3-5ea9-4707-b12d-a5d7ec2a9bc6`; no rollback was required.
+
+Fresh Canary 1 evidence:
+
+- Desktop category: nine visible listing badges, zero missing or mismatched
+  Product IDs, zero forbidden slots, and no console warnings/errors. One
+  `/ratings` request batched all 12 event Product IDs; quick-view reused that
+  identity/cache and emitted no `widget-error` request.
+- Desktop PDP `/premium-shortsg`: one title-adjacent
+  `product-title-rating` slot and inner badge, both carrying Product ID
+  `37fb6e3d-6085-4ac1-b0eb-7aaa63ada934` and `4.0/93`; zero forbidden slots
+  and no console warning/error.
+- Desktop homepage scroll/slider/infinite-scroll: 29 visible badges in the
+  interactive check and 23 in a separate network run; every visible slot and
+  inner badge had matching Product IDs. ID-less Ozy cards caused exactly one
+  bulk `/ratings-by-slug` discovery request, then rendered Product ID-bound
+  badges. No per-card request or `widget-error` request occurred.
+- Desktop search for `Premium`: one visible result badge with the same Product
+  ID and `4.0/93`, zero missing/mismatched/forbidden slots, and no console
+  warning/error.
+- Desktop quick-view: one exact `h1.product-name` modal slot retained that
+  Product ID and rating at 31 seconds and 94 seconds, including after a
+  non-link interaction inside the modal. The route remained the category URL
+  and no duplicate slot or console warning/error appeared.
+- Fresh mobile Chromium at a measured `412x915`: category badges had zero
+  missing/mismatched IDs; quick-view retained one exact Product ID slot at
+  initial bind, 17 seconds, and after an internal title click; closing the
+  modal left zero visible modal and zero retained modal slots. Mobile PDP,
+  homepage scroll/infinite-scroll, and `Premium` search also passed with exact
+  Product IDs and no widget request failure, page exception, forbidden slot,
+  or `widget-error` request.
+- The mobile run observed a separate HTTP 404 for Ikas theme asset
+  `cdn.myikas.com/.../image_180.webp` and aborted Ikas `sendEventV2` requests
+  during navigation. Neither originated from Renuvex or affected badge/API
+  behavior; they are recorded rather than misreported as widget errors.
 
 The local Sentry read-only check could not inspect event tags because the
 configured organization token returned HTTP `401 Invalid org token`. No Sentry
@@ -249,13 +301,14 @@ rule or project setting was mutated.
 
 | Gate | Required evidence | Status |
 |---|---|---|
-| Backend deploy | Closeout commit and Vercel deployment ID | PASS through PR #39; current deployed main `81068849`, `dpl_FEZcU1VLA1YzedHp6vRQWWNbnVZF`, `READY`. The `0705f819` follow-up is not merged/deployed. |
+| Backend deploy | Closeout commit and Vercel deployment ID | PASS through PR #40/main `559a7d4b`; Vercel `dpl_gm1mn5TsUdvmJyvHitv3gnhoEuYh` is `READY` and `PROMOTED` for the exact merge SHA. |
 | Origin slug API | Product ID-bearing and zero-review responses; `no-store`; old-runtime compatibility | PASS |
 | Worker pre-runtime check | Same body through read origin; `X-Renuvex-Edge-Cache: BYPASS`; no HIT | PASS |
 | First Worker runtime deploy | Approved deployment/version and immutable runtime hash | PASS; version `a025a9a4-216d-470b-b67c-9167d58f538a`, deployment `5c297724-18c4-46b3-8420-9614662f446b`, runtime SHA-256 recorded above |
-| Canary 1 | Fresh desktop/mobile PDP `/premium-shortsg`, category `/clothing`, homepage scroll, search, slider/infinite-scroll, and quick-view DOM/network/console evidence | INCOMPLETE; PDP/category/home/slider/infinite-scroll passed. PR #39 made quick-view initially correct, but the badge disappeared at about `14.48 s`; required fresh mobile/search completion is not claimed. |
+| Final lifetime Worker deploy | Approved deployment/version and exact merged runtime hash | PASS; version `b7e942eb-c638-422f-8e8b-51afffaba4ba`, deployment `b5a4945b-622f-4dce-a046-7ab3ac44bc64`, immutable SHA-256 `255893670c8ec36517802fa32e12feb1a609d96358bf98f43c92af4218ed9e35` |
+| Canary 1 | Fresh desktop/mobile PDP `/premium-shortsg`, category `/clothing`, homepage scroll, search, slider/infinite-scroll, and quick-view DOM/network/console evidence | PASS; desktop and measured `412x915` mobile checks passed. Quick-view remained exact and single beyond the former TTL and after an internal interaction; close cleanup passed. Widget/API network was batched and error-free. One unrelated missing Ikas theme image is recorded above. |
 | Quick-view generation follow-up | Exact same-target/same-Product-ID generation rebinding, regression tests, PR/CI, backend and Worker rollout | DEPLOYED through PR #39/main `81068849`, Vercel `dpl_FEZcU1VLA1YzedHp6vRQWWNbnVZF`, Worker `fcb63b3a-eeab-4c19-ad7f-5112b3c95f08`; initial badge placement passed and exposed the separate bound-lifetime issue. |
-| Bound-modal lifetime follow-up | Discovery TTL is pre-bind only; bound modal survives elapsed time/internal interactions; changed/disconnected identity still retires | SOURCE/LOCAL PASS at `0705f819`: placement `49/49`, five-browser `20/20`, broad/reproducibility/build/Worker dry-run gates pass. PR/CI, backend verification, and separately approved Worker rollout remain pending. |
+| Bound-modal lifetime follow-up | Discovery TTL is pre-bind only; bound modal survives elapsed time/internal interactions; changed/disconnected identity still retires | DEPLOYED/PASS through PR #40, exact main/Vercel verification, Worker version `b7e942eb-c638-422f-8e8b-51afffaba4ba`, and Canary 1. |
 | Lifecycle continuity | One natural daily reconciliation completed without identity drift/conflict | PENDING |
 | Canary 2 | Repeat the same fresh-session canary after lifecycle reconciliation | PENDING |
 | Sentry alerts | `identity-conflict` first event and other three health types at 10 events / 5 minutes to maintainer email | PENDING EXPLICIT APPROVAL; current read-only org token returned HTTP 401 and no rule was changed |

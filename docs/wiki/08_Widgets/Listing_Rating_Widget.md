@@ -154,26 +154,32 @@ CSS variable before injecting badges. Badge stars are no longer hardcoded to
 - [[ADR_0015_Canonical_Product_Identity]]
 
 ## Change Log
+- 2026-09-10: PR #40/main `559a7d4b`, exact Vercel deployment, and approved
+  Worker version `b7e942eb-c638-422f-8e8b-51afffaba4ba` deployed the bound-modal
+  lifetime fix. Desktop and `412x915` Canary 1 passed PDP, category, homepage
+  scroll/slider/infinite-scroll, search, and quick-view. Event-backed category
+  cards used one Product ID batch; ID-less homepage cards used one bulk slug
+  discovery request and every visible result was promoted to Product ID.
 - 2026-09-10: PR #39's generation fix was merged and deployed. Production then
   showed the correct quick-view Product ID badge disappearing at about
   `14.48 s` while the modal/title nodes stayed identical. Commit `0705f819`
   narrows the 10-second timeout to pre-bind discovery, preserves interactions
   inside the exact bound modal, and keeps disconnected or changed targets
-  fail-closed. Local placement `49/49` and five-browser `20/20` pass; rollout
-  and live lifetime acceptance remain open.
+  fail-closed. Local placement `49/49` and five-browser `20/20` passed before
+  the PR #40 rollout recorded above.
 - 2026-09-09: The first live Product ID runtime canary found that Ozy emitted a
   same-route listing generation after card click, replacing the exact link's
   attestation and leaving quick-view safely blank. The source fix preserves
   quick-view only when the exact target is unchanged and the replacement proof
   equals the sealed clicked Product ID; different or unsealed identity remains
-  fail-closed. Local placement and five-browser regressions pass; production
-  follow-up rollout and live modal acceptance remain open.
+  fail-closed. Local placement and five-browser regressions passed; the later
+  production follow-up and live acceptance are recorded above.
 - 2026-09-09: Closed the source Product ID propagation gap for ID-less strict
   cards. The slug API now returns the lifecycle-resolved Product ID, candidates
   are promoted only after full revalidation, visible slot/inner badge ownership
   is Product ID-stamped, v3 cache keys are Product ID-only, event conflicts fail
-  closed, and quick-view binds one exact modal instance. Production rollout and
-  two-canary acceptance remain separately gated.
+  closed, and quick-view binds one exact modal instance. The first rollout and
+  canary now pass; lifecycle continuity and Canary 2 remain separately gated.
 - 2026-09-08: Bound listing request coordination to the exact placement proof.
   Repeated carousel/style mutations no longer fan out duplicate slug reads
   while a batch is in flight or after a successful empty response; failed
