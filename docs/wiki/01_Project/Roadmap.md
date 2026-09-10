@@ -3,8 +3,8 @@ type: roadmap
 project: renuvex-product-reviews
 status: draft
 created: 2026-05-05
-updated: 2026-07-29
-last_verified: 2026-07-29
+updated: 2026-09-10
+last_verified: 2026-09-10
 confidence: medium
 tags:
   - roadmap
@@ -16,50 +16,100 @@ related:
   - "[[ADR_0032_Review_Video_On_Mux]]"
   - "[[Review_Video_Canary_Runbook]]"
 source_files:
-  - "docs/wiki/10_Research/Competitor_Pricing_And_Plans.md"
+  - "src/lib/widgets/catalog.ts"
+  - "src/widget/structured-data/index.js"
+  - "src/lib/review-email/config.ts"
+  - "src/lib/product-lifecycle.ts"
+  - "scripts/build-widget.mjs"
 ---
 
 # Roadmap
 
-## Summary
-Living roadmap. Order is rough priority, not committed dates. Tweak as decisions are made and file them as ADRs when they shape architecture.
+## Agent Brief
 
-## Near Term (next iterations)
-- **Structured data / Rich snippets** — JSON-LD with `aggregateRating` injected on product pages so Google can show stars in SERPs. See [[Structured_Data_And_Rich_Snippets]]. Decide whether widget.js writes the JSON-LD client-side or whether a server route serves it for ikas theme include.
-- **Q&A widget** — clarify scope; data model (separate `Question` table?), public submission endpoint, admin tab.
-- **Review-request emails** — post-purchase trigger (likely via ikas webhook or polling), template, signed token URL for one-click rating.
-- **CSV import/export** — admin endpoint for bulk import (migrating from another platform) and export.
-- **Analytics tab** — review volume per week, average rating trend, response rate, conversion uplift (long-term — needs storefront analytics integration).
+This page contains planned work, not current-state history. Items have no
+committed date unless a separate release plan says otherwise. Use
+[[Current_Status]] for live state, [[Open_Questions]] for unresolved product or
+architecture choices, and [[Future_Feature_Ideas]] for uncommitted ideas.
 
-## Mid Term
-- **Multi-language widget UI** — storefront copy currently Turkish-only; storefront-aware locale (ikas storefront locale → widget i18n key). No i18n layer exists yet: ALL strings are hardcoded TR including ~25 `aria-label`s, and browser auto-translate skips `aria-label` — so accessibility text needs an explicit i18n migration (sr-only text + `aria-labelledby` where it must survive translation). Scope detail: [[Open_Questions]].
-- **Photo gallery improvements** — lightbox, lazy loading review thumbnails on listing pages.
-- **Email notifications to merchant** on new pending review.
-- **Webhook-based product rename sync** — currently `productName` is captured at submit time; product renames don't propagate.
-- **Per-storefront widget settings** — currently settings are per-merchant; ikas merchants can have multiple storefronts (locale, currency variants).
+## Priority 0 - Release Acceptance
 
-## Longer Term / Speculative
-- **Verified-buyer badge** (cross-check submission email against ikas order history)
-- **Q&A → review request flow** (smart sequencing)
-- **Loyalty/coupon-on-review** integration with ikas discount codes
-- **AI moderation summary** (LLM auto-generates merchant-facing summaries; flags suspicious reviews)
-- **Async media pipeline (image moderation + video foundation)** — queue + background workers to process uploaded media off the upload hot path (authoritative metadata, **image** moderation before public display, variant generation, future video). Distinct from the review-**text** "AI moderation summary" above. Deferred; trigger = image-moderation/video parity or upload volume outgrowing the daily cron. Analysis + cost/competitor evidence: [[Async_Media_Pipeline]].
-- **Theme storefront blocks / sections** — instead of injected JS, register native ikas theme widgets (research [[Ikas_Theme_Limitations]]).
+- Complete the Badge Product ID closeout after one natural Product Lifecycle
+  reconciliation: verify identity health, repeat Canary 2, and update the
+  acceptance record. Badge-specific Sentry alert creation and controlled
+  delivery remain owner-deferred and require fresh approval.
+- Run authenticated ikas dashboard smoke and Sentry post-deploy health checks
+  after the next meaningful admin or runtime deployment.
+- Validate the existing Product `aggregateRating` JSON-LD on a public PDP with
+  approved reviews. The client-side surface already exists; decide on a
+  server/native alternative only if measured search-engine behavior requires it.
 
-## Tech Debt / Quality
-- Add tests for `/api/public/reviews` (POST validation matrix), widget settings sanitize/validate
-- Replace `JSON.stringify(images)` text column with a relational `ReviewImage` table once we add lightbox/CDN-resize features
-- Move profanity list to a config file (and consider Postgres ILIKE-based filter for scale)
-- Evaluate a per-merchant Origin allowlist for anonymous review POST only if
-  abuse evidence justifies the product/configuration cost. Credentialed
-  review-session and widget-beacon CORS boundaries are already isolated.
-- Revisit OAuth scope (`read_orders,write_orders,read_products,read_inventories,write_inventories`) — does the app actually need write_orders/write_inventories?
-- **Authoritative review-media metadata at scale** — AWS register decodes images server-side today; at thousands of stores / 1M+ images evaluate S3 Inventory/S3 Metadata as an operational audit layer for object-family reconciliation. Detail: [[ADR_0034_AWS_Review_Image_Migration]].
+## Priority 1 - Product Work
 
-- **Mux asset reconciliation report** - deferred hardening: add a read-only scheduled or manually runnable report that compares Mux asset inventory with DB ownership (`VideoUploadSession`, `ReviewMedia`, `MediaProviderJob`, `WebhookEvent`) to detect orphan assets, broken DB references, stuck abandoned sessions, failed cleanup jobs, or environment mismatches. Default behavior must be dry-run/report-only; no automatic asset delete or DB mutation. Initial scheduler can be manual, Vercel Cron, or QStash. If storefront widget/script delivery later moves to Cloudflare Workers, keep the public widget Worker secret-free and place this audit only in a separate backend/control worker or keep it on Vercel/QStash. See [[ADR_0032_Review_Video_On_Mux]] and [[Review_Video_Canary_Runbook]].
+- Activate review-request email only through the gates in
+  [[ADR_0036_Review_Request_Email_Architecture]]. The backend and schema already
+  exist but are disabled. Sender infrastructure, review-domain DNS, legal/IYS
+  acceptance, merchant controls, journal readiness, and live delivery evidence
+  remain separate work.
+- Build a real widget localization layer covering visible copy, formatting, and
+  accessible names. Decide locale ownership with the multi-storefront model
+  before changing the settings schema.
+- Decide the Q&A product scope before adding tables or public endpoints.
+- Add CSV review import/export with validation, tenant isolation, and an audit
+  trail.
+- Add a minimal admin analytics view for review volume, rating trend, and
+  merchant response rate. Conversion claims require separate storefront
+  analytics evidence.
+
+## Platform And Scale
+
+- Close managed PostgreSQL/provider-capacity, sustained backlog, erasure,
+  retention, and identity-conflict operations before any large-scale readiness
+  claim or Product Lifecycle Release B rollout.
+- Expand automatic placement beyond Ozy only through the bounded adapter
+  acceptance in [[Theme_Adapter_Playbook]]. Add an unsupported-theme admin
+  warning without weakening fail-closed storefront behavior.
+- Decide whether `WidgetSettings` remains merchant-wide or becomes storefront
+  and locale aware.
+
+## Deferred Or Trigger-Based
+
+- Carousel and popup remain catalog-only planned scaffolds until their product
+  behavior and placement contracts are approved.
+- Merchant notification email for new pending reviews is separate from shopper
+  review-request email.
+- Decide whether historical `Review.productName` remains an immutable submit
+  snapshot or follows current Ikas product names. Product Lifecycle already
+  synchronizes identity snapshots; it must not rewrite review ownership.
+- Add a dry-run Mux asset ownership reconciliation report only when operations
+  need recurring orphan/stuck-session evidence. QStash or a manual backend job
+  is the scheduler boundary; the public Worker stays secret-free.
+- Add S3 Inventory/S3 Metadata as an audit layer only when image scale justifies
+  it. Keep current AWS metadata and variants out of the storefront hot path.
+- Move profanity policy to merchant/config storage and add a per-merchant
+  anonymous-Origin allowlist only when product or abuse evidence justifies them.
+- Image moderation, loyalty, verified-buyer, and AI summary ideas remain in
+  [[Future_Feature_Ideas]] until selected.
+
+## Tooling Debt
+
+- Remove or implement the stale `--theme=new-theme` build scaffold; there is no
+  matching runtime-selection contract or `themes/new-theme` implementation.
+- Verify whether `pnpm apply:ai-rules` still has an owner. The script exists,
+  `.ruler` does not, and tracked `CLAUDE.md` declares `AGENTS.md` as its source.
+
+## Completed, Not Roadmap
+
+The structured-data runtime, review lightbox/lazy media behavior, normalized
+`ReviewMedia` model, and broad `/api/public/reviews` tests already exist. Their
+remaining acceptance or maintenance work is tracked above or in their canonical
+pages; do not re-add them as unimplemented features.
 
 ## Obsidian Links
+
 - [[Current_Status]]
 - [[Open_Questions]]
 - [[Future_Feature_Ideas]]
 - [[Competitor_Pricing_And_Plans]]
+- [[Structured_Data_And_Rich_Snippets]]
+- [[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]]

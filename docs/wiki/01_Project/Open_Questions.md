@@ -3,8 +3,8 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-10
-last_verified: 2026-08-10
+updated: 2026-09-10
+last_verified: 2026-09-10
 confidence: medium
 tags:
   - questions
@@ -13,18 +13,16 @@ related:
   - "[[Index]]"
   - "[[Current_Status]]"
   - "[[Roadmap]]"
-  - "[[Yotpo_Style_Widget_Modular_Architecture]]"
-  - "[[Ikas_Storefront_Script_Capabilities]]"
-  - "[[Widget_Architecture_Audit]]"
-  - "[[Widget_Transfer_Measurement_2026-05-29]]"
+  - "[[Theme_Adapter_Playbook]]"
+  - "[[Structured_Data_And_Rich_Snippets]]"
+  - "[[Ikas_OAuth_Installation_Notes]]"
 source_files:
-  - "src/widget/loader.js"
-  - "src/widget/core/storefront-context.js"
-  - "src/widget/surfaces/listing-badge.surface.js"
+  - "src/lib/widgets/catalog.ts"
   - "src/widget/placement/capability.js"
-  - "src/widget/core/helpers.js"
-  - "src/widget/core/badge.js"
-  - "src/widget/summary-layouts/shared/bar-chart.js"
+  - "src/widget/structured-data/index.js"
+  - "src/app/api/oauth/authorize/ikas/route.ts"
+  - "src/app/api/public/reviews/route.ts"
+  - "src/lib/product-snapshots.ts"
 ---
 
 # Open Questions
@@ -39,204 +37,83 @@ before implementation. Review-email V5's accepted lifecycle lives in
 [[ADR_0036_Review_Request_Email_Architecture]]; only its listed rollout and
 product/legal gates remain open.
 
-## Wiki prompt folder numbering
-The second-brain setup template names reusable agent procedures under `08_Prompts`, but this repo already uses `08_Widgets` for widget domain memory and `09_Prompts` for AI workflows. The migration kept `09_Prompts` canonical to avoid duplicating or moving existing pages. Decide later whether a deliberate folder renumbering cleanup is worth the churn.
-
 ## Q&A widget scope
-The `qa` widget id is registered in `WidgetDef`, but the storefront and submission flow are unclear from the codebase scan. **Before adding any DB tables**, decide: separate `Question` model, or reuse `Review` with a `kind` column? Will customers answer or only the merchant?
 
-## Carousel / Popup widgets
-`carousel` and `popup` widget ids exist in `WidgetDef`. Need to confirm whether they ship today or are scaffolds. Read [src/widget/reviews-section/](src/widget/reviews-section/) and [src/widget/listing-badges/](src/widget/listing-badges/) before extending.
+The `qa` catalog entry is a planned, non-configurable scaffold. Before adding a
+table or endpoint, decide whether questions use a separate model, who can
+answer, what moderation states exist, and whether verified purchase matters.
 
-## Yotpo-style modular loader decisions
-The 2026-05-15 Protein Ocean/Yotpo research supports a one-loader/many-widget-modules architecture. Before implementing it, decide:
-- Should the existing `widget.js` remain a compatibility alias while new installs receive `loader.js`?
-- Which widgets are first-class modules: rating badge, reviews main, listing badge, media gallery, Q&A, review form, schema?
-- What is the stable placeholder contract for `data-renuvex-widget` and `data-renuvex-product-id`?
-- Should theme adapter selection be explicit merchant config, automatic runtime detection, or both?
+## Carousel and popup behavior
 
-Reference: [[Yotpo_Style_Widget_Modular_Architecture]]
+`carousel` and `popup` are also planned, non-configurable catalog scaffolds.
+Before implementation, define their merchant selection rules, eligible review
+set, placement/mount contract, dismissal behavior, and performance budget.
 
-## Theme adapter coverage - partially resolved, ongoing per-theme work
-The old "Ozy hard-coded" audit risk remains structurally addressed by the adapter
-boundary, but active-theme evidence is currently unavailable. On 2026-08-09 both
-live ikas v1 and v2 schemas exposed only `id/name` for the fields Renuvex uses on
-`Storefront`; `themes` and `mainStorefrontThemeId` were absent. Current code marks
-new observations as `provider_unavailable`, treats previously stored observations as
-  `legacy_unverifiable`. ADR 0038 keeps provider identity unavailable but permits
-  strict runtime-attested Ozy placement; unsupported and ambiguous signatures stay
-  fail-closed. The explicit, shadow-isolated review mount remains independent.
+## Theme adapter coverage and provider signal
 
-Still open: ikas needs to publish a supported active-theme or placement signal before
-provider-selected adapter placement can be re-enabled. Each runtime-detectable theme
-needs an explicit opt-in, bounded signature, cross-theme negative fixtures, and
-browser availability tests. ikas still
-does not expose official public DOM slots, and planned ikas Studio `data-*` attributes
-are not broad enough to rely on today.
-
-Detail: [[Theme_Adapter_Playbook]], [[Ikas_Theme_Limitations]],
-[[Ikas_Storefront_Script_Capabilities]].
-
-## Unknown-theme widget visibility policy — RESOLVED, AMENDED 2026-08-10
-**Resolved by ADR 0022 and superseded for automatic placement by
-[[ADR_0038_Runtime_Attested_Storefront_Placement]].** `placementPolicy` is now the
-canonical authority, the legacy boolean is always false, and every production
-PDP/listing/modal path requires a strict current proof before rating reads or DOM
-mutation. `reviewsMountEnabled` remains the independent backend kill-switch for the
-explicit review mount. The
-admin warning UI for unsupported themes is **deferred** as a follow-up — the runtime
-signal is already in place (`adapterSource === 'generic_unknown'`), it just needs a
-dashboard surface.
-
-## ikas storefront theme webhook (parallel feature request)
-ikas Admin API has no `store/theme/*` webhook scope (introspected 2026-05-27 — only 10
-scopes exist, all under `store/order/*`, `store/product/*`, `store/customer/*`,
-`store/customerFavoriteProducts/*`, `store/stock/*`). Shopify offers `THEMES_PUBLISH`
-which the global review-app ecosystem keys off; ikas's gap forced [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]]
-to use a pull-model lazy resync instead. Open a feature request to ikas; if a theme
-webhook ships, layer it as a third sync trigger (`reason: 'webhook'`) alongside the
-existing lazy resync path.
-
-## `VIEW_LISTING` undocumented ikas event — RESOLVED 2026-06-06 (audit finding O6)
-`core/storefront-context.js` depends on the `VIEW_LISTING` Storefront Event for
-category-page product arrays. `VIEW_LISTING` is **runtime-verified** (Phase 1 audit) and is now
-**ikas-sanctioned** even though it is still absent from the public docs list.
-- **RESOLVED 2026-06-06:** ikas developer confirmed `VIEW_LISTING` + its `productDetails[]` array is
-  supported/usable. No category fallback hardening is required from this answer; keep the note only
-  because the public docs remain incomplete. See [[Ikas_Lifecycle_Mount_Questions]] (Q6).
-- Detail: [[Widget_Architecture_Audit]] (O6), [[Ikas_Storefront_Events]].
-
-## ikas SPA lifecycle / mount contract — ANSWERED 2026-06-06 (PDP review race)
-The PDP review SPA-navigation race ([[Bug_PDP_Review_Lifecycle_SPA_Race]]) was fixed
-**defensively** because ikas guarantees neither a post-render "page ready" lifecycle hook,
-nor a `PRODUCT_VIEW`↔DOM ordering, nor a stable mount anchor. Consolidated questions to ask
-ikas (SPA ready signal, event↔DOM ordering, official mount slots, custom-block render timing,
-router-change subscription, `VIEW_LISTING` status) + ikas's answers live in
-[[Ikas_Lifecycle_Mount_Questions]]. **Answered 2026-06-06:** ikas confirmed the events are
-analytics-grade with **no** DOM-readiness / ordering / custom-block-timing guarantee and **no**
-route-change API, so the defensive fix is required; `VIEW_LISTING` + `productDetails[]` is confirmed
-usable; official page-injection points are roadmapped but not near-term.
+Ozy is the only automatic runtime-attested adapter. Unknown and ambiguous themes
+fail closed. Before another theme is enabled, require a bounded signature,
+negative cross-theme fixtures, browser tests, and a live canary. Provider-selected
+placement remains blocked until Ikas exposes a supported active-theme or stable
+placement signal. See [[Theme_Adapter_Playbook]] and
+[[ADR_0038_Runtime_Attested_Storefront_Placement]].
 
 ## Structured data injection mechanism
-Two approaches for JSON-LD aggregateRating:
-1. Widget.js writes a `<script type="application/ld+json">` into the product DOM. Pro: zero theme changes. Con: bots might not execute JS / late.
-2. Server-rendered include — merchant adds an ikas theme snippet that fetches our endpoint server-side. Pro: SEO-friendly. Con: requires merchant theme edit.
-Need to test which Google actually reads on ikas storefronts.
+The runtime already injects client-side Product `aggregateRating` JSON-LD only
+when an eligible review/rating surface is present. Validate a public PDP through
+the intended search-engine tooling. Consider a server/native alternative only
+if that evidence shows the current mechanism is insufficient. See
+[[Structured_Data_And_Rich_Snippets]].
 
-## Multi-storefront settings
-ikas merchants can have multiple storefronts (e.g. locale variants). Today, `WidgetSettings` is keyed by `(storeId, widgetId)` only, not by storefrontId. The widget script DOES carry `storefrontScripts: Json` per storefront. Decide whether settings should fork per storefront or stay global.
+## Multi-storefront settings and localization
 
-## Token storage TTL
-Install now replaces merchant tokens atomically through `IkasStoreInstallation`; refresh updates only an existing exact installation row and cannot recreate an erased token. The disabled review-email V5 source handles a signed `store/app/deleted` receiver, exact-subject DSR, generation-fenced auth/PII erasure, immutable journal intent, real restore replay, and bounded retries. `saveWebhooks` registers only the MCP-valid order scopes. Still open before launch: verify the copy register against the actual managed DB restore horizon, roll out and initialize journal coverage through separate gates, configure and prove the app-deleted signal provider-side, set the operator verification gate, and run live 24-hour uninstall acceptance.
+`WidgetSettings` is merchant-wide, while one merchant can have multiple
+storefronts/locales. Decide whether locale comes from Ikas storefront context or
+a merchant setting, whether settings fork per storefront, and how translated
+merchant labels are stored. Any i18n implementation must cover visible copy,
+formatting, screen-reader text, and other accessible names together.
 
 ## OAuth scope correctness
-The authorize route requests `read_orders`, `write_orders`, `read_products`,
-`read_inventories`, `write_inventories`, and `read_customers`, while the
-retained production token reflects a broader Partner permission set. Source
-uses only product/order webhook registration and storefront script
-create/update mutations; it does not mutate order, inventory, product,
-customer, or campaign data. The exact `saveWebhooks` scope dependency and
-existing-token behavior after Partner permission reduction are pending an ikas
-answer. The application-neutral provider question, evidence, and closure test
-are recorded in [[Ikas_OAuth_Installation_Notes]]. Do not reduce live scopes
-before that contract and a development-store reauthorization test agree.
+The authorize route requests broader order/inventory scopes than current source
+appears to mutate. Do not reduce them until Ikas confirms the exact
+`saveWebhooks` dependency and a development-store reauthorization test proves
+install, refresh, product/order webhooks, and script lifecycle. Canonical
+evidence: [[Ikas_OAuth_Installation_Notes]].
 
 ## Profanity filter
-Hard-coded list in [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts). Maintainable? Move to config or Redis? Add per-merchant blocklist?
-
-## Test coverage - partially resolved, ongoing by feature
-The old "no tests visible" gap is superseded by [[Test_Strategy]]. Current automation covers widget network/chunk contracts, layout/runtime smoke, lightbox + review wizard flows, admin preview/settings behavior, public API route branches, and storefront theme-state helpers.
-
-Still open: real authenticated ikas dashboard iframe smoke, live post-deploy dev-store smoke, Sentry post-deploy health checks, transfer-size budgets, and new-feature-specific coverage for future carousel/FAQ/Q&A/popup surfaces.
-
-## Theme variant strategy
-`pnpm build:widget --theme=new-theme` produces a separate bundle. How is the right theme bundle picked at runtime? Is `widget-new-theme.js` ever auto-injected, or is it manual? See [scripts/build-widget.mjs](scripts/build-widget.mjs).
+The current TR/EN list is code-owned. Decide whether moderation remains a
+global application policy or gains merchant-managed terms. Do not add a Redis
+or database policy layer without a concrete product requirement and moderation
+rules.
 
 ## Image lifecycle
-- Upload happens through AWS S3 presigned POST plus server-side register/variant generation.
-- Cleanup runs daily through `/api/admin/daily-maintenance`, with monthly `/api/admin/cleanup-images` fallback for object families that bypassed the registry.
-- Question: after launch, should rejected image reviews keep private admin-preview variants for support for a fixed retention period, or should they be queued for immediate object-family cleanup?
+AWS upload registration owns metadata and variants; QStash maintenance performs
+bounded cleanup. Decide whether rejected reviews retain private admin-preview
+objects for a support window or queue immediate object-family cleanup. Record
+the retention rule before changing cleanup behavior.
 
-## CORS
-Anonymous storefront APIs use wildcard CORS without credentials; review
-sessions use exact host/origin and the widget-error beacon has its own
-canonical-Origin reflection policy. A per-merchant Origin allowlist for
-anonymous POST `/api/public/reviews` remains an optional abuse-resistance
-product decision, not an unresolved credential-isolation defect.
+## Review product-name snapshots
 
-## Stale references in pre-existing docs (Needs Verification)
-Discovered while reconciling existing AI rule files (see [[Existing_AI_Rules_And_Ikas_CLI_Instructions]]):
+Product Lifecycle synchronizes current Ikas product identity snapshots, while
+existing `Review.productName` values are submit-time display snapshots. Decide
+whether old reviews should show historical names or current product names. Any
+change must preserve `(storeId, productId)` ownership and avoid mass rewrites
+without an explicit migration/rollback plan.
 
-- **Helpful feature in `.proje-dokuman.md`** — the Turkish project doc still describes `helpfulCount`, `/api/public/reviews/[id]/helpful`, and a 24h/IP rate limit for it. The `helpful` feature was added then **removed** in migrations 20260408060000 + 20260417000000. The doc should be updated or marked deprecated.
-- **Two CLAUDE.md files coexist** — `/CLAUDE.md` (Ruler-generated, gitignored) and the worktree-local `CLAUDE.md` created by this wiki seed (also gitignored). Decide a single source-of-truth strategy: (a) treat `/AGENTS.md` as source and let Ruler regenerate `CLAUDE.md`, then delete worktree CLAUDE.md, OR (b) ungitignore CLAUDE.md and merge into a tracked file. Affects all new contributors.
+## Resolved Elsewhere
 
-## Existing-rules verification needed
-- **OAuth scope justification** — existing `/CLAUDE.md` doesn't justify the broad scope (`read_orders,write_orders,read_products,read_inventories,write_inventories`). For ikas App Store submission, we'll need to pare it down — see [[Ikas_App_Store_Requirements]].
-- **`@ikas/admin-api-client` v2** — existing rules / docs assume v2 GraphQL client API (`ikasClient.queries.<name>()`). Pinned at `^2.0.11`. If a major version bump is published, the wrapper API may change.
-- **`pnpm apply:ai-rules` workflow** — Ruler is configured but `.ruler/` only contains `ruler.toml` (no source `.md` file). The Ruler source appears to be `/AGENTS.md` (root). Confirm by reading Ruler docs or running `pnpm apply:ai-rules` and seeing what it does.
-
-## PDP listing-badges clean-PDP transfer — RESOLVED 2026-05-31
-Resolved by the 2026-05-31 widget performance phase. `listingBadgeSurface.detect`
-now gates page-triggered listing loads to listing-like page types, and the observer /
-fallback probes ignore widget-owned hash/query links. The proof lives in
-[[Widget_Performance]], [[Test_Strategy]], and [[Widget_Transfer_Measurement_2026-05-29]].
-After deployment, re-run `pnpm measure:deployed-widget` to replace the older deployed
-measurement table with live evidence.
-
-## Widget i18n / accessibility-string localization — scope detail for "Multi-language widget UI"
-Concrete gap found 2026-06-06; enriches the [[Roadmap]] Mid-Term "Multi-language widget UI" item.
-
-**There is NO i18n layer today.** Every storefront string is hardcoded Turkish in the widget
-bundle, except ~5 merchant-editable settings labels (`countLabel`, `writeButtonText`, `title`,
-`mediaGalleryTitle`, `merchantReplyLabel`). So a future "language option" would NOT auto-translate
-anything — it needs a real i18n refactor (a `{ tr, en, … }` string table + `t(key)` lookup + a
-language source, e.g. the ikas storefront locale).
-
-**Accessibility (aria) strings are the hardest part and the easiest to forget:**
-- ~25 `aria-label`s are hardcoded Turkish — e.g. `'Kapat' / 'Önceki' / 'Sonraki'`
-  ([review-modal.js](src/widget/reviews-section/review-modal.js)), `'Filtrele'`
-  ([actions-block.js](src/widget/summary-layouts/shared/actions-block.js)), `'Puan dağılımı'`
-  ([compact/index.js](src/widget/summary-layouts/compact/index.js)), the review-form wizard
-  ([progress-bar.js](src/widget/reviews-section/review-form-modal/progress-bar.js) + `steps/*`),
-  media-gallery arrows ([render/media-gallery.js](src/widget/reviews-section/render/media-gallery.js)).
-- **Browser auto-translate (Google Translate etc.) does NOT translate the `aria-label` attribute** —
-  it only reaches visible text and `aria-labelledby`-referenced real text. So even a visitor running
-  page translation keeps Turkish screen-reader labels. The codebase already knows this: the rating
-  badge uses a real sr-only text node + `aria-labelledby` ("translation-tool friendly, unlike
-  aria-label" — `buildRatingA11yLabel` in [helpers.js](src/widget/core/helpers.js),
-  [badge.js](src/widget/core/badge.js)); the review-section controls do NOT follow that pattern
-  (note: even the badge's sr-only text is still hardcoded TR, so it is browser-translatable but not
-  app-localized).
-- The bar-chart aria is now partly dynamic (binds `currentSettings.countLabel` —
-  [bar-chart.js](src/widget/summary-layouts/shared/bar-chart.js)), but the surrounding words
-  (`'yıldız' / 'filtrele' / 'filtreyi kaldır'`) are still hardcoded TR.
-
-**Decide when the feature is picked up:**
-1. Adopt an i18n string table + `t(key)` and migrate ALL strings (visible + the ~25 aria) — not
-   visible-only, or screen readers fall behind the visible UI.
-2. Where the accessible name must survive browser translation, reuse the sr-only-text +
-   `aria-labelledby` pattern (already proven in the badge) instead of `aria-label`.
-3. Language source: ikas storefront locale (ties into the **Multi-storefront settings** question
-   above + the Roadmap per-storefront item) vs a merchant admin select. Merchant labels
-   (`countLabel` etc.) are single-value today; per-language values would need the same i18n layer.
-
-## Authoritative review-media metadata source — revisit at scale
-The AWS image path decodes uploaded images server-side during register and stores normalized metadata/variants in `ReviewMedia` / `PendingReviewImage`. At scale, decide whether S3 Inventory/S3 Metadata should be added as an operational audit layer for object-family reconciliation. This is not a storefront hot-path requirement.
-
-## Async media pipeline — build trigger + design choices (deferred)
-We deliberately defer the async media pipeline (queue + background workers for media metadata,
-moderation, variants, future video) — the current signed-upload + daily-maintenance cron is
-sufficient at current scale. Full analysis (benefit / mechanism / cost / competitor evidence):
-[[Async_Media_Pipeline]].
-- **Trigger to build (any of):** image moderation before public display, OR video reviews, OR upload
-  volume outgrowing the daily cron cadence.
-- **Open design choices:** queue (Postgres `jobs` table vs Upstash vs QStash); moderation provider
-  (AI add-on with per-image cost vs manual admin queue); publish-gating (review stays `pending` until
-  media passes?); worker model (Vercel cron poll vs event-triggered function).
-- **No ADR yet** — becomes `ADR_00XX` at the build-decision point.
+- Loader/module ownership: [[ADR_0013_Modular_Widget_Loader_Architecture]].
+- Unknown-theme placement: [[ADR_0038_Runtime_Attested_Storefront_Placement]].
+- Storefront event and SPA ordering: [[Ikas_Lifecycle_Mount_Questions]].
+- Test coverage and release gates: [[Test_Strategy]].
+- CORS isolation: [[Security_And_Rate_Limits]].
+- PDP/listing transfer behavior: [[Widget_Performance]].
+- Current image/video pipelines: [[ADR_0034_AWS_Review_Image_Migration]] and
+  [[ADR_0032_Review_Video_On_Mux]].
 
 ## Obsidian Links
 - [[Current_Status]]
 - [[Roadmap]]
 - [[Decision_Index]]
-- [[Existing_AI_Rules_And_Ikas_CLI_Instructions]]
+- [[Theme_Adapter_Playbook]]
+- [[Structured_Data_And_Rich_Snippets]]

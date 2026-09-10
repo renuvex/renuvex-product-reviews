@@ -3,8 +3,8 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-29
-last_verified: 2026-07-29
+updated: 2026-09-10
+last_verified: 2026-09-10
 confidence: high
 tags:
   - overview
@@ -24,13 +24,21 @@ source_files:
   - "src/app/page.tsx"
   - "src/widget/index.js"
   - "src/widget/core/origins.js"
+  - "src/widget/structured-data/index.js"
+  - "src/lib/product-lifecycle.ts"
+  - "src/lib/review-email/config.ts"
   - "workers/widget-delivery/src/index.ts"
 ---
 
 # Project Overview
 
 ## Summary
-Renuvex Product Reviews is a SaaS-style review and rating app for ikas e-commerce merchants. It provides a merchant admin panel for moderating reviews, a customizable storefront widget that collects and displays reviews on product pages, and listing-level rating badges. The repo started from `ikas-app-starter-template` and has been extended with a review domain on top of the OAuth + Prisma + GraphQL foundation.
+Renuvex Product Reviews is a review and rating app for ikas merchants. It
+provides review collection and moderation, customizable storefront review
+surfaces, Product ID-backed rating badges, review media, and Product
+`aggregateRating` structured data. The repository extends the ikas OAuth,
+Prisma, and typed GraphQL starter foundation with a production-oriented review
+domain.
 
 ## Product Goal
 Compete with global review apps within the ikas ecosystem. See [[Competitor_Pricing_And_Plans]] for positioning.
@@ -41,15 +49,23 @@ Compete with global review apps within the ikas ecosystem. See [[Competitor_Pric
 - Stores wanting moderation control (auto-approve thresholds, profanity filter, manual reply)
 
 ## Core Capabilities
-- **Review collection** — public POST endpoint for storefront submissions, with profanity filter, IP rate-limit, AWS-backed image upload
-- **Moderation** — admin dashboard lists/filters reviews; merchant can approve/reject/delete and reply
-- **Storefront widget** — single bundled `widget.js` injected into all storefronts; renders product widgets, rating badges, listing badges
-- **Widget customization** — per-merchant settings stored in `WidgetSettings`, schema-driven UI, real-time iframe preview
-- **Auto-approval modes** — manual / 4plus / 5stars / all
-- **Auto script injection** — on OAuth install, registers a `StorefrontJSScript` per storefront pointing to `/widget.js?publicApiKey=<merchantId>`
+- **Review collection** - public submission with validation, profanity checks,
+  rate limits, AWS images, and optional Mux video.
+- **Moderation** - merchant review listing, approve/reject/delete, replies, and
+  private media preview.
+- **Storefront runtime** - opt-in product review section plus independent PDP,
+  listing, search, slider, and quick-view rating badges.
+- **Product identity** - `(storeId, productId)` ownership, lifecycle evidence,
+  reconciliation, and fail-closed slug-to-ID discovery.
+- **Customization** - per-merchant `WidgetSettings`, schema-driven editor, and
+  real-time iframe preview.
+- **SEO** - client-side Product `aggregateRating` JSON-LD tied to an eligible
+  visible review/rating surface.
+- **Installation** - OAuth registration and non-destructive
+  `StorefrontJSScript` lifecycle per storefront.
 
 ## Tech Stack (one-line)
-Next.js 16 (16.2) App Router · React 19 · TypeScript · Prisma + Postgres (Supabase) · Tailwind v4 + shadcn/ui · iron-session + JWT · esbuild widget bundle · AWS S3/CloudFront review images · Mux video · Upstash Redis/QStash · Vercel (fra1 backend). Full detail in [[ADR_0001_Project_Stack]] and [[Dependency_Map]]. (Note: the public README and generated/local rule files such as `CLAUDE.md` may still say "Next.js 15"; `package.json` is authoritative.)
+Next.js 16.2.1 App Router · React 19 · TypeScript · Prisma + Postgres (Supabase) · Tailwind v4 + shadcn/ui · iron-session + JWT · esbuild widget bundle · AWS S3/CloudFront review images · Mux video · Upstash Redis/QStash · Vercel (fra1 backend). Full detail lives in [[ADR_0001_Project_Stack]] and [[Dependency_Map]]; `package.json` is authoritative for versions.
 
 ## Architecture in One Picture
 - **Merchant** opens the app inside ikas Admin (iframe). AppBridge → JWT → calls `/api/admin/*`.
@@ -58,22 +74,21 @@ Next.js 16 (16.2) App Router · React 19 · TypeScript · Prisma + Postgres (Sup
   anonymous API calls target `app.renuvex.app` with wildcard CORS and no
   credentials. Review-center/session APIs remain isolated to the review host
   and do not expose CORS.
-- **Preview** runs widget.js on `/preview` route in an iframe; admin posts settings via `postMessage`.
+- **Preview** uses prerendered `/preview/<widgetId>/<scene>` iframe routes; the
+  admin sends settings through the versioned `postMessage` protocol. The bare
+  `/preview` route is a compatibility redirect.
 - **AWS S3/CloudFront** receives signed image uploads and serves public variants. **Upstash Redis** rate-limits public endpoints. **QStash** runs daily maintenance plus monthly orphan-image fallback cleanup through signed internal scheduler calls.
 
 See [[System_Architecture]] for the diagram-level view.
 
 ## Boundaries (what this app is NOT)
-- Not a full PIM. It does not own product data — fetched on-the-fly from ikas Admin GraphQL when needed.
-- Not a marketing/email tool yet. No review-request emails, no post-purchase triggers (yet — see [[Roadmap]]).
+- Not a full PIM. Ikas remains the product authority; Renuvex stores bounded
+  product identity snapshots and lifecycle evidence, not a merchant catalog.
+- Not an active marketing/email product. The review-request backend and schema
+  are deployed but disabled; no outbound sender or live shopper email flow is
+  accepted. See [[ADR_0036_Review_Request_Email_Architecture]] and [[Roadmap]].
 - Not multi-store-per-merchant aware in a complex way: storeId == merchantId throughout.
 - Not a fully localized product yet. The storefront widget is Turkish-first today; English/German support needs the planned i18n layer in [[Roadmap]] and [[Open_Questions]].
-
-## Related Source Files
-- [README.md](README.md) — public-facing project README
-- [package.json](package.json) — scripts and dependencies
-- [src/app/page.tsx](src/app/page.tsx) — entry that triggers auth flow
-- [src/widget/index.js](src/widget/index.js) — widget entry point
 
 ## Obsidian Links
 - [[Current_Status]]

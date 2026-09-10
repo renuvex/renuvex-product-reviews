@@ -3,9 +3,9 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-01
-last_verified: 2026-08-01
-confidence: medium
+updated: 2026-09-10
+last_verified: 2026-09-10
+confidence: high
 tags:
   - features
 related:
@@ -13,107 +13,94 @@ related:
   - "[[Current_Status]]"
   - "[[Roadmap]]"
   - "[[Open_Questions]]"
+  - "[[Storefront_Widget_Overview]]"
 source_files:
-  - "src/widget/core/helpers.js"
-  - "src/widget/reviews-section/review-form-modal/copy.js"
   - "src/lib/widgets/catalog.ts"
+  - "src/widget/surfaces/index.js"
+  - "src/app/api/public/reviews/route.ts"
+  - "src/app/api/public/ratings-by-slug/route.ts"
+  - "src/lib/product-lifecycle.ts"
+  - "src/lib/review-email/config.ts"
+  - "src/lib/scheduled-jobs.ts"
 ---
 
 # Feature Map
 
-> Snapshot of features and where they live. Update whenever a feature is added, removed, or significantly refactored.
+## Agent Brief
 
-## Status legend
-- ✅ shipped & working
-- 🚧 partial / in progress
-- ❓ scaffold or unverified — see [[Open_Questions]]
-- 📅 planned — see [[Roadmap]]
+Use this page as a compact product inventory. Follow [[Current_Status]] for
+release gates, [[Roadmap]] for ordering, and focused pages for evidence. Core
+reviews are live on the production test store. Product ID badge placement is
+deployed and passed Canary 1, but final closeout is open. Ozy is the only
+verified automatic placement adapter. Review-request email is deployed but
+disabled. Carousel, popup, and Q&A are planned catalog entries only.
 
-## Authentication & Installation
-| Feature | Status | Source |
+## Status Legend
+
+- **Live**: implemented and active on the production test store.
+- **Partial**: has a stated coverage or acceptance boundary.
+- **Disabled**: implementation exists, but customer behavior is off.
+- **Planned**: product or runtime implementation is incomplete.
+
+## Authentication And Installation
+
+| Capability | Status | Boundary |
 |---|---|---|
-| OAuth authorize redirect | ✅ | [src/app/api/oauth/authorize/ikas/route.ts](src/app/api/oauth/authorize/ikas/route.ts) |
-| OAuth callback (state-gated token exchange, bounded dashboard bootstrap, supplied-signature validation) | ✅ | [src/app/api/oauth/callback/ikas/route.ts](src/app/api/oauth/callback/ikas/route.ts) |
-| AppBridge token in iframe | ✅ | [src/app/hooks/use-base-home-page.ts](src/app/hooks/use-base-home-page.ts) |
-| JWT-gated admin API | ✅ | [src/lib/auth-helpers.ts](src/lib/auth-helpers.ts) |
-| Auto refresh of expired access tokens | ✅ | [src/helpers/api-helpers.ts](src/helpers/api-helpers.ts) `onCheckToken` |
-| Manual store-name entry fallback | ✅ | [src/app/authorize-store/page.tsx](src/app/authorize-store/page.tsx) |
+| Ikas OAuth install | Live | Browser-bound state, optional supplied-signature validation, token exchange, and active installation persistence. |
+| Embedded admin authentication | Live | AppBridge JWT and shared installation/token verification protect admin routes. |
+| Storefront script lifecycle | Live | Non-destructive create/update, stored script identity, token refresh, and scheduled reconciliation. |
 
-## Review Lifecycle
-| Feature | Status | Source |
+## Reviews And Media
+
+| Capability | Status | Boundary |
 |---|---|---|
-| Public submit (POST) with validation | ✅ | [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts) |
-| IP rate limit (3 / 10min) | ✅ | same file, Upstash Redis |
-| Profanity filter (TR + EN) | ✅ | same file, `PROFANITY_LIST` constant |
-| Auto-approve modes (`manual` / `4plus` / `5stars` / `all`) | ✅ | same file |
-| Image upload (AWS S3 presigned POST, tenant-scoped) | ✅ | [src/app/api/public/upload/sign/route.ts](src/app/api/public/upload/sign/route.ts) |
-| Author masking on public output | ✅ | `maskAuthor` in public reviews route |
-| Public read with rating filter, photo filter, sort | ✅ | same file (GET) |
-| Ratings-by-slug bulk endpoint (listing badges) | ✅ | [src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts) |
+| Public submit and read | Live | Validation, filters, sorting, pagination, author masking, profanity checks, and IP rate limiting. |
+| Moderation | Live | Admin filters, approve/reject/delete, merchant replies, and private-media preview. |
+| Rating summaries | Live | Product ID is the canonical lookup identity. |
+| ID-less listing discovery | Live | `ratings-by-slug` resolves slug once to Product ID, fails closed, and returns `no-store`; slug is not review or cache identity. |
+| Review images | Live | Private AWS intake, validated variants, signed moderation preview, and trusted CloudFront delivery. |
+| Review video | Live | Mux upload, readiness, moderation, preview/playback, reconciliation, quota, and cleanup paths. |
+| Form wizard and lightbox | Live | Responsive dialogs, focus handling, media fallbacks, and live setting updates; known lightbox audit risks are fixed. |
+| Review-request email | Disabled | Backend/schema exist behind `REVIEW_EMAIL_ENABLED`; sender, merchant UI, and live delivery acceptance remain gated. |
 
-## Admin / Moderation
-| Feature | Status | Source |
+## Admin And Storefront
+
+| Capability | Status | Boundary |
 |---|---|---|
-| Reviews list / pagination / status filter | ✅ | [src/app/api/admin/reviews/route.ts](src/app/api/admin/reviews/route.ts) |
-| Update status / merchant reply | ✅ | same file (PUT) |
-| Delete review | ✅ | same file (DELETE) |
-| Admin UI (persistent shell, review moderation, widget routes) | ✅ | [src/features/](src/features/) |
-| Widget settings GET/PUT | ✅ | [src/app/api/admin/settings/route.ts](src/app/api/admin/settings/route.ts) |
-| Inject scripts (re-inject button) | ✅ | [src/app/api/admin/inject-scripts/route.ts](src/app/api/admin/inject-scripts/route.ts) |
-| Image cleanup cron | ✅ | [src/app/api/admin/daily-maintenance/route.ts](src/app/api/admin/daily-maintenance/route.ts), [src/app/api/admin/cleanup-images/route.ts](src/app/api/admin/cleanup-images/route.ts), [vercel.json](vercel.json) |
+| Admin dashboard and settings | Live | Review moderation, per-widget settings, script recovery, and authenticated APIs. |
+| Widget preview | Live | Canonical route is `/preview/<widgetId>/<scene>`; bare `/preview` is a compatibility redirect. |
+| Stable loader/runtime | Live | `public/widget.js` loads the manifest-selected ESM runtime; retained hashes protect cached loaders. |
+| PDP review section | Live | Opt-in mount renders summary, filters, layouts, form, reviews, media, and load-more. |
+| PDP rating badge | Live | Strict proof requires exact Product ID equality on slot and visible badge. |
+| Listing/home/search/slider/quick-view badges | Partial | Strict Product ID-backed Ozy placement passed Canary 1; lifecycle continuity, Canary 2, and Sentry alert delivery remain. |
+| SPA and recycled-card safety | Live | Event generations, proof revalidation, mutation observation, lazy hydration, dedupe, and self-heal retire stale identity. |
+| Structured Product rating data | Partial | Eligible surfaces emit `aggregateRating` JSON-LD; public SEO acceptance remains open. |
+| Non-Ozy automatic placement | Partial | Unknown or ambiguous themes fail closed; each new adapter needs explicit acceptance. |
+| Storefront localization | Partial | Merchant labels exist, but general copy and accessible names remain Turkish-first. |
+| Carousel, popup, and Q&A | Planned | Catalog-only, non-configurable scaffolds; define behavior in [[Open_Questions]] first. |
 
-## Storefront Widget
-| Feature | Status | Source |
+## Platform And Product Gaps
+
+| Capability | Status | Boundary |
 |---|---|---|
-| Bundle build (esbuild, IIFE, minified) | ✅ | [scripts/build-widget.mjs](scripts/build-widget.mjs) |
-| Widget bootstrap / mutation observer (SPA themes) | ✅ | [src/widget/index.js](src/widget/index.js), [observer.js](src/widget/observer.js) |
-| Product review widget (form, list, summary) | ✅ | [src/widget/reviews-section/](src/widget/reviews-section/) |
-| Review form modal (multi-step wizard) | ✅ | [src/widget/reviews-section/review-form-modal/](src/widget/reviews-section/review-form-modal/) |
-| Review detail lightbox (photo modal) | ✅ with open audit risks | [src/widget/reviews-section/review-modal.js](src/widget/reviews-section/review-modal.js), [[Product_Review_Lightbox]], [[Bug_Review_Detail_Lightbox_Risks]] |
-| Summary layouts (classic/compact/hero/minimal/split) | ✅ | [src/widget/summary-layouts/](src/widget/summary-layouts/) |
-| Review layouts (card/gallery/list) | ✅ | [src/widget/review-layouts/](src/widget/review-layouts/) |
-| Listing-page rating badges | ✅ | [src/widget/listing-badges/](src/widget/listing-badges/) |
-| Theme variant build (`--theme=new-theme`) | 🚧 | [scripts/build-widget.mjs](scripts/build-widget.mjs); runtime selection unclear |
-| Carousel widget | planned | Catalog-visible, no editor/settings/runtime activation contract |
-| Popup widget | planned | Catalog-visible, no editor/settings/runtime activation contract |
-| Q&A widget | planned | Catalog-visible, no editor/settings/runtime activation contract |
-| Settings live preview via postMessage | ✅ | [src/app/(preview)/preview/route.ts](src/app/(preview)/preview/route.ts), [src/widget/index.js](src/widget/index.js) |
+| Cloudflare widget delivery | Live | Static assets and eligible read caching only; writes/media/lifecycle stay on the application origin. |
+| Public API caching | Live | Route-specific; settings, ratings, and eligible review reads may cache, while identity discovery uses `no-store`. |
+| QStash maintenance | Live | Signed daily/monthly jobs; `vercel.json` is not the scheduler. |
+| Sentry monitoring | Live | Next.js SDK plus bounded widget reports without a storefront SDK. |
+| Badge health alerts | Partial | Events exist; external rules and delivery test need fresh owner approval. |
+| Product Lifecycle Release A | Live | Evidence, tombstones, reconciliation, retention, fencing, and fail-closed resolution support badge identity. |
+| Product Lifecycle Release B | Planned | Consumer-wide enforcement, managed-scale evidence, and conflict operations require a separate release. |
+| Widget quality gates | Live | Build/drift, budget, unit/runtime, placement, and critical browser checks are established. |
+| CSV import/export | Planned | See [[Roadmap]]. |
+| Review analytics | Planned | See [[Roadmap]]. |
+| Complete locale system | Planned | See [[Roadmap]] and [[Open_Questions]]. |
+| Additional theme adapters | Planned | See [[Theme_Adapter_Playbook]]. |
+| Review-request email activation | Disabled | Separate gated rollout, unrelated to badge closeout or Release A. |
 
-## Localization / i18n
-| Feature | Status | Source |
-|---|---|---|
-| Turkish-first storefront widget copy | current reality | Hardcoded widget strings plus selected merchant-editable labels in [copy.js](src/widget/reviews-section/review-form-modal/copy.js) and [catalog.ts](src/lib/widgets/catalog.ts) |
-| English / German / multi-language widget UI | planned | [[Roadmap]], [[Open_Questions]], [[Storefront_Widget_Overview]], [[Widget_Customization]] |
-| Locale-aware accessibility labels | planned | Current source still has hardcoded Turkish `aria-label` strings; future i18n must include accessible names, not only visible text |
+## Canonical Links
 
-## SEO / Structured Data
-| Feature | Status | Source |
-|---|---|---|
-| JSON-LD `aggregateRating` injection | 📅 | [[Structured_Data_And_Rich_Snippets]] |
-
-## Notifications / Outreach
-| Feature | Status | Source |
-|---|---|---|
-| Review-request email | 📅 | none yet |
-| Merchant new-review notification email | 📅 | none yet |
-
-## Imports / Exports
-| Feature | Status | Source |
-|---|---|---|
-| CSV import | 📅 | none |
-| CSV export | 📅 | none |
-
-## Obsidian Links
-- [[Current_Status]]
-- [[Roadmap]]
-- [[Storefront_Widget_Overview]]
-- [[Product_Review_Lightbox]]
-- [[API_Design]]
-- [[Backend_API_Map]]
-- [[Open_Questions]]
-- [[Storefront_Widget_Overview]]
-- [[Widget_Customization]]
-
-## Change Log
-- 2026-06-21: Added explicit localization status. The widget is Turkish-first today; English/German support is planned and requires a real i18n layer.
-- 2026-05-10: Added review detail lightbox to the storefront widget feature inventory and linked its open audit risks. Related source: [src/widget/reviews-section/review-modal.js](src/widget/reviews-section/review-modal.js), related bug: [[Bug_Review_Detail_Lightbox_Risks]].
+- Current production truth: [[Current_Status]]
+- Work ordering: [[Roadmap]]
+- Unresolved decisions: [[Open_Questions]]
+- Storefront architecture: [[Storefront_Widget_Overview]]
+- Badge acceptance: [[Badge_Product_ID_Closeout_Acceptance_2026-09-09]]
