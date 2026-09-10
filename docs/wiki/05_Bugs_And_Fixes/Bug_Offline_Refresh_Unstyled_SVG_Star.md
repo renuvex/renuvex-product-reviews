@@ -3,7 +3,7 @@ type: bug
 project: renuvex-product-reviews
 status: active
 created: 2026-07-02
-updated: 2026-07-02
+updated: 2026-09-10
 last_verified: 2026-07-02
 confidence: high
 tags:
@@ -37,6 +37,10 @@ source_files:
 ---
 
 # Bug: Offline / Partial-Load Unstyled Widget Fallback
+
+## Status
+
+Fixed and regression-covered on 2026-07-02.
 
 ## Symptom
 

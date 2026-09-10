@@ -3,7 +3,7 @@ type: bug
 project: renuvex-product-reviews
 status: active
 created: 2026-08-09
-updated: 2026-09-09
+updated: 2026-09-10
 last_verified: 2026-09-08
 confidence: high
 tags:
@@ -33,6 +33,12 @@ source_files:
 ---
 
 # Bug - Storefront Badges Fail Closed After Theme Schema Drift
+
+## Status
+
+Fixed and live-verified for Ozy badge availability. Product ID propagation is
+deployed and Canary 1 passed; the remaining closeout gates are tracked in
+[[Badge_Product_ID_Closeout_Acceptance_2026-09-09]].
 
 ## Agent Brief
 

@@ -25,6 +25,11 @@ source_files:
 
 # Bug - Quick-view badge lost across generation and modal lifetime
 
+## Status
+
+Resolved and live-verified on desktop and mobile on 2026-09-10. The broader
+Product ID closeout gates remain in the linked acceptance record.
+
 ## Agent Brief
 
 The first live Product ID runtime canary exposed a same-route listing-generation

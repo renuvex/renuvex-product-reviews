@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-09-09
-last_verified: 2026-09-09
+updated: 2026-09-10
+last_verified: 2026-09-10
 confidence: high
 tags:
   - index
@@ -103,32 +103,7 @@ source_files: []
 - [[Structured_Data_And_Rich_Snippets]]
 
 ## Decisions
-- [[Decision_Index]]
-- [[ADR_0001_Project_Stack]]
-- [[ADR_0002_Widget_Injection_Strategy]]
-- [[ADR_0003_Review_Data_Model]]
-- [[ADR_0004_Ikas_Integration_Strategy]]
-- [[ADR_0005_Summary_Layout_Visual_Consistency_Strategy]]
-- [[ADR_0006_Trusted_Review_Image_URL_Policy]]
-- [[ADR_0007_Photo_Strip_Cap_And_Rotation]]
-- [[ADR_0008_Cloud_Name_Build_Time_Only]]
-- [[ADR_0009_Sentry_Observability_Strategy]]
-- [[ADR_0010_Widget_Error_Forwarding]]
-- [[ADR_0011_Widget_Touch_Feedback_And_Focus_Modality]]
-- [[ADR_0012_Pending_Upload_Registry]]
-- [[ADR_0013_Modular_Widget_Loader_Architecture]]
-- [[ADR_0014_Public_API_Response_Caching]]
-- [[ADR_0015_Canonical_Product_Identity]]
-- [[ADR_0016_Rating_Visual_System]]
-- [[ADR_0017_Badge_Architecture]]
-- [[ADR_0018_Widget_Ownership_And_Placement_Resilience]]
-- [[ADR_0019_Icon_Sprite_Rendering]]
-- [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]]
-- [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]]
-- [[ADR_0034_AWS_Review_Image_Migration]]
-- [[ADR_0035_QStash_Scheduler_For_Maintenance]]
-- [[ADR_0036_Review_Request_Email_Architecture]]
-- [[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]]
+- [[Decision_Index]] - canonical registry for every active, draft, and superseded ADR
 
 ## Bugs And Fixes
 - [[Bug_Index]]

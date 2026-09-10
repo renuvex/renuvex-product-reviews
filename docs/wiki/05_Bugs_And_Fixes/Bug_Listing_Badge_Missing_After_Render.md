@@ -3,7 +3,7 @@ type: bug
 project: renuvex-product-reviews
 status: active
 created: 2026-05-25
-updated: 2026-05-25
+updated: 2026-09-10
 last_verified: 2026-05-25
 confidence: high
 tags:
@@ -24,6 +24,10 @@ source_files:
 ---
 
 # Bug — Listing badge "missing_after_render" false positive
+
+## Status
+
+Fixed and verified on the live dev store on 2026-05-25.
 
 ## Symptom
 Sentry issue `RENUVEX-PRODUCT-REVIEWS-6` ("Error: Widget node missing after render") accrued ~93 events in ~26h, dominated by `widgetEventType=dom-conflict`, `reason=missing_after_render`, `surface=listing-badge`, `path=/clothing`, all from the dev store. It is a `handled` health-telemetry event forwarded via `/api/public/widget-error`, not a crash.

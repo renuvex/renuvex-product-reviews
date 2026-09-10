@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-10
-last_verified: 2026-08-10
+updated: 2026-09-10
+last_verified: 2026-09-10
 tags:
   - adr
   - decisions
@@ -13,6 +13,13 @@ related:
 ---
 
 # Decision Index
+
+## Agent Brief
+
+Use this page only as the ADR registry. The individual ADR is canonical for its
+decision, scope, rollout evidence, and supersession details. Keep every ADR
+discoverable here, but do not duplicate full decision history in navigation
+pages.
 
 > Architectural Decision Records (ADRs). When a decision changes, **create a new ADR** that supersedes the old one — never silently rewrite history.
 
@@ -24,6 +31,7 @@ related:
 | [[ADR_0002_Widget_Injection_Strategy]] | Single bundled `widget.js` injected via ikas StorefrontJSScript | Accepted |
 | [[ADR_0003_Review_Data_Model]] | Single denormalized `Review` table; `storeId === merchantId`; status as string literals | Accepted |
 | [[ADR_0004_Ikas_Integration_Strategy]] | OAuth via `@ikas/admin-api-client` + GraphQL Codegen for typed operations | Accepted |
+| [[ADR_0005_Summary_Layout_Visual_Consistency_Strategy]] | Shared spacing, action alignment, tablet breakpoint, and layout-shift rules for summary layouts | Accepted |
 | [[ADR_0006_Trusted_Review_Image_URL_Policy]] | Review images must be app-owned Cloudinary URLs before storage or storefront render | Accepted |
 | [[ADR_0007_Photo_Strip_Cap_And_Rotation]] | Photo strip fixed cap 15, newest-first rotation, dedicated fetch independent of main list | Accepted |
 | [[ADR_0008_Cloud_Name_Build_Time_Only]] | Cloudinary cloud name is a build-time constant; removed from settings response and widget runtime cache | Accepted |
@@ -46,22 +54,22 @@ related:
 | [[ADR_0025_Overlay_Shared_Surface_Foundation]] | Cross-cutting overlay concerns (robust body scroll lock, focus trap, back-button history) extracted into shared modules — `core/body-scroll-lock.js` (ref-counted, locks `<html>`+`<body>` + iOS `position:fixed`), `shared/focus-trap.js`, `core/modal-history.js` — consumed by BOTH body-level overlays (photo lightbox, review-form wizard), enforced by a `widget-surface-contracts.test.ts` invariant. Fixes the wizard's weaker theme-dependent scroll lock (storefront scrolled behind the open wizard on `<html>`-scrolling/`!important` themes and on iOS). A `createOverlaySurface()` controller was considered and rejected as over-abstraction for two divergent overlays; shared modules + contract test deliver the "ortak/kişisel" separation and the anti-recurrence guarantee. | Accepted |
 | [[ADR_0026_Product_Review_Summary_Read_Model]] | `ProductReviewSummary` is the product-level aggregate read model for public badge, structured-data, and review summary distribution reads. Raw `Review` remains source of truth; submit/moderation/delete paths update the summary in the same transaction, and a repair script can rebuild summaries from approved reviews. | Accepted |
 
-| [[ADR_0027_Review_Media_Read_Model]] | `ReviewMedia` stores trusted review image rows and `Review.hasImages` is the indexed public photo-review facet. `Review.images` remains a legacy mirror while backfill/transition completes. | Accepted |
 | [[ADR_0028_Review_Cursor_Pagination]] | Public review list load-more uses cursor/keyset pagination while preserving legacy `page/limit` response compatibility. | Accepted |
-| [[ADR_0029_Review_Media_Metadata]] | `ReviewMedia` and `PendingReviewImage` carry verified Cloudinary image metadata for future media-heavy widgets while preserving the public `images` contract. | Accepted |
 | [[ADR_0030_Cleanup_Hardening]] | `cleanup-images` orphan deletion is hardened with a circuit-breaker (G1 empty-used-set / G2 30% ratio / G3 200 absolute), two-phase quarantine (mark now, sweep after a grace window), a `MediaCleanupRun` audit log, and `source:cron` Sentry error alerts (failures + breaker trips). `?force=1` overrides G2/G3 but never G1. | Accepted |
 | [[ADR_0032_Review_Video_On_Mux]] | Review video provider is **Mux** while retaining the provider-agnostic model and durable lifecycle. Active path uses Mux direct upload (UpChunk), Mux webhook dedup/audit, provider-neutral media jobs, signed admin playback, and public playback IDs after approval. Production Mux canary evidence allowed the contract migration to enter the active deploy path; external Cloudflare Stream/R2 teardown remains separately gated. | Accepted |
 | [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]] | `widget.renuvex.app` is the Cloudflare Worker Static Assets origin and narrow public-read cache for settings/ratings/reviews, while `app.renuvex.app` remains the Vercel backend/API/upload/Mux/QStash/write origin. Worker fails closed for non-allowlisted `/api/*`; API and read origins are explicit widget build-time settings with rollback fallback. | Accepted |
 | [[ADR_0034_AWS_Review_Image_Migration]] | AWS-only review image contract. New image uploads use S3/CloudFront, finite generated variants, `https://media.renuvex.app/reviews/<assetId>/<variant>.<format>` public URLs, signed private admin preview, DB-backed public reads, and breaker-guarded AWS object-family cleanup. | Accepted |
 | [[ADR_0035_QStash_Scheduler_For_Maintenance]] | Maintenance scheduling moves to a staged QStash contract: a signed internal scheduler endpoint, explicit task bodies, DB slot locks for idempotency, and Vercel Cron removal only after QStash schedule acceptance. | Accepted |
 | [[ADR_0036_Review_Request_Email_Architecture]] | Deployed-but-disabled review-request architecture with current ikas customer subscription authorization, immutable delivered-line evidence, stable package-line grouping, additive V5 lifecycle/DSR/retention, and Multi-Product Batch/Envelope V3.2. AWS sender, sandbox, review-domain DNS, IYS/privacy/legal acceptance, and activation remain separately gated. | Accepted |
-| [[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]] | `(storeId, productId)` ownership is protected by explicit provider evidence, tombstones, bounded QStash reconciliation, fail-closed slug resolution, and a live ready gate before consumer enforcement. | Accepted - closure source/local gates implemented; PR/deploy, Worker, managed scale, conflict operations, live readiness, and Release B remain open |
-| [[ADR_0038_Runtime_Attested_Storefront_Placement]] | Versioned `placementPolicy` selects provider-verified, runtime-attested, or disabled placement. Every production badge path requires a strict ephemeral DOM proof before ratings and revalidates context before injection. Legacy auto-placement is safety-first disabled, Ozy is the only explicit runtime detector, and preview/review mounts remain separate. | Accepted; production rollout conditional |
+| [[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]] | `(storeId, productId)` ownership is protected by explicit provider evidence, tombstones, bounded QStash reconciliation, fail-closed slug resolution, and a live ready gate before consumer enforcement. | Accepted; Release A backend, edge, and active-installation readiness passed. Managed scale, conflict operations, remaining lifecycle acceptance, and Release B remain separate. |
+| [[ADR_0038_Runtime_Attested_Storefront_Placement]] | Versioned `placementPolicy` selects provider-verified, runtime-attested, or disabled placement. Every production badge path requires a strict ephemeral DOM proof before ratings and revalidates context before injection. Legacy auto-placement is safety-first disabled, Ozy is the only explicit runtime detector, and preview/review mounts remain separate. | Accepted; PR #40, Vercel/Worker rollout, and Canary 1 passed. Natural reconciliation, Canary 2, and owner-deferred Sentry alert delivery remain before Production closeout. |
 
 ## Superseded / Deprecated
 
 | ID | Title | Status |
 |---|---|---|
+| [[ADR_0027_Review_Media_Read_Model]] | Normalized review-media read model | Accepted core; image-provider behavior superseded by [[ADR_0034_AWS_Review_Image_Migration]] |
+| [[ADR_0029_Review_Media_Metadata]] | Review-media metadata contract | Accepted core; image-provider behavior superseded by [[ADR_0034_AWS_Review_Image_Migration]] |
 | [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]] | Earlier provider-agnostic video foundation | Superseded by [[ADR_0032_Review_Video_On_Mux]] (2026-06-17) |
 
 ## How to add an ADR
@@ -77,6 +85,7 @@ related:
 - [[Open_Questions]]
 
 ## Change Log
+- 2026-09-10: Restored missing ADR 0005, aligned superseded ADR placement with frontmatter, and refreshed ADR 0037/0038 rollout summaries from their canonical records.
 - 2026-08-08: Corrected ADR_0037 rollout status after live edge verification:
   backend/DB readiness is proven for the active installation, while the serving
   Worker, operational closure, Release B, and large-scale gates remain open.

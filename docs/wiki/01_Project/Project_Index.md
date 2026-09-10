@@ -3,7 +3,7 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-02
+updated: 2026-09-10
 tags:
   - quick-reference
 related:
@@ -19,7 +19,7 @@ related:
 ## Entry points
 - App entry / auth bootstrap → [src/app/page.tsx](src/app/page.tsx) → [src/app/hooks/use-base-home-page.ts](src/app/hooks/use-base-home-page.ts)
 - Widget bundle entry → [src/widget/index.js](src/widget/index.js) → built to [public/widget.js](public/widget.js)
-- Preview iframe → [src/app/(preview)/preview/route.ts](src/app/(preview)/preview/route.ts)
+- Preview iframe → [canonical preview route](<src/app/(preview)/preview/[widgetId]/[scene]/route.ts>)
 - Layout / theming → [src/app/layout.tsx](src/app/layout.tsx), [src/app/globals.css](src/app/globals.css)
 
 ## OAuth + Auth
@@ -35,19 +35,22 @@ related:
 - Reviews (list/update/delete) → [src/app/api/admin/reviews/route.ts](src/app/api/admin/reviews/route.ts)
 - Settings (per-widget) → [src/app/api/admin/settings/route.ts](src/app/api/admin/settings/route.ts)
 - Inject scripts (manual re-inject) → [src/app/api/admin/inject-scripts/route.ts](src/app/api/admin/inject-scripts/route.ts)
-- Cleanup orphan AWS image families (cron) → [src/app/api/admin/daily-maintenance/route.ts](src/app/api/admin/daily-maintenance/route.ts), [src/app/api/admin/cleanup-images/route.ts](src/app/api/admin/cleanup-images/route.ts)
+- Maintenance handlers → [src/app/api/admin/daily-maintenance/route.ts](src/app/api/admin/daily-maintenance/route.ts), [src/app/api/admin/cleanup-images/route.ts](src/app/api/admin/cleanup-images/route.ts)
+- QStash scheduled-job receiver → [src/app/api/internal/scheduled-jobs/route.ts](src/app/api/internal/scheduled-jobs/route.ts)
 - Example ikas-backed admin call → [src/app/api/ikas/get-merchant/route.ts](src/app/api/ikas/get-merchant/route.ts)
 
 ## Public API (explicit anonymous or session policy)
 - Reviews list + submit → [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts)
-- Listing badges (bulk avg+count by slug) → [src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts)
+- Listing badge fallback discovery (slug → Product ID + rating; no-store) → [src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts)
 - Widget settings (read by widget.js) → [src/app/api/public/settings/route.ts](src/app/api/public/settings/route.ts)
 - AWS image upload sign/register -> [src/app/api/public/upload/sign/route.ts](src/app/api/public/upload/sign/route.ts), [src/app/api/public/upload/register/route.ts](src/app/api/public/upload/register/route.ts)
 
 ## Preview pipeline
-- Iframe HTML → [src/app/(preview)/preview/route.ts](src/app/(preview)/preview/route.ts)
-- Settings persistence (preview-only) → [src/app/api/preview/settings/route.ts](src/app/api/preview/settings/route.ts)
-- Reviews fixture for preview → [src/app/api/preview/reviews/route.ts](src/app/api/preview/reviews/route.ts)
+- Compatibility redirect → [src/app/(preview)/preview/route.ts](src/app/(preview)/preview/route.ts)
+- Canonical prerendered iframe → [route handler](<src/app/(preview)/preview/[widgetId]/[scene]/route.ts>)
+- Route catalog → [src/lib/widgets/preview-routes.ts](src/lib/widgets/preview-routes.ts)
+- Local scenes and fixture data → [src/widget/preview/scenes.js](src/widget/preview/scenes.js), [src/widget/preview/fixtures.js](src/widget/preview/fixtures.js)
+- Preview document and runtime rendering → [src/widget/preview/document.js](src/widget/preview/document.js), [src/widget/preview/index.js](src/widget/preview/index.js)
 
 ## Database
 - Schema entrypoint → [prisma/schema.prisma](prisma/schema.prisma); domain models → [prisma/models/](prisma/models/)
@@ -91,7 +94,7 @@ related:
 - App config (oauth, urls) → [src/globals/config.ts](src/globals/config.ts)
 - ikas dev settings → [ikas.config.json](ikas.config.json)
 - Next config → [next.config.js](next.config.js)
-- Vercel (region + cron) → [vercel.json](vercel.json)
+- Vercel deployment config → [vercel.json](vercel.json)
 - Widget build script → [scripts/build-widget.mjs](scripts/build-widget.mjs)
 - Tailwind v4 styles → [src/app/globals.css](src/app/globals.css)
 - TS config → [tsconfig.json](tsconfig.json)
@@ -103,4 +106,5 @@ related:
 - [[Backend_API_Map]]
 
 ## Change Log
+- 2026-09-10: Replaced removed preview API pointers with the canonical static preview route, local fixtures, and QStash scheduler receiver.
 - 2026-05-12: Updated the quick pointer for widget icons after splitting the registry under [src/widget/icons/](src/widget/icons/).

@@ -3,7 +3,7 @@ type: bug
 project: renuvex-product-reviews
 status: active
 created: 2026-07-29
-updated: 2026-07-29
+updated: 2026-09-10
 last_verified: 2026-07-29
 confidence: high
 tags:
@@ -25,6 +25,11 @@ source_files:
 ---
 
 # Bug - Review widget SPA health probe false positive
+
+## Status
+
+Fixed in source and regression-tested on 2026-07-29. Dedicated live
+production/Sentry effectiveness was not recorded in this bug note.
 
 ## Agent Brief
 

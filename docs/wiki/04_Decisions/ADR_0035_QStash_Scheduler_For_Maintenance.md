@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-07-04
-updated: 2026-07-30
-last_verified: 2026-07-30
+updated: 2026-09-10
+last_verified: 2026-09-10
 confidence: high
 tags:
   - adr
@@ -34,6 +34,12 @@ signed POST bodies; `CRON_SECRET` remains only for manual/admin endpoints; and
 `ScheduledJobRunLock` prevents duplicate same-slot execution. Do not use
 QStash `nextScheduleTime` as the health gate; rely on delivery logs, DLQ, and
 runtime DB lock evidence.
+
+## Status
+
+Accepted. QStash is the repository scheduler source of truth, and
+`vercel.json` contains no cron definitions. Live schedule health remains an
+operational check in [[Maintenance_Runbook]].
 
 ## Context
 

@@ -3,7 +3,7 @@ type: bug
 project: renuvex-product-reviews
 status: active
 created: 2026-06-12
-updated: 2026-08-01
+updated: 2026-09-10
 last_verified: 2026-08-01
 confidence: high
 tags:
@@ -27,6 +27,12 @@ source_files:
 ---
 
 # Widget Editor Late Settings Dirty State
+
+## Status
+
+Fixed in source. The late-hydration, type-import, and hard-error paths are
+regression-covered; this note does not record a separate live merchant
+acceptance.
 
 ## Symptom
 Opening the Product Reviews customization screen could immediately show the "unsaved changes" badge and an active save button, even before the merchant changed a setting. The preview could also look like defaults on that first entry. If the merchant discarded the unsaved state and reopened the editor, the previously saved settings appeared.
