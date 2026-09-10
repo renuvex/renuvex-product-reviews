@@ -5,6 +5,7 @@ status: active
 created: 2026-05-11
 updated: 2026-09-10
 last_verified: 2026-09-10
+confidence: high
 tags:
   - sentry
   - observability
@@ -18,6 +19,14 @@ related:
   - "[[Security_And_Rate_Limits]]"
   - "[[ADR_0009_Sentry_Observability_Strategy]]"
   - "[[Phase_1_Widget_Runtime_Audit]]"
+source_files:
+  - "sentry.server.config.ts"
+  - "sentry.edge.config.ts"
+  - "src/instrumentation.ts"
+  - "src/instrumentation-client.ts"
+  - "src/app/global-error.tsx"
+  - "src/app/api/public/widget-error/route.ts"
+  - "src/widget/core/error-reporter.js"
 ---
 
 # Sentry Operations
@@ -39,15 +48,13 @@ Sentry is the observability surface for the Next.js panel app. The organization 
 - `@sentry/nextjs` (panel SDK)
 - Sentry MCP server: `https://mcp.sentry.dev/mcp/renuvex`
 - Sentry CLI npm package: `sentry@^0.33` (global on the maintainer machine)
-- CLI config: `C:\Users\mertw\.sentry\cli.db`
+- CLI authentication: local Sentry CLI credential store (outside the repository)
 - Vercel-Sentry integration (Vercel Marketplace): injects `SENTRY_ORG` and `SENTRY_PROJECT` into Vercel env automatically; `SENTRY_AUTH_TOKEN` is added manually.
 
 ## Project Coordinates
 - Organization: `renuvex`
 - Project slug: `renuvex-product-reviews`
-- Project ID: `4511372449218640`
 - Region: EU (`de.sentry.io`)
-- Authenticated CLI user: `mertworkspace2906@gmail.com`
 
 ## Runtime Initialization
 - `src/instrumentation.ts` — Next.js entry. Conditionally imports `sentry.server.config.ts` on `nodejs` and `sentry.edge.config.ts` on `edge`. Exports `onRequestError = Sentry.captureRequestError`.
@@ -86,7 +93,8 @@ release/source-map upload should be treated as failed until the token is rotated
 - `@sentry/cli` is approved in `package.json` `pnpm.onlyBuiltDependencies`. If Vercel logs `Ignored build scripts: @sentry/cli`, the source-map upload install path is not in the expected state.
 - Vercel "Redeploy" without a new commit will re-run with current env, but **will not include code changes not yet pushed**. Always commit Sentry config changes before redeploying.
 - Multiple org auth tokens exist for the project (wizard generates one per run). Keep one for local (`.env.sentry-build-plugin`) and one for Vercel CI; revoke unused ones in Settings → Organization Tokens.
-- Sentry MCP token persists in `C:\Users\mertw\.sentry\cli.db`. It auto-refreshes; do not commit the file.
+- Sentry MCP/CLI credentials persist in the maintainer's local credential store.
+  Never copy that store or its contents into the repository or wiki.
 - ⚠️ **`search_issues` (MCP) under-counts for this org.** It has returned only the most-recently-active issue, silently omitting other `unresolved` ones (reproduced with `is:unresolved` and `lastSeen:-30d`). To enumerate reliably, fetch consecutive short IDs (`RENUVEX-PRODUCT-REVIEWS-<n>`) via `get_sentry_resource`, or use the web UI. Treat `search_issues` counts as a lower bound.
 
 ## Quota Levers (in order of preference if quota alerts fire)
@@ -182,37 +190,3 @@ These entries exist so future work does not re-discover them from scratch.
 - [[Security_And_Rate_Limits]]
 - [[Config_And_Env_Map]]
 - [[Phase_1_Widget_Runtime_Audit]]
-
-## Change Log
-- 2026-09-10: Confirmed read-only that Sentry is installed, production event
-  ingestion works, and dedicated read/alerts credentials can access `renuvex /
-  renuvex-product-reviews`. Existing workflows remain limited to cron and media
-  alerts. The preceding 24 hours contained six non-burst
-  `placement-attestation-miss / listing / ozy / stale_after_resolution` events
-  and no resolution miss/error or identity conflict. The owner deferred new
-  Badge workflows, the combined metric detector, and controlled test events;
-  no Sentry mutation occurred.
-- 2026-09-10: PR #40/Worker Canary 1 produced no Renuvex `widget-error`
-  request, widget request failure, or page exception across desktop and
-  `412x915` badge checks. This does not verify alert delivery; no Sentry rule or
-  controlled event was mutated. Both alert paths remain an explicit final
-  closeout gate.
-- 2026-09-10: Badge closeout read-only inspection could not verify production
-  event tags with the generic process organization token because it returned
-  HTTP `401 Invalid org token`. The later dedicated-token check above supersedes
-  that access limitation. No alert, project setting, or token was mutated.
-- 2026-09-09: Added fixed Product ID/placement health fingerprints, strict
-  low-cardinality tag allowlists, runtime-version validation, and privacy
-  filtering. External alert creation/verification remains approval-gated.
-- 2026-07-29: A CI Playwright trace proved that `reviews-widget / missing_after_render` could be false telemetry when SPA navigation intentionally retired the old product before the next product event. Review probes now apply route/product lifecycle relevance without suppressing genuine unexpected removal. See [[Bug_Review_Widget_SPA_Health_Probe_False_Positive]].
-- 2026-05-27: Widget reporter now forwards widget script/chunk resource-load failures and route/visibility/readyState/online context. Classic loader runtime-import failures include the same context, so intermittent "error script" reports after refresh or SPA navigation can be tied to a failed hashed runtime URL instead of remaining browser-only noise.
-- 2026-05-25: RENUVEX-PRODUCT-REVIEWS-6 (`listing-badge` / `missing_after_render`, ~93 events) proven to be a **false positive** — the visibility probe held a stale reference to the pre-self-heal element. Fixed in `core/health.js` (probe re-resolves the live owned node); verified on the dev store (1 report/session → 0). See [[Bug_Listing_Badge_Missing_After_Render]], [[Widget_Architecture]].
-- 2026-05-25: Documented that the Sentry MCP `search_issues` tool under-counts (returns only the latest-active issue, omits other unresolved ones) — enumerate by short ID. Noted that all widget health signals fingerprint into one issue; differentiate via `widgetEventType`/`widgetHealth`. Fixed three issues surfaced this way: `/callback` token-log removal, `setToken` throw→return, dashboard init 401 guard (see [[Debugging_Notes]], [[Auth_And_Installation_Flow]]).
-- 2026-05-25: Sentry organization/project external slugs are now `renuvex` / `renuvex-product-reviews`; Vercel env was redeployed successfully and `.mcp.json` now points at the Renuvex organization scope.
-- 2026-05-25: Namespace cleanup changed the local `next.config.js` project fallback to `renuvex-product-reviews`. Widget-error rate-limit keys use `renuvex_pr_werr_rl:`.
-- 2026-05-17: Added Context7-backed Sentry JavaScript note for Phase 1 post-test triage. Tags, context, breadcrumbs, and captured events are the useful Sentry SDK-level signals, but browser/runtime evidence remains primary.
-- 2026-05-17: Added Phase 1 widget post-test check guidance. Sentry should be used after browser/Playwright verification to catch widget/API runtime errors, but it is not a substitute for visual DOM and event-payload audits. Related: [[Phase_1_Widget_Runtime_Audit]].
-- 2026-05-11: Added "Pending Operational Improvements" section: alert rules, MCP scope narrowing, and saved searches. None blocking — captured here so they are not re-discovered from scratch.
-- 2026-05-11: Added widget error forwarding via `/api/public/widget-error`. Tiny in-widget reporter (637 bytes gzip) forwards uncaught widget errors to the panel's Sentry SDK without bundling the SDK into the widget. Decision in [[ADR_0010_Widget_Error_Forwarding]].
-- 2026-05-11: Wizard ran successfully; SDK initialized for Node/Edge/browser. Switched DSN from wizard-hardcoded literal to env var read. Set `sendDefaultPii: false`, production `tracesSampleRate: 0.1`, masked Replay with prod 5% / on-error 100%. Deleted the wizard-generated `/sentry-example-page` and `/api/sentry-example-api` after verifying ingestion. Recorded decision in [[ADR_0009_Sentry_Observability_Strategy]].
-- 2026-05-11: Added Sentry operations note after CLI authentication was verified and MCP was scoped to the then-current Sentry organization. Current org/project slugs are `renuvex` / `renuvex-product-reviews`.

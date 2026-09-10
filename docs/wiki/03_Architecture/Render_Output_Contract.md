@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-25
-updated: 2026-07-02
-last_verified: 2026-07-02
+updated: 2026-09-10
+last_verified: 2026-09-10
 confidence: high
 tags:
   - widget
@@ -33,6 +33,15 @@ source_files:
 
 # Render Output Contract
 
+## Agent Brief
+
+Every storefront surface must use the `renuvex-pr-` namespace, shared
+render/icon/media helpers, explicit ownership hooks, and accessible semantic
+controls. Visible PDP, listing, review, and quick-view output is Product ID
+bound; slug may remain only on a temporary discovery placeholder. Review
+surfaces and overlays must use the shared Shadow DOM style gate. Verify the
+named source and runtime/interaction tests before changing this contract.
+
 The storefront widget injects HTML into a third-party (ikas) theme it does not control. This page is the **standard every rendered surface must follow** so CSS, JS event-binding, re-render/self-heal, debugging, and theme-compatibility stay reliable. Verified live against competitors (Loox/Yotpo/Judge.me/Okendo) on 2026-05-25; our pattern mirrors Loox and is leaner than the rest.
 
 ## Namespace & class naming
@@ -42,7 +51,12 @@ The storefront widget injects HTML into a third-party (ikas) theme it does not c
 
 ## `data-renuvex-*` attributes (ownership + hooks)
 Required because ikas gives no stable mount point/slot ([[ADR_0018_Widget_Ownership_And_Placement_Resilience]]). Use **namespaced** `data-renuvex-*` (never generic `data-rating` — collision risk; Loox uses generic and we intentionally don't):
-- Identity/ownership: `data-renuvex-app`, `data-renuvex-slot`, `data-renuvex-store-id`, `data-renuvex-surface`, `data-renuvex-product-id`, `data-renuvex-product-slug`.
+- Identity/ownership: `data-renuvex-app`, `data-renuvex-slot`,
+  `data-renuvex-surface`, and `data-renuvex-product-id`. A listing discovery
+  placeholder may temporarily carry `data-renuvex-product-slug`; it is removed
+  or promoted to a Product ID slot before visible badge output. Do not invent a
+  `data-renuvex-store-id` hook unless source and privacy contracts explicitly
+  require it.
 - Render data/CSS hook: `data-renuvex-rating`, `data-renuvex-count`, `data-renuvex-align` (alignment via attr + CSS, Loox-style — not inline `justify-content`).
 - **Stable test/selector hook (recommended, gap today):** add `data-renuvex-testid` on primary surfaces. Competitors (Loox `data-testid`) expose stable hooks; our a11y label ids are random and unsuitable for e2e/theme targeting.
 

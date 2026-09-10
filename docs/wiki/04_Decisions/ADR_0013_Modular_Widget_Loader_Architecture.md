@@ -3,7 +3,7 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-16
-updated: 2026-05-25
+updated: 2026-09-10
 last_verified: 2026-05-25
 confidence: high
 tags:
@@ -38,6 +38,15 @@ source_files:
 ---
 
 # ADR_0013 — Modular Widget Loader Architecture
+
+## Agent Brief
+
+This accepted ADR explains the phased move from one storefront bundle to one
+stable ikas script loader with lazy surfaces. The active build now emits a
+classic loader plus manifest-selected immutable ESM runtime/chunks; references
+to a single IIFE describe the pre-split phase. Use [[Widget_Architecture]] and
+the build manifest for current implementation truth, while preserving this ADR
+for rationale and compatibility constraints.
 
 ## Status
 Accepted. Phase 1 implementation landed in commit `a68704e` and was runtime-verified

@@ -1,9 +1,9 @@
 ---
 type: research
 project: renuvex-product-reviews
-status: active
+status: archived
 created: 2026-06-30
-updated: 2026-06-30
+updated: 2026-09-10
 last_verified: 2026-06-30
 confidence: medium
 tags:
@@ -33,8 +33,9 @@ comparison for a future review-image provider decision. It compares AWS
 S3/CloudFront against Cloudflare Images and Cloudflare R2 plus Cloudflare Image
 Transformations.
 
-This is **not** a migration decision. The current implemented provider remains
-Cloudinary until a separate image-provider migration is approved.
+This was not a migration decision. At the snapshot date the implemented
+provider was Cloudinary; [[ADR_0034_AWS_Review_Image_Migration]] later
+superseded that implementation state and AWS is now current.
 
 ## Scope
 
@@ -159,7 +160,8 @@ photo reviews.
 2. Estimate real active-image reuse: how many unique review images are actually
    transformed/viewed per store per month?
 3. Decide whether Renuvex needs a custom image pipeline before public launch or
-   whether Cloudinary remains acceptable until real usage proves otherwise.
+   whether the current AWS path remains acceptable until real usage proves
+   otherwise. Cloudinary is historical and is not a fallback recommendation.
 4. If AWS remains a candidate, verify flat-rate plan contract details before
    assuming the public table maps directly to Renuvex production traffic.
 

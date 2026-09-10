@@ -67,6 +67,9 @@ const MAX_PROMPT_PAGE_WORDS = 1200;
 const MAX_AGENTS_WORDS = 600;
 const LONG_PAGE_WORDS = 1200;
 const AGENT_BRIEF_WORDS = 250;
+const MAX_INDEX_WORDS = 500;
+const MAX_LOG_WORDS = 600;
+const METADATA_CONTRACT_DATE = "2026-09-10";
 
 const HOT_CONTEXT_REQUIRED_HEADINGS = [
   "## Current Focus",
@@ -79,17 +82,10 @@ const HOT_CONTEXT_REQUIRED_HEADINGS = [
 const allowedPromptFiles = new Set([
   "Agent_Rules.md",
   "New_Session_Start_Prompt.md",
-  "Documentation_Update_Prompt.md",
   "Wiki_Maintenance_Prompt.md",
   "Problem_Resolution_Prompt.md",
-  "IDE_Agent_Usage.md",
   "Architecture_Review_Prompt.md",
-  "Claude_Code_Rules.md",
-  "Codex_Rules.md",
   "Database_Review_Prompt.md",
-  "Debug_Prompt.md",
-  "Existing_AI_Rules_And_Ikas_CLI_Instructions.md",
-  "Master_Project_Prompt.md",
   "Widget_Development_Prompt.md",
 ]);
 
@@ -332,16 +328,36 @@ function getWikiLinkTargets(text) {
 }
 
 function buildWikiLookup(files) {
-  const exact = new Set();
-  const basenames = new Set();
+  const exact = new Map();
+  const basenames = new Map();
 
   for (const file of files) {
     const relative = wikiRel(file).replace(/\.md$/, "");
-    exact.add(relative);
-    basenames.add(path.basename(relative));
+    const basename = path.basename(relative);
+    exact.set(relative, file);
+    const matches = basenames.get(basename) ?? [];
+    matches.push(file);
+    basenames.set(basename, matches);
   }
 
   return { exact, basenames };
+}
+
+function resolveWikiLink(target, currentFile, lookup) {
+  if (!target || target.startsWith("#") || /^https?:\/\//i.test(target)) return null;
+
+  const normalized = target.replace(/\.md$/, "").replaceAll("\\", "/");
+  const currentDir = path.dirname(wikiRel(currentFile)).replaceAll("\\", "/");
+  const relativeCandidate = path.posix.normalize(path.posix.join(currentDir, normalized));
+
+  if (lookup.exact.has(normalized)) return lookup.exact.get(normalized);
+  if (lookup.exact.has(relativeCandidate)) return lookup.exact.get(relativeCandidate);
+  if (!normalized.includes("/")) {
+    const matches = lookup.basenames.get(normalized) ?? [];
+    if (matches.length === 1) return matches[0];
+  }
+
+  return null;
 }
 
 function wikiLinkExists(target, currentFile, lookup) {
@@ -355,7 +371,7 @@ function wikiLinkExists(target, currentFile, lookup) {
   return (
     lookup.exact.has(normalized) ||
     lookup.exact.has(relativeCandidate) ||
-    (!normalized.includes("/") && lookup.basenames.has(normalized))
+    (!normalized.includes("/") && (lookup.basenames.get(normalized)?.length ?? 0) === 1)
   );
 }
 
@@ -369,6 +385,39 @@ function validateWikiLinks(file, text, lookup) {
 
     if (!wikiLinkExists(target, file, lookup)) {
       add("ERROR", file, `broken wiki link: [[${target}]]`);
+    }
+  }
+}
+
+function withoutFencedCode(text) {
+  return text.replace(/^```[^\r\n]*\r?\n[\s\S]*?^```\s*$/gm, "");
+}
+
+function validatePageStructure(file, text) {
+  const prose = withoutFencedCode(text);
+
+  if (/^## (?:Change Log|Update History)\s*$/im.test(prose)) {
+    add("ERROR", file, "generic page history is forbidden; use Git or the owning ADR, bug, runbook, or dated evidence record.");
+  }
+
+  const seen = new Set();
+  for (const match of prose.matchAll(/^##\s+(.+?)\s*$/gm)) {
+    const heading = match[1].replace(/\s+#+$/, "").trim().toLowerCase();
+    if (seen.has(heading)) {
+      add("ERROR", file, `duplicate level-two heading: ${match[1].trim()}`);
+    }
+    seen.add(heading);
+  }
+}
+
+function validateWikiLookup(lookup) {
+  for (const [basename, matches] of lookup.basenames) {
+    if (matches.length > 1) {
+      addByRel(
+        "ERROR",
+        "docs/wiki",
+        `duplicate wiki basename makes short links ambiguous: ${basename}.md (${matches.map(rel).join(", ")})`
+      );
     }
   }
 }
@@ -389,6 +438,19 @@ function validateHotContext(file, text, fm) {
       );
     }
   }
+
+  const exactIdentifiers = [
+    /\bdpl_[A-Za-z0-9]+\b/g,
+    /\b[0-9a-f]{40}\b/gi,
+    /\bruntime-[A-Z0-9]{8}\.js\b/g,
+    /\b\d+\s*\/\s*\d+\s+migrations?\b/gi,
+  ];
+  for (const pattern of exactIdentifiers) {
+    if (pattern.test(text)) {
+      addStrictable(file, "Hot_Context contains volatile deployment, commit, runtime, or migration-count detail; route exact evidence to a dated record.");
+      break;
+    }
+  }
 }
 
 function validateIndex(file, text) {
@@ -397,6 +459,46 @@ function validateIndex(file, text) {
   }
   if (!text.includes("| Task Type |") || !text.includes("| Read First |")) {
     add("ERROR", file, "Index.md task routing table is missing required columns.");
+  }
+}
+
+function validateReachability(files, lookup, pageRecords) {
+  const indexFile = path.join(wikiRoot, "Index.md");
+  if (!exists(indexFile)) return;
+
+  const reachable = new Set();
+  const queue = [indexFile];
+
+  while (queue.length > 0) {
+    const file = queue.shift();
+    if (!file || reachable.has(file)) continue;
+    reachable.add(file);
+
+    const record = pageRecords.get(file);
+    if (!record) continue;
+    for (const target of getWikiLinkTargets(record.text)) {
+      const resolved = resolveWikiLink(target, file, lookup);
+      if (resolved && !reachable.has(resolved)) queue.push(resolved);
+    }
+  }
+
+  for (const file of files) {
+    const record = pageRecords.get(file);
+    if (!record?.fm || record.isTemplate) continue;
+    const status = scalar(record.fm.values.status);
+    if ((status === "active" || status === "draft") && !reachable.has(file)) {
+      addStrictable(file, "active/draft wiki page is not reachable from Index.md through wiki links.");
+    }
+  }
+
+  const indexRecord = pageRecords.get(indexFile);
+  if (!indexRecord) return;
+  for (const target of getWikiLinkTargets(indexRecord.text)) {
+    const resolved = resolveWikiLink(target, indexFile, lookup);
+    const status = scalar(pageRecords.get(resolved)?.fm?.values?.status);
+    if (status === "archived" || status === "superseded") {
+      add("ERROR", indexFile, `hot-path Index links directly to ${status} page: [[${target}]]`);
+    }
   }
 }
 
@@ -446,6 +548,9 @@ if (!exists(wikiRoot)) {
 const files = walk(wikiRoot);
 const wikiLookup = buildWikiLookup(files);
 const sourceToWikiPages = new Map();
+const pageRecords = new Map();
+
+validateWikiLookup(wikiLookup);
 
 const requiredFiles = [
   path.join(wikiRoot, "Index.md"),
@@ -468,6 +573,8 @@ for (const file of files) {
   const isArchive = relative.includes("/archive/");
   const isTemplate = /\/\d+_Templates\//.test(relative);
 
+  pageRecords.set(file, { text, fm, isTemplate });
+
   if (!fm && !isArchive && !isTemplate) {
     add("ERROR", file, "missing frontmatter.");
   }
@@ -479,10 +586,16 @@ for (const file of files) {
       }
     }
 
-    if (strictMode) {
+    const pageStatus = scalar(fm.values.status);
+    const updated = scalar(fm.values.updated);
+    if (
+      (pageStatus === "active" || pageStatus === "draft") &&
+      updated >= METADATA_CONTRACT_DATE &&
+      !isTemplate
+    ) {
       for (const field of RECOMMENDED_FRONTMATTER_FIELDS) {
         if (!fm.keys.has(field)) {
-          add("WARN", file, `missing recommended frontmatter field: ${field}`);
+          addStrictable(file, `missing post-contract frontmatter field: ${field}`);
         }
       }
     }
@@ -499,6 +612,7 @@ for (const file of files) {
   }
 
   validateWikiLinks(file, text, wikiLookup);
+  validatePageStructure(file, text);
 
   const wc = wordCount(text);
 
@@ -511,6 +625,13 @@ for (const file of files) {
 
   if (relative === "docs/wiki/Index.md") {
     validateIndex(file, text);
+    if (wc > MAX_INDEX_WORDS) {
+      add("ERROR", file, `Index exceeds ${MAX_INDEX_WORDS} words. Current: ${wc}`);
+    }
+  }
+
+  if (relative === "docs/wiki/Log.md" && wc > MAX_LOG_WORDS) {
+    add("ERROR", file, `Log history router exceeds ${MAX_LOG_WORDS} words. Current: ${wc}`);
   }
 
   if (relative.includes(`docs/wiki/${PROMPTS_DIR_NAME}/`) && wc > MAX_PROMPT_PAGE_WORDS) {
@@ -541,6 +662,8 @@ for (const file of files) {
     }
   }
 }
+
+validateReachability(files, wikiLookup, pageRecords);
 
 const promptsDir = path.join(wikiRoot, PROMPTS_DIR_NAME);
 if (exists(promptsDir)) {

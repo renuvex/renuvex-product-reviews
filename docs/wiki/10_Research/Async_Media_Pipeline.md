@@ -1,9 +1,9 @@
 ---
 type: research
 project: renuvex-product-reviews
-status: active
+status: draft
 created: 2026-06-09
-updated: 2026-07-03
+updated: 2026-09-10
 last_verified: 2026-07-03
 confidence: medium
 tags:

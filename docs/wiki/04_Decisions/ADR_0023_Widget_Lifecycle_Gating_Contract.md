@@ -3,7 +3,7 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-27
-updated: 2026-08-10
+updated: 2026-09-10
 last_verified: 2026-08-10
 confidence: high
 tags:
@@ -55,6 +55,15 @@ source_files:
 ---
 
 # ADR 0023: Widget Lifecycle Gating Contract
+
+## Agent Brief
+
+All asynchronous storefront work is scoped to the current route/product epoch,
+surface generation, mount, and adapter proof. Late responses, recycled cards,
+hidden/replaced modals, or changed Product IDs must retire without visible DOM.
+Use the shared lifecycle/context helpers and preserve one observer plus bounded
+retries; local per-surface guards must not create a second competing lifecycle
+owner.
 
 ## Status
 Accepted (2026-05-27).

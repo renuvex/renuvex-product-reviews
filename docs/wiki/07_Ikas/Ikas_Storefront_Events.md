@@ -3,7 +3,7 @@ type: ikas
 project: renuvex-product-reviews
 status: active
 created: 2026-05-16
-updated: 2026-08-10
+updated: 2026-09-10
 last_verified: 2026-08-10
 confidence: high
 tags:
@@ -31,6 +31,15 @@ source_files:
 ---
 
 # ikas Storefront Events
+
+## Agent Brief
+
+Storefront Events are the primary page and product context source, but they are
+analytics-oriented and do not attest that destination DOM is ready. Consume
+supported product/listing payloads through the single storefront-context owner,
+normalize Product IDs, and pair event data with current epoch and DOM placement
+proof. Never treat an event alone, a URL slug, or a delayed response as
+authorization to render.
 
 ## Summary
 

@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-06-14
-updated: 2026-07-30
-last_verified: 2026-06-21
+updated: 2026-09-10
+last_verified: 2026-09-10
 confidence: high
 tags:
   - video
@@ -43,8 +43,22 @@ source_files:
 
 # Review Video Mux Canary Runbook
 
+## Agent Brief
+
+Use this only for an explicitly approved Mux review-video canary. Keep Preview
+and Production credentials/resources isolated, prove capability and webhook
+contracts before upload, and treat provider, Vercel environment, deployment,
+or cleanup actions as separate mutation gates. Re-check current source and
+provider state before executing commands; the last full canary verification
+date remains in frontmatter.
+
 ## Purpose
-This runbook controls the Mux review-video canary. The first canary is Preview-only. Production activation is a later gate and must use the separate production Mux environment.
+This runbook controls a future explicitly approved Mux review-video canary or
+regression acceptance. The original Preview and Production rollout has already
+completed and review video is live; the historical Preview-first sequence below
+is retained as the isolation model, not as current release status. Any new
+Production change still requires its own gate and the separate Production Mux
+environment.
 
 ## Environment Separation
 - Preview/local: Mux environment `Renuvex - Products Review (Preview)`.

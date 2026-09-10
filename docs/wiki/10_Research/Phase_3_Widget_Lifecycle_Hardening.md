@@ -1,9 +1,9 @@
 ---
 type: research
 project: renuvex-product-reviews
-status: active
+status: archived
 created: 2026-05-18
-updated: 2026-05-18
+updated: 2026-09-10
 last_verified: 2026-05-18
 confidence: high
 tags:
@@ -85,7 +85,9 @@ risks remained open as ADR_0013 Phase 3 work:
 
 ### Cron consolidation
 
-Vercel cron count kept at 2 ([vercel.json](vercel.json)):
+Historical rollout state kept two scheduled maintenance jobs. Scheduling has
+since moved to QStash and `vercel.json` no longer declares crons; use
+[[Maintenance_Runbook]] for the active contract. The original two jobs were:
 
 - `/api/admin/daily-maintenance` (`0 3 * * *`) — runs pending-upload cleanup +
   storefront-script reconcile.

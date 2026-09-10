@@ -95,7 +95,3 @@ After the fix:
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 - [[Bug_Index]]
 - [[Open_Questions]] (Q3 — cleanup cron sıklığı)
-
-## Change Log
-- 2026-05-11: Fixed. `attachImageErrorHandler` + `hideOnImageError` helper'ları eklendi; tüm trusted image render path'leri (strip, card, list, gallery, lightbox mini) `hide` davranışına bağlandı. Lightbox ana görsel için özel placeholder eklendi (`.renuvex-pr-modal-img-error` koyu zemin + metin). Tüm fail durumları `console.warn` ile loglanıyor.
-- 2026-05-11: Sayfa oluşturuldu. Photo strip cap 15 + per-display-size width düzeltmeleriyle birlikte yapılan analiz sonucu açık bulgu olarak kayıt altına alındı.

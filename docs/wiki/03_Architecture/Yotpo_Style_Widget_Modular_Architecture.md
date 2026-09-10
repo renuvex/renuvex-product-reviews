@@ -1,9 +1,9 @@
 ---
 type: architecture
 project: renuvex-product-reviews
-status: active
+status: archived
 created: 2026-05-15
-updated: 2026-05-29
+updated: 2026-09-10
 last_verified: 2026-05-29
 confidence: high
 tags:
@@ -40,9 +40,20 @@ source_files:
 
 # Yotpo-Style Widget Modular Architecture
 
+## Agent Brief
+
+This is the preserved May 2026 design and phase narrative that led to the
+current loader/runtime split. It is not the current implementation contract.
+Use [[Widget_Architecture]] and
+[[ADR_0013_Modular_Widget_Loader_Architecture]] for current ownership, and use
+the dated phase research only when reconstructing why the split was chosen.
+
 ## Summary
 
-The target storefront architecture for this project should be a single ikas-injected loader plus multiple lazy widget modules. This matches the Yotpo-style pattern observed on Protein Ocean while keeping the implementation appropriate for ikas and this app's current codebase.
+The target storefront architecture proposed in May 2026 was a single
+ikas-injected loader plus multiple lazy widget modules. That direction was
+implemented and subsequently hardened; the remainder of this page preserves
+the original rationale and rollout narrative.
 
 Protein Ocean is a **read-only benchmark**, not a normative implementation contract. It is one ikas storefront with a mature Yotpo installation and may include one-off merchant/theme/customization choices. Use it to identify useful patterns and questions before Phase 2, but use official ikas docs, ikas MCP introspection, direct ikas developer feedback, and this app's dev-store verification as the sources of truth for product architecture.
 

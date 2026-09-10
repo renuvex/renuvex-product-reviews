@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-07
-updated: 2026-06-01
-last_verified: 2026-06-01
+updated: 2026-09-10
+last_verified: 2026-09-10
 confidence: high
 source_files:
   - "src/widget/reviews-section/styles.js"
@@ -30,18 +30,33 @@ related:
 
 # Summary Layout Padding Strategy
 
+## Agent Brief
+
+This page owns spacing and title-alignment rules shared by classic, compact,
+hero, minimal, and split review summaries. Shared defaults live in
+`summary-layouts/shared/summary-base.js` and review-section base styles;
+layout-specific files override only their composition. Keep the 600px general
+breakpoint and 768px split breakpoint synchronized with source and responsive
+tests rather than duplicating magic values elsewhere.
+
 ## Summary
 
-Tüm summary layout'lar (`classic`, `compact`, `hero`, `minimal`, `split`) icin padding, margin ve baslik hizalama stratejisi. Bu sayfa, 2026-05-31 itibariyla gecerli olan guncel durumu dokumante eder.
+Spacing, margin, and title-alignment strategy for all summary layouts
+(`classic`, `compact`, `hero`, `minimal`, `split`). The values below were
+rechecked against the focused source files on 2026-09-10.
 
 Classic/default summary root CSS now lives in `summary-layouts/classic/styles.js`. Shared child CSS such as bar rows, action rows, and filters lives in `reviews-section/styles/summary-controls.js`; shared root/mobile tokens live in `reviews-section/styles/base.js`. `reviews-section/styles.js` keeps the stable `CLASSIC_CSS` aggregation contract.
 
 ## Design Principles
 
-1. **Tutarlilik**: Tum layout'lar ayni padding/margin dilini konusur. Magic number yerine token ve ortak kural.
-2. **Desktop yan padding birligi**: Dar ekranlarda ve farkli temalarda icerik kenara yapismasin.
-3. **Baslik hizalama birligi**: Classic default title is centered; compact, hero, minimal, and split keep left alignment with layout-local overrides.
-4. **Mobile/desktop ayrimi**: Tek breakpoint (`600px`) uzerinden. Mobile'da `var(--renuvex-pr-pad-summary-mobile)` kullanilir.
+1. **Consistency**: layouts share spacing tokens and common rules instead of
+   duplicating unexplained values.
+2. **Desktop gutters**: narrow containers and merchant themes must not pin
+   content to an edge.
+3. **Title alignment**: classic is centered; compact, hero, minimal, and split
+   use layout-local left alignment on desktop.
+4. **Responsive ownership**: the general mobile breakpoint is `600px`; split
+   uses `768px` for its stacked tablet/mobile composition.
 
 ## Padding Reference Table
 
@@ -123,16 +138,3 @@ Sistemde iki ana breakpoint yaklasimi vardir:
 - [src/widget/summary-layouts/hero/styles.js](src/widget/summary-layouts/hero/styles.js) — hero padding
 - [src/widget/summary-layouts/minimal/styles.js](src/widget/summary-layouts/minimal/styles.js) — minimal padding
 - [src/widget/summary-layouts/split/styles.js](src/widget/summary-layouts/split/styles.js) — split padding + 768px breakpoint
-
-## Change Log
-
-- **2026-06-01**: Shared summary-control CSS ownership split into [reviews-section/styles/summary-controls.js](src/widget/reviews-section/styles/summary-controls.js), while base/mobile tokens moved under [reviews-section/styles/base.js](src/widget/reviews-section/styles/base.js). `CLASSIC_CSS` export and injection order are unchanged.
-- **2026-05-31**: Classic/default summary root, title, avg/count/recommend CSS moved from [reviews-section/styles.js](src/widget/reviews-section/styles.js) to [classic/styles.js](src/widget/summary-layouts/classic/styles.js). At that point shared bar/action/filter/photo/review/modal CSS remained in `reviews-section/styles.js`; the 2026-06-01 split kept the same exported `CLASSIC_CSS` order.
-- **2026-05-07**: Spacing ve Hizalama Guncellemesi.
-  - Summary block'lar arasi dikey bosluk (gap) `12px` -> `20px` yapildi (Classic ve Split Mobile).
-  - Split layout tablet breakpoint'i `601px` -> `769px` yapildi (Tablette dikey dizilim icin).
-  - Compact layout mobil sızıntısı giderildi, panel ici bosluk `20px` yapildi.
-  - Filtre butonu "Yorum Yap" butonu ile dikeyde esitlendi (`align-items: stretch`).
-- **2026-05-07**: Desktop yan padding birligi saglandi. `hero`, `minimal`, `split` layout'larina `8px` yan padding eklendi.
-- **2026-05-07**: Baslik hizalama birligi saglandi. Base `.renuvex-pr-title` `text-align: center` -> `left`.
-- **2026-05-07**: Ikas temasi padding analizi yapildi. `--renuvex-pr-pad-summary-mobile` `16px`, `--renuvex-pr-pad-review-mobile` `16px` yapildi.

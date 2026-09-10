@@ -3,7 +3,7 @@ type: ikas
 project: renuvex-product-reviews
 status: active
 created: 2026-05-15
-updated: 2026-08-10
+updated: 2026-09-10
 last_verified: 2026-08-10
 confidence: high
 tags:
@@ -40,6 +40,15 @@ source_files:
 ---
 
 # ikas Storefront Script Capabilities
+
+## Agent Brief
+
+The app owns one non-destructively reconciled StorefrontJSScript per storefront.
+Generated/MCP operation shapes and active-installation fences govern writes;
+public documentation alone does not authorize a mismatched mutation. The
+injected URL stays a stable HTTPS loader with `publicApiKey`, while page context
+and placement remain runtime concerns. Re-discover and introspect ikas
+operations before changing script lifecycle code.
 
 ## Summary
 

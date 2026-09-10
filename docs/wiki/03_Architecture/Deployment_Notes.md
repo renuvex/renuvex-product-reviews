@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-09
-last_verified: 2026-08-09
+updated: 2026-09-10
+last_verified: 2026-09-10
 confidence: high
 tags:
   - deployment
@@ -15,19 +15,44 @@ related:
   - "[[Config_And_Env_Map]]"
   - "[[Caching_And_Performance]]"
   - "[[Sentry_Operations]]"
+source_files:
+  - "package.json"
+  - "vercel.json"
+  - "wrangler.widget.jsonc"
+  - "scripts/build-widget.mjs"
+  - "scripts/prepare-widget-worker-assets.mjs"
+  - "src/app/api/internal/scheduled-jobs/route.ts"
 ---
 
 # Deployment Notes
 
+## Agent Brief
+
+Use this page for the current Vercel, Cloudflare Worker, database, scheduler,
+and widget artifact deployment boundaries. Production mutations always require
+explicit approval. `vercel.json` has no cron declarations: QStash owns scheduled
+maintenance, while authenticated admin routes are manual fallbacks. Widget
+delivery is a stable classic loader plus manifest-selected immutable ESM
+runtime/chunks; verify origin, edge, manifest, and a fresh storefront session.
+
 ## Summary
-Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler for runtime, session pooler for migrations). Upstash Redis for rate limits. AWS S3/CloudFront for review images. Two scheduled jobs: daily maintenance and monthly AWS image cleanup. Build runs `pnpm prisma:generate && pnpm prisma:migrate:deploy && pnpm build:widget && next build --webpack`.
+Vercel hosts the app/API in `fra1`; Cloudflare Worker Static Assets serves the
+storefront loader/runtime and allowlisted reads. Postgres runs on Supabase,
+Upstash provides Redis/QStash, and AWS S3/CloudFront serves review images. The
+production build runs auth-env verification, Prisma generation and migration
+deploy, live installation-auth verification, widget build, and Next.js webpack
+build as defined in `package.json`.
 
 ## Vercel
 - **Region**: `["fra1"]` ([vercel.json](vercel.json)). Reasonable proximity to ikas/Supabase EU regions.
 - **Production domains**: `app.renuvex.app` is the ikas app/admin/API origin and remains on the production Vercel project. `widget.renuvex.app` is the storefront widget static asset origin and is served by Cloudflare Worker Static Assets. The legacy pre-custom-domain Vercel alias has been removed from the project and must not be used for new configuration or documentation.
-- **Cron**: `/api/admin/daily-maintenance` daily at 03:00 UTC. It verifies pending storefront themes in batches and runs pending-upload cleanup plus storefront script reconciliation. The route still supports lightweight sub-daily execution if the Vercel plan is upgraded and the cron expression is changed later. `/api/admin/cleanup-images` remains monthly on day 1 at 04:00 UTC.
-- **Build command**: `pnpm build` → `pnpm prisma:generate && pnpm prisma:migrate:deploy && pnpm build:widget && next build --webpack`.
-- **Why webpack**: build script forces `--webpack` (Turbopack opt-out, presumably for compatibility — verify when Next ships stable Turbopack production builds).
+- **Scheduling**: `vercel.json` declares no cron jobs. QStash calls the signed
+  internal scheduled-jobs route; `/api/admin/daily-maintenance` and
+  `/api/admin/cleanup-images` remain bearer-authenticated manual fallbacks.
+- **Build command**: `pnpm build` -> `pnpm verify:auth-runtime-env && pnpm prisma:generate && pnpm prisma:migrate:deploy && pnpm verify:ikas-installation-auth && pnpm build:widget && next build --webpack`.
+- **Bundler contract**: the build script explicitly selects webpack with
+  `--webpack`. Its rationale is not encoded in the repository; treat any future
+  bundler change as a separately verified build-contract decision.
 
 ### Preview database isolation gate
 
@@ -35,34 +60,6 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 - `main` remains the only Git branch permitted to deploy automatically. Branch pushes must produce GitHub CI evidence without creating a Vercel Preview deployment.
 - Do not re-enable Preview deployments until `pnpm verify:preview-db-isolation -- --json --branch=<branch>` proves that both Preview database URLs are isolated from Production. A failed isolation check is a rollout blocker, not a warning.
 - After every branch push while this guard is active, confirm that Vercel did not start a Preview deployment and that the Production migration set did not change.
-
-### Review-email disabled rollout
-
-- PR #8 merged as `6163fa11441092d36272da7e9e1d15697c01739e`.
-  Vercel deployment `dpl_5tikvdGzDwK5XBu3FHaP85R5QyeD` reached `Ready`
-  and `app.renuvex.app` was promoted to it.
-- The build applied the three additive review-email migrations successfully.
-  The Production database reports `59/59`, no failed migration, all
-  customer/request/job/attempt lifecycle counts remain zero, and
-  `REVIEW_EMAIL_ENABLED` remains absent. Nine report-mode
-  `ReviewEmailPurgeRun` maintenance audits exist; all succeeded without a
-  sanitized error code.
-- Production acceptance found and reproduced one disabled-state issue: public
-  review routes read activation-only host configuration before checking the
-  global flag, causing `500` while those secrets were intentionally absent.
-  PR #9 merged as `7e89a6dd760388df6a2f033162f2eca944069d51`.
-  Vercel deployment `dpl_5KHmYepsDxhVbKoHMN9JPRA2g82s` reached `Ready` with no
-  pending migration. Live GET/POST checks across legacy exchange, batch session,
-  items, submit, and skip now return `404 not_found` with `private, no-store`.
-  The focused regression is
-  `tests/unit/review-email-disabled-public-routes.test.ts`.
-- `reviews.renuvex.app` is not yet public DNS or a Vercel alias. That domain,
-  its runtime secrets, AWS sender infrastructure, and outbound email remain
-  separate activation gates. Do not weaken TLS or add a local DNS fallback to
-  simulate readiness.
-- No Cloudflare Worker deployment was required. The live Worker health endpoint
-  stayed healthy and its parsed build manifest remained semantically equal to
-  the committed manifest.
 
 ## Database
 - Provider: Supabase Postgres.
@@ -96,9 +93,15 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 - Scope: `read_orders,read_customers,write_orders,read_products,read_inventories,write_inventories` (from [src/globals/config.ts](src/globals/config.ts)). Review-email send authorization requires current customer subscription evidence and therefore fails closed without `read_customers`.
 
 ## Widget bundle
-- Built into [public/widget.js](public/widget.js). **Committed to git** so deploys ship without an extra build step on the Vercel pipeline.
-- Run `pnpm build:widget` after any `src/widget/*` change. Don't forget to commit the artifact.
-- Theme variant: `pnpm build:widget --theme=new-theme` produces `public/widget-new-theme.js`. Runtime selection mechanism is unclear — see [[Open_Questions]].
+- [public/widget.js](public/widget.js) is the stable classic loader. The current
+  runtime map lives in `public/widget-runtime/build-manifest.json`; hashed ESM
+  runtime/chunks are immutable and retention-aware.
+- Run `pnpm build:widget:ci` after any `src/widget/*` change and commit all
+  manifest-selected artifacts. CI/build drift checks reject hand edits or
+  incomplete artifact sets.
+- The `--theme=new-theme` option is stale scaffolding with no supported runtime
+  selection contract. Do not use it for production; removal or implementation
+  remains tracked in [[Roadmap]].
 
 ## Cloudflare Worker widget delivery
 - Live architecture: `widget.renuvex.app` serves storefront static widget assets through Cloudflare Worker Static Assets; `app.renuvex.app` remains the Vercel backend/API/upload/Mux/QStash origin.
@@ -134,7 +137,10 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 ## Local development
 1. `pnpm install`
 2. Copy `.env.example` → `.env.local`, fill values
-3. `pnpm prisma:init` (first run only — pushes schema, no migrations)
+3. For a disposable local database only, `pnpm prisma:init` generates Prisma
+   and runs `db push --accept-data-loss`. Never point it at shared, preview, or
+   production data; normal schema validation uses migrations on disposable
+   PostgreSQL.
 4. `pnpm codegen` (after editing `graphql-requests.ts`)
 5. `pnpm dev` — Next dev server on port 3000
 6. `pnpm build:widget:watch` — auto-rebuild widget bundle
@@ -146,7 +152,9 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 - Review Video V1 preflight uses `scripts/verify-video-infrastructure.mjs --require-webhook --write-probe`, QStash delivery/DLQ inspection, Sentry media-route queries, and the live `/api/public/settings` capability response. Local `.env.local` flag state is not proof of the Vercel Production flag.
 
 ## Notes
-- **Don't bypass the widget bundle commit step.** If you forget to commit `public/widget.js`, deploys ship the old widget. CI does not regenerate.
+- **Do not bypass widget artifact drift checks.** The deploy build regenerates
+  artifacts, but the repository must still contain the matching loader,
+  manifest, runtime, and chunks so review and rollback remain deterministic.
 - Migrations run on **every** deploy. Avoid migrations that can't safely run during traffic (long-running locks). For risky migrations, consider an out-of-band deploy.
 - Manual cron-style admin routes still require `CRON_SECRET`; QStash scheduled execution uses `Upstash-Signature` on `/api/internal/scheduled-jobs` and must not send `CRON_SECRET`.
 - Keep `NEXT_PUBLIC_DEPLOY_URL` and the app's URL in sync. Mismatch breaks OAuth (`getRedirectUri` in [src/helpers/api-helpers.ts](src/helpers/api-helpers.ts) tries to recover when `localhost` config meets non-localhost host, but it's a fallback).
@@ -170,17 +178,3 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 - [[Auth_And_Installation_Flow]]
 - [[Sentry_Operations]]
 - [[Open_Questions]]
-
-## Change Log
-- 2026-07-20: Closed the disabled-route fix-forward through PR #9, recorded its Ready Vercel deployment, six-route live `404` acceptance, unchanged `59/59` migration set, zero customer lifecycle rows, and successful report-mode purge audit rows.
-- 2026-07-20: Recorded PR #8 disabled review-email Production rollout, `59/59` additive migration evidence, the public-route fail-closed fix-forward, and the still-deferred review domain/AWS activation.
-- 2026-07-20: Disabled non-`main` Vercel Git deployments while Preview and Production share the same Supabase project; recorded the mandatory isolation check for safely re-enabling Preview.
-- 2026-07-02: Refreshed live Worker notes after verifying settings read-cache is now live on `widget.renuvex.app` with `MISS -> HIT`; lazy-sync and write/upload/video routes remain on `app.renuvex.app`.
-- 2026-06-28: Updated initial Cloudflare Worker V2 public-read cache rollout notes from [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]]. At that stage V2 was live for allowlisted ratings/reviews reads; settings joined the Worker read-cache after the later read/sync split.
-- 2026-06-28: Added Cloudflare Worker widget delivery rollout notes from [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]]. `widget.renuvex.app` becomes an asset-only target; `app.renuvex.app` remains backend/API.
-- 2026-06-21: Removed the legacy pre-custom-domain Vercel alias after verifying Vercel Production env and live storefront script tags use `app.renuvex.app` / `widget.renuvex.app`.
-- 2026-06-14: Promoted `app.renuvex.app` as the ikas app/admin/API origin and `widget.renuvex.app` as the storefront widget origin. Live storefront checks confirmed the custom widget domain; the old Vercel alias was kept only for a temporary compatibility window.
-- 2026-05-25: GitHub repository and Vercel project renamed to `renuvex-product-reviews`; local `origin` updated. Production domain stayed on the legacy Vercel alias until a custom domain replaced it. `renuvex-product-reviews.vercel.app` returned 404 and the team-scoped Vercel domain was protected, so storefront script URLs could not be changed yet.
-- 2026-05-24: Recorded the Pro upgrade path for sub-daily theme verification and clarified that Upstash Redis is already configured for rate limits, while QStash remains optional future infrastructure.
-- 2026-05-23: Restored `/api/admin/daily-maintenance` to the daily 03:00 UTC Vercel-compatible schedule after the attempted 5-minute cron failed deployment on the current plan. The route still supports lightweight sub-daily runs if the deploy plan or queue architecture changes later.
-- 2026-05-11: Linked [[Sentry_Operations]] after adding Sentry CLI/MCP setup notes.

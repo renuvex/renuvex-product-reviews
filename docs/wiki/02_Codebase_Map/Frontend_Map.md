@@ -3,7 +3,7 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-02
+updated: 2026-09-10
 last_verified: 2026-08-02
 confidence: high
 tags:
@@ -80,7 +80,8 @@ Next.js 16 (16.2), React 19, TypeScript, Tailwind CSS v4 (`@tailwindcss/postcss`
   handoff.
 
 ### Mandatory iframe page pattern (from canonical rules)
-The dashboard route group follows this pattern through its persistent auth boundary (see [[Existing_AI_Rules_And_Ikas_CLI_Instructions]] for full text):
+The dashboard route group follows this pattern through its persistent auth
+boundary. `AGENTS.md` is authoritative; [[Agent_Rules]] explains wiki routing:
 1. **Always** call `AppBridgeHelper.closeLoader()` in a separate `useEffect(() => { AppBridgeHelper.closeLoader(); }, [])` on mount.
 2. **Always** retrieve the JWT via `TokenHelpers.getTokenForIframeApp()`.
 3. **Never** make direct API calls to ikas from the frontend — always go through `/api/admin/*` or `/api/ikas/*` server routes.
@@ -235,6 +236,3 @@ The storefront widget is an entirely different runtime — vanilla JS, IIFE, IE1
 - [[Widget_Files_Map]]
 - [[Widget_Customization]]
 - [[System_Architecture]]
-
-## Change Log
-- 2026-05-08: Added [VisualSelectGrid.tsx](src/features/widget-management/components/editor/VisualSelectGrid.tsx) to the admin editor map. It renders schema-driven visual choice cards for layout select fields without changing stored widget setting values.

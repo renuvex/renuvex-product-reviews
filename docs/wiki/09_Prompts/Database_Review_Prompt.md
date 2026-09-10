@@ -3,7 +3,9 @@ type: prompt
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-09-10
+last_verified: 2026-09-10
+confidence: high
 tags:
   - prompts
   - database
@@ -11,6 +13,9 @@ related:
   - "[[Index]]"
   - "[[Database_Schema]]"
   - "[[Database_Map]]"
+source_files:
+  - "prisma/schema.prisma"
+  - "prisma/migrations"
 ---
 
 # Database Review Prompt
@@ -35,7 +40,9 @@ Output:
 - Update `docs/wiki/03_Architecture/Database_Schema.md` after migration applied.
 
 Hard rules:
-- Migrations run on every Vercel deploy. Never include long-running statements without a plan.
+- Production uses `prisma migrate deploy` during the Vercel build while the old
+  deployment still serves traffic. Breaking changes require expand/contract.
+- Never use `prisma db push` against production.
 - Don't add Postgres enums for status fields — use string literals (existing convention).
 - `Review.images` stays TEXT-JSON for now — don't normalize without a feature reason ([[ADR_0003_Review_Data_Model]]).
 - Never break existing JSON columns (`WidgetSettings.settings`, `StoreSettings.storefrontScripts`) — extend at app layer.

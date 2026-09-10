@@ -3,14 +3,21 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-02
+updated: 2026-09-10
 last_verified: 2026-08-02
+confidence: medium
 tags:
   - critical-files
 related:
   - "[[Index]]"
   - "[[Folder_Structure]]"
   - "[[Project_Index]]"
+source_files:
+  - "package.json"
+  - "scripts/build-widget.mjs"
+  - "public/widget.js"
+  - "public/widget-runtime/build-manifest.json"
+  - "workers/widget-delivery/src/index.ts"
 ---
 
 # Important Files
@@ -167,13 +174,19 @@ code overrides stale prose.
   preview API/sessionStorage persistence.
 
 ### [public/widget.js](public/widget.js)
-- **What:** Built bundle.
-- **Be careful:** **Never hand-edit.** Run `pnpm build:widget` after `src/widget/*` changes. Output is checked into git.
+- **What:** Stable classic IIFE loader that imports the manifest-selected ESM
+  runtime.
+- **Be careful:** **Never hand-edit.** Run `pnpm build:widget` after
+  `src/widget/*` changes. Commit the loader, manifest, current hashed runtime,
+  and manifest-referenced chunks together; retention intentionally keeps some
+  older hashed assets.
 
 ## Build / deploy
 
 ### [scripts/build-widget.mjs](scripts/build-widget.mjs)
-- **What:** esbuild driver. IIFE format, ES2017 target, minified in prod, `node --check` validates output.
+- **What:** esbuild driver. It emits the classic IIFE loader plus a split ESM
+  runtime/chunks, updates the build manifest and compatibility shim, and keeps
+  retained immutable assets for cached loaders.
 - **Be careful:** `--theme=new-theme` aliases swap theme files at bundle time. If you add a theme variant, declare it in the `validThemes` allowlist and provide all aliased modules.
 
 ### [workers/widget-delivery/src/index.ts](workers/widget-delivery/src/index.ts)
@@ -241,13 +254,3 @@ code overrides stale prose.
 - [[Database_Schema]]
 - [[Widget_Architecture]]
 - [[Security_And_Rate_Limits]]
-
-## Change Log
-- 2026-07-29: Documented the explicit anonymous, widget-beacon, and no-CORS
-  trust boundaries; removed the generic public helper contract.
-- 2026-06-28: Added the split-origin widget helper and Cloudflare Worker asset-delivery files to the critical-file list.
-- 2026-05-12: Added [src/widget/icons/index.js](src/widget/icons/index.js) to the widget runtime hot-list after splitting review/rating and filter icon registries under [src/widget/icons/](src/widget/icons/).
-- 2026-05-11: Added [src/widget/core/error-reporter.js](src/widget/core/error-reporter.js) and [src/app/api/public/widget-error/route.ts](src/app/api/public/widget-error/route.ts) under Observability. Together they close the widget-side visibility gap from ADR_0009 by forwarding uncaught widget errors to Sentry via a 637-byte (gzip) in-widget reporter and a rate-limited server endpoint. See [[ADR_0010_Widget_Error_Forwarding]].
-- 2026-05-11: Added the Observability (Sentry) section: [sentry.server.config.ts](sentry.server.config.ts), [sentry.edge.config.ts](sentry.edge.config.ts), [src/instrumentation.ts](src/instrumentation.ts), [src/instrumentation-client.ts](src/instrumentation-client.ts), [src/app/global-error.tsx](src/app/global-error.tsx), and the `withSentryConfig` wrapping in [next.config.js](next.config.js). Each entry calls out the `sendDefaultPii: false` invariant, env-driven DSN, prod sample rates, and the wizard-wrapper ordering rule. See [[ADR_0009_Sentry_Observability_Strategy]].
-- 2026-05-10: Added [src/lib/review-images.ts](src/lib/review-images.ts) as the source of truth for trusted review image URL validation.
-- 2026-05-08: Added [SettingsPanel.tsx](src/features/widget-management/components/editor/SettingsPanel.tsx) and [VisualSelectGrid.tsx](src/features/widget-management/components/editor/VisualSelectGrid.tsx) to the admin widget editor hot-list after introducing schema-driven visual choice cards.

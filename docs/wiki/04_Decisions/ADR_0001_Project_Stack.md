@@ -3,7 +3,9 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-28
+updated: 2026-09-10
+last_verified: 2026-09-10
+confidence: high
 tags:
   - adr
   - stack
@@ -11,6 +13,16 @@ related:
   - "[[Decision_Index]]"
   - "[[Dependency_Map]]"
   - "[[System_Architecture]]"
+  - "[[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]]"
+  - "[[ADR_0034_AWS_Review_Image_Migration]]"
+  - "[[ADR_0035_QStash_Scheduler_For_Maintenance]]"
+source_files:
+  - "package.json"
+  - "prisma/schema.prisma"
+  - "scripts/build-widget.mjs"
+  - "public/widget-runtime/build-manifest.json"
+  - "vercel.json"
+  - "wrangler.widget.jsonc"
 ---
 
 # ADR_0001 — Project Stack
@@ -30,7 +42,8 @@ We're building a SaaS review app for ikas merchants: merchant admin (iframe insi
 - Deploys cleanly to Vercel
 
 ## Decision
-- **Framework**: Next.js 16 (App Router) + React 19 + TypeScript — pinned at `16.2.1` in `package.json`. (Some legacy docs/rule files still say "Next.js 15"; treat the pinned version as authoritative.)
+- **Framework**: Next.js 16 (App Router) + React 19 + TypeScript - Next is
+  pinned at `16.2.1` in `package.json`.
 - **DB**: Postgres (Supabase), Prisma ORM
 - **Styling**: Tailwind CSS v4 + shadcn/ui (Radix primitives)
 - **Sessions**: iron-session for the opaque OAuth browser binding; Upstash
@@ -38,10 +51,15 @@ We're building a SaaS review app for ikas merchants: merchant admin (iframe insi
 - **Auth**: HS256 JWT (`jsonwebtoken`) for browser → server, signed with `CLIENT_SECRET`
 - **Rate limit / ephemeral security state**: Upstash Redis (REST API for
   serverless compatibility)
-- **Image storage**: Cloudinary with signed direct uploads
-- **Widget bundle**: vanilla JS bundled by **esbuild** (separate from Next pipeline)
+- **Image storage/delivery**: private AWS S3 originals and variants delivered
+  through CloudFront; upload uses signed direct-to-S3 requests.
+- **Widget runtime**: vanilla JavaScript built by **esbuild** as a stable classic
+  loader plus immutable split ESM runtime/chunks.
 - **Codegen**: GraphQL Codegen for the ikas Admin client
-- **Hosting**: Vercel (region `fra1`), daily maintenance cron plus monthly fallback cleanup
+- **Hosting/delivery**: Vercel (`fra1`) for the app and APIs; Cloudflare Worker
+  Static Assets for the storefront loader/runtime and allowlisted public reads.
+- **Maintenance scheduler**: QStash-signed daily and monthly jobs; manual admin
+  routes remain authenticated operational fallbacks.
 - **Package manager**: pnpm 10.4.1
 
 ## Reasoning
@@ -49,7 +67,8 @@ We're building a SaaS review app for ikas merchants: merchant admin (iframe insi
 - **Prisma** — type-safe DB layer, mature migrations, good DX.
 - **shadcn/ui** — copy-into-repo primitives; we control them, no version lock-in.
 - **Vanilla JS widget** — every storefront pays for widget bytes and execution time; React/framework overhead is unjustified for a script that paints star ratings.
-- **Cloudinary signed direct upload** — body never proxies through our server; offloads bandwidth + transformation.
+- **AWS signed direct upload** - image bodies do not proxy through the app;
+  registration and variant processing remain server-authoritative.
 - **Upstash REST** — works in serverless cold-starts; no socket pool to manage.
 
 ## Alternatives Considered
@@ -60,8 +79,11 @@ We're building a SaaS review app for ikas merchants: merchant admin (iframe insi
 - **Webpack production builds** vs Turbopack — currently `--webpack` due to compatibility; revisit when Turbopack production ships stable.
 
 ## Consequences
-- The widget bundle is checked into git (`public/widget.js`). Every change requires `pnpm build:widget` before commit.
-- Migrations run on every deploy (`prisma migrate deploy`). Risky migrations need careful sequencing.
+- Widget build outputs are checked into Git: `public/widget.js`, the manifest,
+  current hashed runtime/chunks, and retention-required older assets. Every
+  storefront source change requires the widget build/drift gates.
+- Migrations run on every production deploy while old code may still serve.
+  Breaking changes require expand/contract sequencing.
 - Strong coupling to ikas: the `@ikas/admin-api-client` and AppBridge are not optional.
 - `CLIENT_SECRET` is used for ikas OAuth and AppBridge JWT verification.
 - Cold-start performance depends on Vercel + Supabase pooler health.
@@ -77,3 +99,6 @@ We're building a SaaS review app for ikas merchants: merchant admin (iframe insi
 - [[System_Architecture]]
 - [[ADR_0002_Widget_Injection_Strategy]]
 - [[ADR_0004_Ikas_Integration_Strategy]]
+- [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]]
+- [[ADR_0034_AWS_Review_Image_Migration]]
+- [[ADR_0035_QStash_Scheduler_For_Maintenance]]

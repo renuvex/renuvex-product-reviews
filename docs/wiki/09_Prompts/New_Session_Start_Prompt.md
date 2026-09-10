@@ -3,8 +3,8 @@ type: prompt
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-05-13
-last_verified: 2026-05-13
+updated: 2026-09-10
+last_verified: 2026-09-10
 confidence: high
 tags:
   - new-session
@@ -26,7 +26,10 @@ Before working on this project:
 4. Identify the task domain from the routing table.
 5. Read only the relevant 2-5 wiki pages.
 6. Inspect related source/config/test files.
-7. Summarize the task understanding before editing when the task is non-trivial.
-8. Update wiki only when durable project memory changed.
-9. If wiki conflicts with source code, trust source code and update or flag the wiki.
-10. If uncertain, ask the maintainer or add an item to [[Open_Questions]].
+7. Treat `source_files` as starting points and verify the relevant dependency
+   path before changing behavior.
+8. Update wiki only when durable project memory changed, using the ownership
+   rules in [[Agent_Rules]].
+9. If wiki conflicts with source code, trust source code and repair or flag the
+   wiki. Never bump `last_verified` without an evidence check.
+10. Put genuine unresolved decisions in [[Open_Questions]]; do not guess.

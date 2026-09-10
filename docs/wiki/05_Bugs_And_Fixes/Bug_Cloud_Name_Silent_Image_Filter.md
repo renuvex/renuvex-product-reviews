@@ -83,8 +83,3 @@ There is one important nuance: if `/api/public/settings` returned no response at
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 - [[Caching_And_Performance]]
 - [[Bug_Index]]
-
-## Change Log
-- 2026-05-11: **Structurally closed** by [[ADR_0008_Cloud_Name_Build_Time_Only]]. The runtime sources that could fail (`imagePolicy.cloudName` settings field, per-store localStorage cache, `setTrustedReviewImageCloudName` setter, `warnMissingReviewImagePolicy` runtime helper) were all removed. Cloud name now has a single build-time source. K3 cannot recur as long as the widget bundle is built with a valid `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` — verified at build time and at module load.
-- 2026-05-11: Initial fix added build-time public cloud fallback, durable widget-side image policy cache, one-time missing-policy logging, 7-day stale settings tolerance, and public settings `stale-if-error`. (Superseded later the same day by ADR_0008 — defensive runtime layers became redundant once cloud name became build-time-only.)
-- 2026-05-11: Page created during photo strip refactor analysis for a silent image filtering failure category.

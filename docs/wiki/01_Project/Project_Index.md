@@ -4,12 +4,20 @@ project: renuvex-product-reviews
 status: active
 created: 2026-05-05
 updated: 2026-09-10
+last_verified: 2026-09-10
+confidence: high
 tags:
   - quick-reference
 related:
   - "[[Index]]"
   - "[[Folder_Structure]]"
   - "[[Important_Files]]"
+source_files:
+  - "src/app/page.tsx"
+  - "src/widget/index.js"
+  - "src/widget/classic-loader.js"
+  - "src/app/api"
+  - "prisma/schema.prisma"
 ---
 
 # Project Index — Quick Source-Code Pointers
@@ -104,7 +112,3 @@ related:
 - [[Important_Files]]
 - [[Frontend_Map]]
 - [[Backend_API_Map]]
-
-## Change Log
-- 2026-09-10: Replaced removed preview API pointers with the canonical static preview route, local fixtures, and QStash scheduler receiver.
-- 2026-05-12: Updated the quick pointer for widget icons after splitting the registry under [src/widget/icons/](src/widget/icons/).

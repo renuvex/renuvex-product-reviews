@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-06-21
-updated: 2026-06-21
-last_verified: 2026-06-21
+updated: 2026-09-10
+last_verified: 2026-09-10
 confidence: high
 tags:
   - video
@@ -33,6 +33,15 @@ source_files:
 ---
 
 # Review Video Manual Repair Runbook
+
+## Agent Brief
+
+Use this only after normal webhook, reconciliation, expiry, and media-job retry
+paths fail to converge. Start read-only, correlate the session, job, webhook,
+review media, quota, and Mux resource, then request explicit approval for one
+narrow repair. Prefer the existing provider-neutral job/outbox path; never
+repair only provider state or expose credentials, upload URLs, signed URLs, or
+customer media in evidence.
 
 ## Purpose
 Operator path for rare Mux review-video lifecycle failures after webhook, reconciliation, expiry, and `MediaProviderJob` retry paths have not converged. Manual repair is not a shortcut: `VideoUploadSession`, `ReviewMedia`, `PendingReviewImage`, `WebhookEvent`, `MediaProviderJob`, and Mux provider state must converge together.
@@ -114,7 +123,8 @@ After a repair, verify:
 5. Ask for explicit approval before any mutation.
 6. Execute one repair path only.
 7. Verify DB, Mux, quota, public API, and job terminal state.
-8. Add a short [[Log]] entry only if the incident reveals a durable lesson or architecture change.
+8. Record a durable lesson only in the owning bug, ADR, runbook, or dated
+   acceptance record; Git history owns the chronology.
 
 ## Obsidian Links
 - [[ADR_0032_Review_Video_On_Mux]]

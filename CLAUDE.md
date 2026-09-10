@@ -224,12 +224,24 @@ Use **Conventional Commits** format:
   1. `AGENTS.md`
   2. `/docs/wiki/Hot_Context.md`
   3. `/docs/wiki/Index.md`
-  4. only the relevant 2-5 wiki pages
+  4. `## Agent Brief` sections in only the relevant 2-5 wiki pages
   5. then the related source/config/test files.
 - Source code is the source of truth. If the wiki conflicts with source files, configs, or runtime behavior, trust the source code and update the wiki.
 - Wiki pages mentioning implementation details should point to focused `source_files` so future agents can verify them.
+- Keep hot-path wiki reads short. Long critical pages are allowed when they preserve decisions/runbooks/evidence, but they should start with `## Agent Brief` for low-token routing.
+- Give each durable fact one canonical owner: current state in `Current_Status`,
+  future work in `Roadmap`, uncertainty in `Open_Questions`, decisions in ADRs,
+  reusable failures in bug notes, and rollout evidence in dated acceptance
+  records. Other pages should link to that owner instead of copying its text.
+- Git history is the edit chronology. Do not create routine page-level
+  `Change Log` sections or append implementation/deployment events to a general
+  project log. Integrate current truth into the page body and preserve durable
+  history in the appropriate ADR, bug, runbook, or dated evidence record.
 - Update wiki files only when useful for durable project memory. Do not update wiki for minor noise (tiny visual tweaks, formatting, low-impact refactors).
 - Preserve ADRs, significant bug history, and problem-resolution notes. Large cleanup, archiving, or deleting requires user confirmation.
+- Never bump `last_verified` without checking the cited source/config/test or
+  the named operational evidence. Dated external research remains a snapshot
+  unless official sources are checked again.
 - Never document secrets, API keys, tokens, private credentials, or real env values.
 - Wiki health checks: `node scripts/wiki-audit.mjs` (add `--changed-source-check` after meaningful source changes).
 - Code and memory must evolve together. **If a meaningful code change was made but the relevant wiki files were not updated, the task is incomplete.**
@@ -237,12 +249,9 @@ Use **Conventional Commits** format:
 Detailed procedures:
 - `/docs/wiki/09_Prompts/Agent_Rules.md`
 - `/docs/wiki/09_Prompts/New_Session_Start_Prompt.md`
-- `/docs/wiki/09_Prompts/Documentation_Update_Prompt.md`
 - `/docs/wiki/09_Prompts/Wiki_Maintenance_Prompt.md`
 - `/docs/wiki/09_Prompts/Problem_Resolution_Prompt.md`
-- `/docs/wiki/09_Prompts/IDE_Agent_Usage.md`
+- `/docs/wiki/09_Prompts/Architecture_Review_Prompt.md`
+- `/docs/wiki/09_Prompts/Database_Review_Prompt.md`
+- `/docs/wiki/09_Prompts/Widget_Development_Prompt.md`
 <!-- SECOND_BRAIN_RULES_END -->
-
-## Stack reality vs. doc lag (note for agents)
-
-Some pre-existing generated rules / docs may still say "Next.js 15"; `package.json` pins `next: 16.2.1`. The wiki and this file should use the actual version unless `package.json` changes.

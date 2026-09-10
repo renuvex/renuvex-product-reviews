@@ -3,7 +3,7 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-26
-updated: 2026-06-01
+updated: 2026-09-10
 last_verified: 2026-06-01
 confidence: high
 tags:
@@ -38,6 +38,14 @@ source_files:
 ---
 
 # ADR 0021: Shadow DOM Isolation of Review Surfaces
+
+## Agent Brief
+
+The review section and body-level review overlays use shared Shadow DOM helpers
+to isolate CSS while inheriting approved custom properties. Light-DOM badges
+remain outside this boundary. New review overlays must use the gated shared
+helpers so missing or delayed styles cannot expose unstyled content, and tests
+must cover style adoption, focus, cleanup, and offline/partial-load behavior.
 
 ## Status
 Accepted (2026-05-26). Single-commit migration; revert via `git revert` if regressions surface. No rollout gate — see "Alternatives Considered".

@@ -64,6 +64,3 @@ After removing the override and rebuilding the widget runtime, both cases passed
 - [[Photo_Strip]]
 - [[CSS_Variable_Surface]]
 - [[Bug_Index]]
-
-## Change Log
-- 2026-06-01: Fixed P3. Removed list/gallery override of `--renuvex-pr-thumbnail-size` and added browser regression coverage.

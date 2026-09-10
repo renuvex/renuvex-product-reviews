@@ -1,9 +1,9 @@
 ---
 type: ikas
 project: renuvex-product-reviews
-status: active
+status: archived
 created: 2026-06-06
-updated: 2026-06-06
+updated: 2026-09-10
 last_verified: 2026-06-06
 confidence: high
 tags:
@@ -26,6 +26,14 @@ source_files:
 ---
 
 # ikas Lifecycle & Mount Contract — Questions to ikas
+
+## Agent Brief
+
+This page preserves the 2026-06-06 ikas answers that justified defensive SPA
+mounting: Storefront Events do not guarantee DOM readiness, no official router
+event or stable placement slot was available, and `VIEW_LISTING` with
+`productDetails[]` was accepted. Use [[Ikas_Storefront_Events]],
+[[Ikas_Theme_Limitations]], and current source for the active contract.
 
 ## Status
 **Asked + answered 2026-06-06** (public ikas developer community). ikas confirmed the Storefront

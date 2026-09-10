@@ -3,7 +3,7 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-24
-updated: 2026-07-02
+updated: 2026-09-10
 last_verified: 2026-07-02
 confidence: high
 tags:
@@ -32,6 +32,14 @@ source_files:
 ---
 
 # ADR_0019 — Icon Sprite Rendering for Rating Stars (+ badge a11y/correctness)
+
+## Agent Brief
+
+Rating icons use one shared SVG symbol sprite and helper-generated use sites.
+Preserve intrinsic fallback dimensions, decorative accessibility semantics,
+current-color behavior, and Shadow DOM compatibility. New rating surfaces must
+reuse the icon registry/helpers and their tests rather than embedding raw star
+SVG markup or inventing a separate visual contract.
 
 ## Status
 Accepted

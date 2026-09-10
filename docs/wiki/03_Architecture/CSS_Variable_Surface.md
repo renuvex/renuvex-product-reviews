@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-27
-updated: 2026-06-12
-last_verified: 2026-06-12
+updated: 2026-09-10
+last_verified: 2026-09-10
 confidence: high
 tags:
   - widget
@@ -44,6 +44,15 @@ source_files:
 ---
 
 # CSS Variable Surface
+
+## Agent Brief
+
+Use this as the ownership index for `--renuvex-pr-*` storefront tokens. Rating
+color is global, review-section tokens inherit into its Shadow DOM, and badge
+size tokens are component-scoped. Before adding or renaming a token, verify its
+setter, consumer, scope, fallback, preview behavior, and runtime tests. Do not
+move visual policy into a theme adapter or create a second token for the same
+setting.
 
 ## Summary
 `reviews-section/styles.js` exports the stable `CLASSIC_CSS` aggregator; shared CSS ownership is split under `reviews-section/styles/*.js`.

@@ -3,7 +3,7 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-20
-updated: 2026-06-01
+updated: 2026-09-10
 last_verified: 2026-06-01
 confidence: high
 tags:
@@ -32,6 +32,15 @@ source_files:
 ---
 
 # ADR_0017 - Badge Architecture (Mount, Class-First Styling, Component-Scope Tokens, Mobile Override)
+
+## Agent Brief
+
+This ADR owns badge DOM shape, class-first styling, component-scoped tokens,
+and responsive sizing. It does not own product identity or storefront
+attestation: current Product ID and strict placement rules live in
+[[ADR_0038_Runtime_Attested_Storefront_Placement]] and [[Product_Rating_Badge]]. Keep
+the shared badge primitive accessible and visually consistent across PDP,
+listing, and preview surfaces.
 
 ## Status
 Accepted

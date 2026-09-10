@@ -47,4 +47,5 @@ What would have caught this earlier? Test, log, lint rule, doc?
 
 ---
 
-> Copy to `05_Bugs_And_Fixes/Bug_<short-title>.md`. Add a row in [[Bug_Index]] and a one-liner in [[Solved_Issues]] when fixed.
+> Copy to `05_Bugs_And_Fixes/Bug_<short-title>.md`. Add and later update one
+> row in [[Bug_Index]]; do not duplicate the fix in a chronological solved log.

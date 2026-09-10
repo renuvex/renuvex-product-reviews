@@ -3,7 +3,7 @@ type: research
 project: renuvex-product-reviews
 status: draft
 created: 2026-05-05
-updated: 2026-06-21
+updated: 2026-09-10
 last_verified: 2026-06-21
 confidence: medium
 tags:
@@ -12,6 +12,8 @@ tags:
 related:
   - "[[Index]]"
   - "[[Competitor_Pricing_And_Plans]]"
+  - "[[Research_Index]]"
+  - "[[Roadmap]]"
 source_files:
   - "docs/wiki/10_Research/Competitor_Pricing_And_Plans.md"
 ---
@@ -19,7 +21,9 @@ source_files:
 # Review App Market Research
 
 ## Summary
-Market sizing, segment analysis, pricing benchmarks, and acquisition channels live here. Detailed competitor plan snapshots are preserved in [[Competitor_Pricing_And_Plans]].
+This is a draft research brief for packaging validation. The dated competitor
+snapshot in [[Competitor_Pricing_And_Plans]] is historical evidence, not a
+current price source. Executable product work is owned by [[Roadmap]].
 
 ## Open questions
 - Pricing tiers used by Loox / Judge.me / Yotpo / Okendo are captured in [[Competitor_Pricing_And_Plans]]; verify official pages and TRY conversions before final packaging.
@@ -27,11 +31,14 @@ Market sizing, segment analysis, pricing benchmarks, and acquisition channels li
 - Conversion lift from displaying reviews (industry studies)
 - TR market specifics - language, payment, support expectations
 
-## To do
-- Convert [[Competitor_Pricing_And_Plans]] into a Renuvex Starter/Growth/Pro packaging recommendation after live price verification.
-- Talk to 3 ikas merchants currently using ad-hoc / external review apps
-- Survey TR-specific review patterns (KVKK / data residency)
+## Next research pass
+- Re-check official competitor pages before using any price or quota.
+- Interview at least three target ikas merchants using ad-hoc or external
+  review tools.
+- Validate Turkey-specific privacy, data-residency, payment, language, and
+  support assumptions before proposing packages.
 
 ## Obsidian Links
 - [[Competitor_Pricing_And_Plans]]
+- [[Research_Index]]
 - [[Roadmap]]

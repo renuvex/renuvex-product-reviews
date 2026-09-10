@@ -14,12 +14,15 @@ related:
   - "[[Hot_Context]]"
   - "[[Project_Overview]]"
   - "[[Current_Status]]"
+  - "[[Project_Index]]"
+  - "[[Research_Index]]"
 source_files: []
 ---
 
-# ikas Review App Wiki Index
+# Renuvex Product Reviews Wiki
 
-> Renuvex Product Reviews - review & rating app for ikas e-commerce stores. Merchant admin + storefront widget + structured-data integration.
+Task router for the ikas merchant admin, storefront review runtime, Product ID
+badges, media pipelines, and operational evidence. Source code is authoritative.
 
 ## Start Here
 - [[Hot_Context]] - fast active context for new sessions
@@ -30,143 +33,33 @@ source_files: []
 - [[Glossary]] - domain vocabulary (ikas-specific and project-specific)
 - [[Feature_Map]] - feature inventory with implementation status
 - [[Project_Index]] - quick links to source code entry points
-- [[Log]] - project-memory event log
 
 ## Task Routing
 
 | Task Type | Read First | Then Read | Then Inspect |
 |---|---|---|---|
-| New session / unclear task | [[Hot_Context]], [[Current_Status]] | [[Project_Overview]], [[Open_Questions]] | Related source files from focused pages |
+| New session / unclear task | [[Hot_Context]], [[Current_Status]] | [[Project_Overview]], [[Open_Questions]] | Focused `source_files` |
 | Admin UI / widget editor task | [[Frontend_Map]], [[Widget_Customization]] | [[Feature_Map]], relevant widget pages | `src/features/admin-shell/*`, `src/features/review-moderation/*`, `src/features/widget-management/*` |
 | Storefront widget task | [[Widget_Architecture]], [[Storefront_Widget_Overview]] | Relevant `08_Widgets` pages and ADRs | `src/widget/*`, `public/widget.js` |
-| Modular widget loader / Yotpo-like architecture | [[Yotpo_Style_Widget_Modular_Architecture]], [[Phase_1_Widget_Runtime_Audit]], [[Phase_2_Widget_Module_Split_Plan]] | [[Yotpo_Protein_Ocean_Widget_Research]], [[Ikas_Storefront_Script_Capabilities]], [[Widget_Performance]] | `src/widget/*`, `scripts/build-widget.mjs`, storefront smoke output |
+| Badge placement / identity | [[Listing_Rating_Widget]], [[Product_Rating_Badge]] | [[ADR_0038_Runtime_Attested_Storefront_Placement]], [[ADR_0015_Canonical_Product_Identity]] | Placement, lifecycle, and focused browser tests |
 | API task | [[Backend_API_Map]], [[API_Design]] | [[Ikas_API_Notes]], [[Security_And_Rate_Limits]] | `src/app/api/*`, `src/lib/*` |
 | Database task | [[Database_Map]], [[Database_Schema]] | [[Decision_Index]] | `prisma/schema.prisma`, `prisma/models/*`, `prisma/migrations/*` |
 | Auth / ikas install task | [[Auth_And_Installation_Flow]], [[Ikas_OAuth_Installation_Notes]] | [[Security_And_Rate_Limits]], [[ADR_0004_Ikas_Integration_Strategy]] | OAuth/API helper files |
 | Deployment / observability task | [[Deployment_Notes]], [[Sentry_Operations]] | [[Config_And_Env_Map]], [[Caching_And_Performance]] | `next.config.js`, `vercel.json`, Sentry config files |
+| Media / review email task | [[ADR_0034_AWS_Review_Image_Migration]], [[ADR_0032_Review_Video_On_Mux]] | [[ADR_0036_Review_Request_Email_Architecture]], [[Maintenance_Runbook]] | Media/email source and integration tests |
 | Automated test / CI task | [[Test_Strategy]], [[Widget_Architecture]] | [[Backend_API_Map]], [[Widget_Performance]] | `tests/*`, `.github/workflows/*`, `package.json` |
 | Recurring bug | [[Bug_Index]], [[Recurring_Problems]] | Relevant bug note, [[Problem_Resolution_Prompt]] | Related source files in the bug note |
 | Architecture change | [[System_Architecture]], [[Decision_Index]] | Relevant ADRs | Affected modules and config |
-| Wiki maintenance | [[Agent_Rules]], [[Wiki_Maintenance_Prompt]] | [[Documentation_Update_Prompt]], [[Log]] | `docs/wiki/**`, `scripts/wiki-*` |
+| Research or historical evidence | [[Research_Index]] | Linked dated record | Its cited source or official primary source |
+| Wiki maintenance | [[Agent_Rules]], [[Wiki_Maintenance_Prompt]] | [[New_Session_Start_Prompt]] | `docs/wiki/**`, `scripts/wiki-*` |
 
-## Codebase Map
-- [[Folder_Structure]]
-- [[Important_Files]]
-- [[Frontend_Map]]
-- [[Backend_API_Map]]
-- [[Database_Map]]
-- [[Widget_Files_Map]]
-- [[Config_And_Env_Map]]
-- [[Dependency_Map]]
+## Registries
 
-## Architecture
-- [[System_Architecture]]
-- [[Database_Schema]]
-- [[Widget_Architecture]]
-- [[API_Design]]
-- [[Auth_And_Installation_Flow]]
-- [[Caching_And_Performance]]
-- [[Security_And_Rate_Limits]]
-- [[Deployment_Notes]]
-- [[Sentry_Operations]]
-- [[AWS_Setup_And_Access]]
-- [[Maintenance_Runbook]]
-- [[AWS_CloudFront_Widget_Canary_Runbook]]
-- [[Review_Video_Canary_Runbook]]
-- [[Review_Video_Manual_Repair_Runbook]]
-- [[Review_Video_Physical_Device_Acceptance_2026-06]]
-- [[Test_Strategy]]
-- [[Yotpo_Style_Widget_Modular_Architecture]]
-- [[Theme_Adapter_Playbook]]
+- [[Project_Index]]: source entry points.
+- [[Feature_Map]]: implemented and planned capabilities.
+- [[Decision_Index]]: accepted, draft, and superseded ADRs.
+- [[Bug_Index]]: open and fixed reusable failures.
+- [[Research_Index]]: dated research, audits, and acceptance evidence.
 
-## ikas
-- [[Ikas_Platform_Notes]]
-- [[Ikas_API_Notes]]
-- [[Ikas_Order_Review_Request_Notes]]
-- [[Ikas_Widget_Injection_Notes]]
-- [[Ikas_Storefront_Script_Capabilities]]
-- [[Ikas_Storefront_Events]]
-- [[Ikas_Theme_Limitations]]
-- [[Ikas_App_Store_Requirements]]
-- [[Ikas_OAuth_Installation_Notes]]
-
-## Widgets
-- [[Storefront_Widget_Overview]]
-- [[Product_Rating_Badge]]
-- [[Product_Review_Widget]]
-- [[Product_Review_Lightbox]]
-- [[Media_Gallery]]
-- [[Listing_Rating_Widget]]
-- [[Widget_Customization]]
-- [[Summary_Layout_Padding_Strategy]]
-- [[Widget_Performance]]
-- [[Structured_Data_And_Rich_Snippets]]
-
-## Decisions
-- [[Decision_Index]] - canonical registry for every active, draft, and superseded ADR
-
-## Bugs And Fixes
-- [[Bug_Index]]
-- [[Solved_Issues]]
-- [[Recurring_Problems]]
-- [[Debugging_Notes]]
-
-## Competitors
-- [[Judge_Me]]
-- [[Yotpo]]
-- [[Loox]]
-- [[Okendo]]
-- [[Competitor_Pricing_And_Plans]]
-
-## Prompts (AI workflows)
-- [[Agent_Rules]]
-- [[New_Session_Start_Prompt]]
-- [[Wiki_Maintenance_Prompt]]
-- [[Problem_Resolution_Prompt]]
-- [[IDE_Agent_Usage]]
-- [[Existing_AI_Rules_And_Ikas_CLI_Instructions]] - canonical pre-existing rule files (Ruler-generated CLAUDE/AGENTS/cursor) + ikas CLI config
-- [[Master_Project_Prompt]]
-- [[Claude_Code_Rules]]
-- [[Codex_Rules]]
-- [[Debug_Prompt]]
-- [[Architecture_Review_Prompt]]
-- [[Database_Review_Prompt]]
-- [[Widget_Development_Prompt]]
-- [[Documentation_Update_Prompt]]
-
-## Research
-- [[Review_App_Market_Research]]
-- [[Competitor_Pricing_And_Plans]]
-- [[Google_Rich_Snippets_Research]]
-- [[Ecommerce_Review_UX_Patterns]]
-- [[Review_Layout_Padding_Research]]
-- [[Storefront_CDN_Performance_Benchmark]]
-- [[Storefront_CDN_Cost_Model]]
-- [[Review_Image_CDN_Cost_Model]]
-- [[Review_App_Monthly_Cost_Model]]
-- [[Upstash_Redis_QStash_Cost_Audit]]
-- [[Yotpo_Protein_Ocean_Widget_Research]]
-- [[Phase_1_Widget_Runtime_Audit]]
-- [[Phase_2_Widget_Module_Split_Plan]]
-- [[Phase_3_Widget_Lifecycle_Hardening]]
-- [[Widget_Architecture_Audit]]
-- [[Product_Lifecycle_Scale_And_Retention_Audit_2026-08-03]]
-- [[Badge_Product_ID_Closeout_Acceptance_2026-09-09]]
-- [[Future_Feature_Ideas]]
-
-## Templates
-- [[Decision_Template]]
-- [[Bug_Template]]
-- [[Competitor_Template]]
-- [[API_Note_Template]]
-- [[Architecture_Template]]
-- [[Feature_Template]]
-- [[Prompt_Template]]
-- [[Codebase_Map_Template]]
-
-## Inbox
-- [[Raw_Notes]] - drop ideas here, file later
-
----
-
-**Last Updated:** 2026-09-10 (Badge Product ID PR #40/backend/approved Worker rollout and complete Canary 1 passed. One natural lifecycle reconciliation, Canary 2, and Sentry alert delivery verification remain open. Product Lifecycle Release B remains separate.)
+Templates are under `11_Templates`; reusable agent procedures are under
+`09_Prompts`. Do not add raw notes or chronology to the hot path.

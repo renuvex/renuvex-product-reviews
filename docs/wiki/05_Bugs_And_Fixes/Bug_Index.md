@@ -13,6 +13,7 @@ related:
   - "[[Solved_Issues]]"
   - "[[Recurring_Problems]]"
   - "[[Debugging_Notes]]"
+source_files: []
 ---
 
 # Bug Index
@@ -82,59 +83,6 @@ its acceptance record.
 - 2026-05-10 - [[Bug_Review_Detail_Lightbox_Risks]] - Photo-less gallery long-text read-more no longer opens the photo detail lightbox; it expands inline, and `openReviewModal` guards empty image sets.
 - 2026-05-10 - [[Bug_Review_Detail_Lightbox_Risks]] - Public review image URLs are now restricted to trusted Cloudinary assets before storage or storefront render.
 
-## Change Log
-- 2026-09-09: Ported the 2026-08-09 badge schema-drift incident record and
-  marked the availability regression fixed by PR #35/#36 plus live Ozy checks.
-  Kept the Product ID response propagation as a separate rollout-gated closeout.
-- 2026-07-29: Added [[Bug_Review_Widget_SPA_Health_Probe_False_Positive]] after Playwright trace evidence proved that the full CI browser failure was an intentional SPA retirement reported as `missing_after_render`, not a failed product transition. Added lifecycle-relevance gating plus unit and browser regressions.
-- 2026-07-04: Added [[Bug_AWS_Lightbox_Full_Size_Variant_Selection]] after live storefront inspection showed the modal main image using `thumb_640x854.webp` in a 1200px lightbox. Root cause was small-original AWS variants sharing the same output width; fixed by making the lightbox prefer full-size `w*` variants and suppressing duplicate immutable `srcset`.
-- 2026-07-02: Added and expanded [[Bug_Offline_Refresh_Unstyled_SVG_Star]] after Android Chrome offline refresh screenshots showed partial/no-style widget rendering with oversized stars and media thumbnails. Fixed by adding intrinsic `width="1em" height="1em" focusable="false"` fallback attributes to shared sprite icon use-sites, separating media thumbnail source and display dimensions, and pinning the contract with unit/runtime tests.
-- 2026-06-12: Added [[Bug_Widget_Editor_Late_Settings_Dirty_State]] after a source review proved the admin editor could open with temporary default settings before the saved settings response arrived. Fixed by tracking the previous saved draft snapshot, syncing late saved settings only when the local draft is still untouched, preserving real merchant edits, and pinning the behavior with unit tests.
-- 2026-06-06: Added [[Bug_PDP_Review_Lifecycle_SPA_Race]] after source review and browser regression tests proved a SPA lifecycle race: late explicit review mounts were missed and slow stale product bootstraps could overwrite the current PDP review widget. Fixed with `reviews-main`-only late-mount replay, guarded initial bootstrap, per-product review state reset, and removal of the dead review cache invalidation write.
-- 2026-06-06: Added [[Bug_Compact_Count_Label_HTML_Injection]] after source review showed compact was the only summary layout that rendered the merchant-editable `countLabel` through `innerHTML`. Fixed by moving the dynamic label to `textContent`, adding shared merchant-text fallback normalization, and adding runtime smoke regressions.
-- 2026-06-02: Added [[Bug_List_Review_Photo_Height_Stretch]] after browser proof showed medium list review item photos could render at `110 x 400px` instead of the intended `110 x 146.67px`. Fixed by adding list photo height variables and a tall-row runtime regression.
-- 2026-06-02: Updated [[Bug_Filter_Menu_Shadow_DOM_Light_Dismiss]] after desktop mouse testing proved the same touch/pen shield path was incorrectly applied to mouse option selection. Fixed by using normal click activation for desktop mouse and pinning immediate filter reopen across classic, compact, hero, minimal, and split summaries.
-- 2026-06-02: Added a deployment follow-up to [[Bug_Filter_Menu_Shadow_DOM_Light_Dismiss]] after Vercel confirmed the production deployment was current but the physical mobile report persisted. The follow-up hardens the dimmed bar-row state class and removes the stable loader/shim 5-minute client-cache window.
-- 2026-06-02: Updated [[Bug_Filter_Menu_Shadow_DOM_Light_Dismiss]] after physical mobile testing proved the scoped dismiss shield preserved click safety but overrode compact bar-row filter opacity. Fixed by narrowing only the forced opacity reset, not the pointer shield.
-- 2026-06-01: Updated [[Bug_Filter_Menu_Shadow_DOM_Light_Dismiss]] after physical mobile testing proved filter option taps could still leak same-gesture compat `:active` state into the exposed write button. Fixed by adding a scoped popover gesture shield instead of disabling mobile press feedback globally.
-- 2026-06-01: Added [[Bug_Summary_Popover_Registry_Lifecycle_Contract]] after the bar chart / summary interaction audit proved the popover registry had a handle/entry identity mismatch, stale disconnected entries after summary re-renders, and an inconsistent compact `close()` boolean contract.
-- 2026-06-01: Added [[Bug_Photo_Strip_Thumbnail_Size_Contract]] after a runtime proof showed list/gallery layouts ignored the visible "Fotoğraf Galeri Boyutu" setting for the top photo strip. Fixed by keeping `--renuvex-pr-thumbnail-size` tied to `thumbnailSize` and pinning list/gallery strip-vs-item-photo sizes in browser tests.
-- 2026-06-01: Added [[Bug_Widget_Page_View_Semantic_Dedupe]] after a focused browser proof showed the global `PAGE_VIEW` timestamp debounce could suppress a real fast page transition. Fixed with semantic page-key dedupe in `storefront-context.js`.
-- 2026-05-31: Added [[Bug_Widget_Listing_Event_Replay]] after the widget loader/surface lifecycle audit proved synchronous listing/search events could be lost before loader subscription. Fixed with `latestListing` replay and network smoke coverage for event ordering, duplicate product contexts, PDP listing side-effect boundaries, and fail-closed listing gates.
-- 2026-05-31: Added [[Bug_Review_Read_Lifecycle_Stale_Responses]] after the review read lifecycle audit proved stale sort/filter responses, stale load-more completions, and overlapping load-more ids could corrupt the active storefront review list.
-- 2026-05-31: Added [[Bug_Review_Wizard_Photo_Upload_Lifecycle]] after the upload lifecycle audit proved pending blob previews leaked on close and deleting one pending upload aborted the rest of the selected batch.
-- 2026-05-31: Updated [[Bug_Lightbox_Focus_Trap_Accessibility]] after the wizard/lightbox lifecycle audit proved photo-strip thumbnails were not keyboard lightbox triggers, while card/list/gallery images already were. Fixed with shared `wireLightboxTrigger()` and a photo-strip keyboard/focus-restore regression.
-- 2026-05-30: Added [[Bug_Wizard_Rating_Radiogroup_And_Focus_Return]] after a user a11y report (Tab stepping through all 5 stars; Esc not returning focus to the trigger). Verified the behavior with Playwright, root-caused to non-roving radiogroup tabindex + a shadow-host `document.activeElement` read in `getReturnFocusElement`, fixed both + excluded `tabindex<0` from the trap, and added a keyboard a11y regression.
-- 2026-05-30: Added [[Bug_Icon_Use_Node_Blank_Glyphs]] after the user reported the new Phosphor caret/X arrows not showing. Reproduced with Playwright screenshots + `getBBox()` (broken icons had a box but empty geometry), root-caused to `iconUseNode` building `<use>` via `image/svg+xml` + `importNode` (does not instance the sprite symbol in a live shadow tree). Fixed by HTML-parsing; added a rendered-geometry regression that the prior behavior-only tests lacked.
-- 2026-05-30: Added [[Bug_Icon_Sprite_Inner_Dimension_Strip]] after discovering — while swapping the wizard photo/plus icons to Phosphor — that the icon sprite's `svgStringToSymbol` globally stripped `width`/`height`, erasing the image icon's `<rect>` frame. Fixed with a root-`<svg>`-only strip + a `tests/unit/widget-icon-sprite.test.ts` regression.
-- 2026-05-30: Added [[Bug_Filter_Menu_Shadow_DOM_Light_Dismiss]] after the filter dropdown's light-dismiss broke under Shadow DOM — the `document`-level click listener's `e.target` retargets to the shadow host, so the menu closed on every click (toggle stuck open) and the dismiss/option click fell through to a photo-strip thumbnail. Fixed with `event.composedPath()` membership + dismiss-click swallow.
-- 2026-05-25: Added [[Bug_Listing_Badge_Missing_After_Render]] after proving via live Playwright repro + A/B test that the high-volume `missing_after_render` Sentry events were a stale-probe-reference false positive, not a broken badge.
-- 2026-05-24: Added [[Bug_Review_Wizard_WebKit_Rating_Advance]] after a physical iPhone 11 Safari test showed the review wizard could wait on the rating step while newer iPhone Safari tests worked.
-- 2026-05-24: Added [[Bug_Filter_Menu_WebKit_Tap_Activation]] after WebKit/iPhone testing reproduced menu-close-without-sort behavior while Android worked.
-- 2026-05-24: Added [[Bug_Widget_Script_Ownership_Conflict]] after live Serpingo/X-app testing proved the storefront script loaded but runtime ownership detection selected the wrong `/widget.js` candidate.
-- 2026-05-17: Marked [[Bug_Listing_Badge_Stars_Direct_Load]] fixed — root cause was `#renuvex-pr-styles` (which carries the `.renuvex-pr-star` `display` rule) being injected only by the PDP `render.js` path; the listing badge factory now self-injects `#renuvex-pr-badge-styles`. Verified on the dev store with cold home/category entry.
-- 2026-05-17: Added [[Bug_Listing_Badge_Stars_Direct_Load]] after user-provided storefront screenshot showed listing badge star icons missing on direct listing entry but recovering after PDP navigation.
-- 2026-05-12: Added [[Bug_Lightbox_Preview_Settings_Sync]] after replacing the lightbox preview star-only DOM-state workaround with closure-state right-pane re-rendering.
-- 2026-05-12: Added [[Bug_Filter_Menu_Keyboard_Accessibility]] after fixing the review summary filter dropdown being unreachable by keyboard.
-- 2026-05-12: Added [[Bug_Review_Wizard_Focus_Trap_Accessibility]] after fixing keyboard focus escaping from the multi-step review submission wizard.
-- 2026-05-12: Added [[Bug_Lightbox_Mobile_Review_Switch_Scroll_State]] after fixing stale modal scroll state when switching between long and short photo reviews.
-- 2026-05-12: Added [[Bug_Lightbox_Mobile_Pull_To_Refresh]] after hardening mobile root scroll locking for the photo review lightbox.
-- 2026-05-11: Added [[Bug_Widget_CSS_Template_Backtick_Crash]] after fixing a deployed widget bundle parse/runtime crash caused by raw backticks inside the CSS template literal.
-- 2026-05-11: Marked [[Bug_Product_Widget_Missing_Auto_Mount]] fixed after adding automatic PDP review anchor creation.
-- 2026-05-11: Marked [[Bug_Review_Image_Error_Fallback]] fixed after adding centralized image error handlers for thumbnails and a lightbox main-image placeholder.
-- 2026-05-11: Re-marked [[Bug_Cloud_Name_Silent_Image_Filter]] as structurally closed via [[ADR_0008_Cloud_Name_Build_Time_Only]] — runtime sources that could fail (`imagePolicy` settings field, localStorage policy cache, `setTrustedReviewImageCloudName` setter) all removed. Cloud name is now a single build-time constant.
-- 2026-05-11: Marked [[Bug_Cloud_Name_Silent_Image_Filter]] fixed after adding a durable review image policy fallback/cache contract and public settings stale-if-error. (Superseded same day by structural closure above.)
-- 2026-05-11: Added [[Bug_Lightbox_Tablet_Viewport_And_Scroll]] after fixing the 641-800 px cramped desktop modal range and mobile viewport-unit handling.
-- 2026-05-11: Added [[Bug_Lightbox_Focus_Trap_Accessibility]] after fixing modal focus escaping to storefront controls.
-- 2026-05-11: Added [[Bug_Review_Fetch_Error_Empty_State]] after fixing review fetch failures being rendered as empty review lists.
-- 2026-05-11: Marked [[Bug_Review_Detail_Lightbox_Risks]] fixed after card/list/gallery lightbox navigation switched from caller page slices to one canonical loaded review collection.
-- 2026-05-11: Updated [[Bug_Review_Detail_Lightbox_Risks]] after fixing body scroll restoration and removing unconditional `history.go(-1)` from normal modal close.
-- 2026-05-11: Marked [[Bug_Photo_Strip_Lazy_Loading_And_Srcset]] fixed after adding responsive `srcset`, native lazy/eager loading, async decoding, and explicit dimensions to review thumbnail render paths.
-- 2026-05-11: Filed three open photo-related defects discovered during the photo strip refactor analysis — [[Bug_Photo_Strip_Lazy_Loading_And_Srcset]] (P2), [[Bug_Review_Image_Error_Fallback]] (K2), [[Bug_Cloud_Name_Silent_Image_Filter]] (K3). Each entry includes scenario, root cause file:line evidence, and proposed fix direction.
-- 2026-05-11: Closed the lightbox "paged navigation limited to caller review slices" risk via [[ADR_0007_Photo_Strip_Cap_And_Rotation]] — strip and lightbox now share a dedicated newest-first 15-review dataset.
-- 2026-05-10: Marked review image URL allowlisting as fixed while keeping paged navigation and body/history lightbox risks open.
-- 2026-05-10: Marked the photo-less gallery read-more lightbox defect as fixed while keeping the remaining lightbox risks open.
-
 ## Recurring problems
 See [[Recurring_Problems]] for patterns that come back across versions.
 
@@ -142,7 +90,7 @@ See [[Recurring_Problems]] for patterns that come back across versions.
 1. Copy [[Bug_Template]] → `05_Bugs_And_Fixes/Bug_<short-title>.md`
 2. Fill: Date · Status · Area · Symptoms · Root Cause · Fix · Files Changed · Prevention
 3. Add a row to this index
-4. Cross-link from [[Solved_Issues]] when fixed
+4. Update the same row and bug page when fixed; do not create a second solved log
 
 ## Obsidian Links
 - [[Solved_Issues]]

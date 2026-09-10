@@ -78,8 +78,3 @@ The durable boundary must be server-side because public storefront clients are n
 - [[Bug_Review_Detail_Lightbox_Risks]]
 - [[Bug_Cloud_Name_Silent_Image_Filter]]
 - [[ADR_0008_Cloud_Name_Build_Time_Only]]
-
-## Change Log
-- 2026-05-18: D3 tightened the trusted image URL shape from global `review_images/...` to tenant-scoped `review_images/stores/<storeId>/...`. `/api/public/upload/sign`, `/api/public/upload/register`, public review submit/read paths, admin read paths, and widget-side filtering now all validate the tenant folder.
-- 2026-05-11: Runtime portion of the cloud-name contract superseded by [[ADR_0008_Cloud_Name_Build_Time_Only]]. The widget no longer reads `imagePolicy.cloudName` from settings or any per-store cache; it consumes a build-time injected constant only. The trust boundary (allowlist shape, max URLs, etc.) is unchanged.
-- 2026-05-11: Documented build-time public cloud fallback and last-valid widget image policy cache as resilience sources for the accepted allowlist. Related bug: [[Bug_Cloud_Name_Silent_Image_Filter]]. (Superseded the same day by ADR_0008 — runtime cache + setter + settings field all removed in favor of a single build-time source.)

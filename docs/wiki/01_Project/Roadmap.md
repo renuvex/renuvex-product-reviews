@@ -13,6 +13,7 @@ related:
   - "[[Current_Status]]"
   - "[[Future_Feature_Ideas]]"
   - "[[Competitor_Pricing_And_Plans]]"
+  - "[[Review_App_Market_Research]]"
   - "[[ADR_0032_Review_Video_On_Mux]]"
   - "[[Review_Video_Canary_Runbook]]"
 source_files:
@@ -60,6 +61,10 @@ architecture choices, and [[Future_Feature_Ideas]] for uncommitted ideas.
 - Add a minimal admin analytics view for review volume, rating trend, and
   merchant response rate. Conversion claims require separate storefront
   analytics evidence.
+- Before public packaging, refresh official competitor pricing, interview the
+  target ikas merchants, and validate Turkey-specific privacy, support, and
+  payment assumptions. Archived pricing snapshots are inputs, not current
+  commercial truth.
 
 ## Platform And Scale
 
@@ -111,5 +116,6 @@ pages; do not re-add them as unimplemented features.
 - [[Open_Questions]]
 - [[Future_Feature_Ideas]]
 - [[Competitor_Pricing_And_Plans]]
+- [[Review_App_Market_Research]]
 - [[Structured_Data_And_Rich_Snippets]]
 - [[ADR_0037_Product_Lifecycle_Evidence_And_Tombstones]]

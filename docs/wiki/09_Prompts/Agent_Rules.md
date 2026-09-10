@@ -3,15 +3,20 @@ type: prompt
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-07-04
-last_verified: 2026-07-04
+updated: 2026-09-10
+last_verified: 2026-09-10
 confidence: high
 tags:
   - agent-rules
   - project-memory
 related:
   - "[[Index]]"
-  - "[[Documentation_Update_Prompt]]"
+  - "[[New_Session_Start_Prompt]]"
+  - "[[Wiki_Maintenance_Prompt]]"
+  - "[[Problem_Resolution_Prompt]]"
+  - "[[Architecture_Review_Prompt]]"
+  - "[[Database_Review_Prompt]]"
+  - "[[Widget_Development_Prompt]]"
 source_files:
   - "AGENTS.md"
 ---
@@ -20,7 +25,8 @@ source_files:
 
 ## Summary
 
-This page is the detailed project-memory procedure for AI coding agents. `AGENTS.md` remains the short operational entry point, with the ikas/Ruler rules taking precedence when they conflict with wiki-memory guidance.
+This page is the project-memory procedure for coding agents. `AGENTS.md` is the
+canonical operational contract and takes precedence if this page drifts.
 
 ## Memory Hierarchy
 
@@ -47,13 +53,31 @@ Add or update wiki content only when it creates durable project memory: architec
 
 Do not update wiki for minor visual-only, copy-only, formatting-only, or low-impact changes.
 
-If evidence is weak, add a focused item to [[Open_Questions]] instead of guessing.
+If evidence is weak, add a focused item to [[Open_Questions]] instead of
+guessing. Do not turn a transient command result, deployment identifier, or
+one-off visual tweak into project memory.
 
-Long critical pages are allowed when they preserve decisions, runbooks, evidence,
-or incident history. To keep agent token cost low, any active long page should
-start with `## Agent Brief`: when to read it, current truth, source files to
-verify first, and assumptions to avoid. Keep `Hot_Context.md` and `Index.md`
-short; move detailed source routing to focused pages.
+## Canonical Ownership
+
+| Information | Canonical owner |
+|---|---|
+| Current production and release state | [[Current_Status]] |
+| Planned work | [[Roadmap]] |
+| Unresolved decisions | [[Open_Questions]] |
+| Accepted architecture and trade-offs | ADR plus [[Decision_Index]] |
+| Reusable failure, cause, fix, regression | Bug note plus [[Bug_Index]] |
+| Repeatable operation | Focused runbook |
+| Deploy, canary, benchmark, or research proof | Dated evidence record |
+| Edit and commit chronology | Git history |
+
+Link to the owner instead of copying its detailed text. Current-state maps may
+summarize a contract, but must not maintain a second rollout history.
+
+Long critical pages are allowed when they preserve decisions, runbooks,
+evidence, or incident history. An active long page starts with a concise
+`## Agent Brief`: when to read it, current truth, source anchors, and assumptions
+to avoid. Keep `Hot_Context.md` and `Index.md` short; move detailed routing to
+focused pages.
 
 ## Source Dependency Verification
 
@@ -69,10 +93,24 @@ After meaningful source changes, check whether a related wiki page exists. Updat
 node scripts/wiki-audit.mjs --changed-source-check
 ```
 
+Use Git for chronology. Do not add a general project-log entry or a routine
+page-level `Change Log`. When an edit changes durable behavior, update the
+current body and its canonical ADR, bug, runbook, or acceptance record.
+
 ## Prompt Folder Rule
 
 This repo already uses `docs/wiki/09_Prompts` for reusable agent procedures and `docs/wiki/08_Widgets` for widget domain memory. Keep procedures in `09_Prompts` unless the maintainer approves a folder renumbering migration.
 
-## Append-Only Safety
+Use [[New_Session_Start_Prompt]] for session routing,
+[[Wiki_Maintenance_Prompt]] for documentation cleanup,
+[[Problem_Resolution_Prompt]] for verified fixes, and the focused
+[[Architecture_Review_Prompt]], [[Database_Review_Prompt]], or
+[[Widget_Development_Prompt]] when that domain is the task.
 
-For ADRs, significant bug notes, and problem-resolution memory, prefer appending updates or marking pages as outdated, superseded, or archived. Preserve the original lesson unless the maintainer approves a larger cleanup.
+## Historical Safety
+
+Do not silently rewrite an accepted decision or erase a significant failure.
+Use explicit status, supersession links, amendment sections, or dated evidence.
+Before deleting or merging a page, verify backlinks and move every unique
+durable fact to its canonical owner. Git history is recovery evidence, not a
+substitute for operational facts that current agents still need.

@@ -3,13 +3,19 @@ type: prompt
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-09-10
+last_verified: 2026-09-10
+confidence: high
 tags:
   - prompts
   - widget
 related:
   - "[[Index]]"
   - "[[Widget_Architecture]]"
+source_files:
+  - "src/widget"
+  - "scripts/build-widget.mjs"
+  - "public/widget-runtime/build-manifest.json"
 ---
 
 # Widget Development Prompt
@@ -31,9 +37,12 @@ Implementation rules:
 - The widget is **plain JS** (no TypeScript, no React). Don't introduce a framework without an ADR.
 - Settings come from [catalog.ts](src/lib/widgets/catalog.ts). If a new field is needed, add to schema first; UI and validation auto-derive.
 - Layout meta (`supports`) drives which settings appear. New layouts must declare `supports`.
-- After any `src/widget/*` change: run `pnpm build:widget`, commit `public/widget.js`.
+- After any `src/widget/*` change, run the widget build/check gates and inspect
+  `public/widget-runtime/build-manifest.json`. Keep the generated stable loader,
+  current hashed runtime/chunks, and retention contract consistent.
 - Test in `/preview` AND on a real ikas storefront — preview skips the mutation observer + theme integration.
-- Bundle size matters. If a feature adds >5KB minified, mention it in the PR.
+- Bundle size matters. Run the repository performance budget rather than using
+  an undocumented per-feature size assumption.
 
 Output:
 - Concrete diff plan, file by file.

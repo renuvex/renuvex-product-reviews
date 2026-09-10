@@ -3,7 +3,9 @@ type: ikas
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-17
+updated: 2026-09-10
+last_verified: 2026-05-17
+confidence: medium
 tags:
   - ikas
   - platform
@@ -11,6 +13,11 @@ related:
   - "[[Index]]"
   - "[[Ikas_API_Notes]]"
   - "[[Auth_And_Installation_Flow]]"
+source_files:
+  - "src/helpers/api-helpers.ts"
+  - "src/helpers/token-helpers.ts"
+  - "src/lib/ikas-client"
+  - "src/app/api/oauth/callback/ikas/route.ts"
 ---
 
 # ikas Platform Notes
@@ -34,7 +41,10 @@ General platform-level facts about ikas that affect this app. Keep this page sho
 | **Sales Channel** | Multi-channel selling abstraction (we currently store `salesChannelId` but don't actively use it) | Returned by `getAuthorizedApp` |
 
 ## Constraints (from observed behavior — verify in docs)
-- StorefrontJSScript is **per storefront**, not per page. There's no built-in "only inject on product detail pages". The widget itself decides whether to render based on URL/DOM heuristics.
+- StorefrontJSScript is **per storefront**, not per page. There is no built-in
+  PDP-only injection. The runtime consumes Storefront Events, explicit mounts,
+  and the verified Ozy placement adapter; unsupported or ambiguous placement
+  fails closed.
 - Active MCP/generated client exposes zero-argument `deleteStorefrontJSScript()`, while public docs show a targeted delete shape. Because of that mismatch, app source must not use delete for lifecycle cleanup; use non-destructive create/update and DB-tracked ids.
 - Token refresh requires `client_id` + `client_secret` — same as initial exchange.
 - OAuth code includes a `signature` parameter (HMAC-SHA256 of code with client secret). Validation is recommended; we enforce when present.
@@ -48,7 +58,9 @@ The `mcp__ikas__list` and `mcp__ikas__introspect` tools (when available) discove
 
 ## Notes
 - ikas docs availability has varied historically. Treat the SDK + observed behavior as authoritative when docs are sparse.
-- Errors from ikas API don't always include rich messages — log full response objects when debugging.
+- Ikas failures do not always include rich messages. Log only bounded status,
+  operation, and allowlisted error codes; never log full provider responses,
+  OAuth tokens, JWTs, or merchant data.
 - The `storeName` is part of OAuth state and is used to fill the admin-redirect URL template (`https://{storeName}.myikas.com/admin/...`).
 
 ## Related Source Files
@@ -63,4 +75,4 @@ The `mcp__ikas__list` and `mcp__ikas__introspect` tools (when available) discove
 - [[Ikas_Widget_Injection_Notes]]
 - [[Ikas_Theme_Limitations]]
 - [[Ikas_App_Store_Requirements]]
-- [[Existing_AI_Rules_And_Ikas_CLI_Instructions]]
+- [[Agent_Rules]]

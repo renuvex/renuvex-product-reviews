@@ -3,7 +3,7 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-10
-updated: 2026-06-24
+updated: 2026-09-10
 last_verified: 2026-06-24
 confidence: high
 tags:
@@ -35,6 +35,15 @@ source_files:
 ---
 
 # Product Review Lightbox
+
+## Agent Brief
+
+This page owns the storefront review-media detail dialog, separate from the
+review-submission wizard. Entry points share keyboard/click wiring and focus
+return; images must pass the trusted AWS URL policy and video uses lazy Mux
+Player with storefront-scoped controls/tokens. Preserve body scroll restoration,
+loaded-collection navigation, media cleanup, responsive containment, and
+Shadow DOM style gating in interaction tests.
 
 ## Summary
 The product review lightbox is the media detail modal opened from trusted review images, video posters, and the media strip. It is separate from the review submission wizard. The lightbox shows the selected image or video, current-review thumbnails, previous/next navigation across media-backed reviews, review metadata, full comment text, and merchant reply.
@@ -102,32 +111,3 @@ The product review lightbox is the media detail modal opened from trusted review
 - Mux Player controls are Mux/Media Chrome-owned in this phase. The storefront hides unnecessary controls through Mux Player CSS variables, and the shared review-player theme layer loads a local Turkish Media Chrome translation module because Turkish is not bundled by Media Chrome. The theme loader registers the public Media Chrome custom elements before loading Gerwig so menu tooltip labels such as Quality and Playback rate use the Turkish registry rather than Gerwig's bundled English fallback. Admin-controlled player theming, Mux Data analytics, and deeper custom Media Chrome themes are separate future phases.
 
 - Storefront fullscreen binds the Mux MediaController `fullscreenElement` property directly to the current `.renuvex-pr-modal-left` media panel. Do not replace this with the Mux `fullscreen-element` attribute unless the lightbox leaves its shadow-root isolation, because Mux resolves that attribute through a document-level ID lookup.
-
-## Change Log
-- 2026-06-28: Removed visible duration badges from storefront video thumbnails and the media-gallery lightbox rail while keeping duration metadata available in the media model.
-- 2026-06-28: Hid the bottom thumbnail rail after active lightbox video playback starts until the video ends, and isolated mobile rail touch gestures from previous/next lightbox swipes.
-- 2026-06-28: Added a media-gallery source mode for the lightbox. Opens from `Müşteri Görselleri` now render a bottom thumbnail rail from the gallery dataset, one first trusted media item per review, while ordinary review opens continue to show only the active review's own media thumbnails.
-- 2026-06-24: Isolated Mux Player control-band gestures from the lightbox swipe handler. Dragging the mobile video timeline no longer changes reviews, while swiping the main video area still preserves previous/next lightbox navigation. The media browser test now pins both paths.
-- 2026-06-24: Fixed storefront Mux Player fullscreen exit by binding MediaController fullscreen state to the active lightbox media panel and adding media tests that assert the binding survives video-to-video modal rebuilds.
-- 2026-06-24: Hardened review-player localization so Media Chrome menu labels are translated from the active Turkish registry before Gerwig defines its bundled fallback elements. Browser media tests now assert the quality and playback-rate menu tooltip labels render as `Kalite` and `Oynatma hızı`.
-- 2026-06-24: Review-video Mux Player controls now load a local Turkish Media Chrome translation module and set `lang="tr"` at the cloned theme controller boundary, so built-in labels such as Quality and Playback rate render in Turkish without changing playback infrastructure.
-- 2026-06-23: Storefront review video lightbox moved to official Mux Player. The player receives a public `playback-id`, disables Mux Data tracking/cookies for now, hides nonessential controls through supported CSS variables, and keeps a trusted `.m3u8` parsing fallback only for rollout overlap.
-- 2026-06-16: Improved video first-frame quality by deriving sized Mux poster variants and adding hls.js player-size capping plus a conservative start-level warm-start. Native controls remain unchanged and browser-owned.
-- 2026-06-14: Documented the provider-aware image/video lightbox and Phase 4 cross-browser media suite. Native-HLS attributes, lazy `hls.js`, no-autoplay poster-first rendering, browser-back cleanup, and video-to-image navigation cleanup are now pinned across the five-project Playwright matrix.
-- 2026-06-01: Lightbox CSS ownership moved into [styles/lightbox.js](src/widget/reviews-section/styles/lightbox.js) while `review-modal.js` continues to inject the stable `CLASSIC_CSS` aggregator.
-- 2026-05-31: Added shared [lightbox-trigger.js](src/widget/reviews-section/lightbox-trigger.js) after an audit found the then-photo-strip thumbnails were click-only images. Media-gallery and card/list/gallery lightbox triggers now share keyboard/ARIA wiring, and interaction smoke verifies keyboard open + focus restore from the media gallery. Related bug: [[Bug_Lightbox_Focus_Trap_Accessibility]].
-- 2026-05-24/25: Updated preview-event wording for ADR_0020 namespace migration. `RENUVEX_PR_SETTINGS_UPDATED_PREVIEW` is the active preview event.
-- 2026-05-12: Fixed preview settings synchronization for an already-open lightbox. The right pane now re-renders from closure state on the preview settings event, covering review icons, merchant reply labels, and future right-pane setting-dependent fields. Related bug: [[Bug_Lightbox_Preview_Settings_Sync]].
-- 2026-05-12: Changed the main lightbox image from `cover` to `contain` on the existing dark media background so customer review photos are shown without crop; preview thumbnails remain `cover`.
-- 2026-05-12: Changed mobile `.renuvex-pr-modal-wrap` from `overflow-y:auto` to `overflow-y:scroll` to keep the fullscreen lightbox's scroll-container behavior consistent in short-review cases.
-- 2026-05-12: Added review-switch scroll normalization and made fixed-body locking platform-aware. Related bug: [[Bug_Lightbox_Mobile_Review_Switch_Scroll_State]].
-- 2026-05-12: Hardened mobile pull-to-refresh containment. The lightbox now snapshots/restores root scroll styles and scroll position and applies root `overscroll-behavior-y:none`. Related bug: [[Bug_Lightbox_Mobile_Pull_To_Refresh]].
-- 2026-05-11: Documented K2 image error fallback. Main lightbox image failures now show a neutral placeholder while mini thumbnail failures hide the failed thumbnail. Related bug: [[Bug_Review_Image_Error_Fallback]].
-- 2026-05-11: Updated image policy notes after adding build-time public cloud fallback and last-valid widget policy cache. Related bug: [[Bug_Cloud_Name_Silent_Image_Filter]].
-- 2026-05-11: Documented the responsive lightbox contract after adding the 641-800 px stacked tablet shell, mobile viewport-unit fallback chain, and scroll containment updates in [styles.js](src/widget/reviews-section/styles.js). Related bug: [[Bug_Lightbox_Tablet_Viewport_And_Scroll]].
-- 2026-05-11: Documented lightbox accessibility hardening after adding dialog semantics, focus trap, thumbnail keyboard activation, and focus restore. Related bug: [[Bug_Lightbox_Focus_Trap_Accessibility]].
-- 2026-05-11: Closed the card/list/gallery page-slice navigation risk by documenting the canonical loaded review collection in [state.js](src/widget/core/state.js) and [render.js](src/widget/reviews-section/render.js). Related bug note: [[Bug_Review_Detail_Lightbox_Risks]].
-- 2026-05-11: Updated body scroll lock and history handling notes after hardening [review-modal.js](src/widget/reviews-section/review-modal.js). Related bug note: [[Bug_Review_Detail_Lightbox_Risks]].
-- 2026-05-10: Updated the lightbox image trust contract after implementing the shared trusted image URL policy. Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].
-- 2026-05-10: Documented the photo-only lightbox contract after fixing the gallery photo-less read-more path and adding an empty-image guard in [review-modal.js](src/widget/reviews-section/review-modal.js). Related bug note: [[Bug_Review_Detail_Lightbox_Risks]].
-- 2026-05-10: Created this page to document the existing photo review detail lightbox separately from the review submission wizard after a technical audit found the two were conflated in the wiki. Related source: [review-modal.js](src/widget/reviews-section/review-modal.js), [styles.js](src/widget/reviews-section/styles.js), related bug note: [[Bug_Review_Detail_Lightbox_Risks]].

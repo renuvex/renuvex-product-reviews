@@ -78,12 +78,6 @@ Fixed:
 - Add API validation tests for `images` payloads that include third-party HTTPS URLs and data URLs.
 - Keep [[Product_Review_Lightbox]] distinct from the review submission wizard in docs and code review checklists.
 
-## Change Log
-- 2026-05-11: Closed the remaining canonical loaded-review navigation risk for card/list/gallery by adding `loadedLightboxReviews` state and passing the stable loaded collection to review layout modal handlers.
-- 2026-05-11: Fixed body scroll restoration and hardened modal history handling. At that point, canonical loaded-review navigation for card/list/gallery entry points was still open.
-- 2026-05-10: Fixed the review image URL trust boundary by rejecting third-party/data image URLs on public POST and filtering read/widget render paths through the trusted Cloudinary policy. Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].
-- 2026-05-10: Partially fixed the photo-less gallery read-more path and added an empty-image guard to the photo detail lightbox. Remaining risks at that point were paged navigation, image URL allowlisting, body scroll restoration, and history-state handling.
-
 ## Related Notes
 - [[Product_Review_Lightbox]]
 - [[Security_And_Rate_Limits]]

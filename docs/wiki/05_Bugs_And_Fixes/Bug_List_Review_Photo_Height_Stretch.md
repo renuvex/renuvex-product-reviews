@@ -63,6 +63,3 @@ After the source fix and `pnpm build:widget`, the same test passed.
 - Treat list review item photo dimensions as a pair: width and height belong to the list layout's `sizeOverrides`.
 - Do not rely on image HTML `width` / `height` attributes to define the final display box; those attributes are for loading/CLS metadata.
 - Keep the top photo strip controlled by `thumbnailSize`; keep list review item photos controlled by widget `size`.
-
-## Change Log
-- 2026-06-02: Fixed P3 visual layout bug. Medium list item photos now render around `110 x 146.67px` instead of `110 x 400px`.

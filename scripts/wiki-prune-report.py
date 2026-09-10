@@ -12,8 +12,9 @@ WIKI = ROOT / "docs" / "wiki"
 
 MAX_HOT_CONTEXT_WORDS = 500
 MAX_HOT_CONTEXT_SOURCE_FILES = 20
+MAX_INDEX_WORDS = 500
+MAX_LOG_WORDS = 600
 MAX_PAGE_WORDS = 1200
-HUGE_PAGE_WORDS = 3000
 STALE_DAYS = 60
 
 AGENT_BRIEF_TYPES = {
@@ -75,9 +76,14 @@ def parse_date(value):
         return None
 
 def duplicate_heading_score(text):
-    headings = re.findall(r"^#{2,4}\s+(.+)$", text, flags=re.MULTILINE)
+    prose = re.sub(r"^```[^\n]*\n[\s\S]*?^```\s*$", "", text, flags=re.MULTILINE)
+    headings = re.findall(r"^##\s+(.+)$", prose, flags=re.MULTILINE)
     normalized = [h.strip().lower() for h in headings]
     return len(normalized) - len(set(normalized))
+
+def has_generic_history(text):
+    prose = re.sub(r"^```[^\n]*\n[\s\S]*?^```\s*$", "", text, flags=re.MULTILINE)
+    return bool(re.search(r"^## (Change Log|Update History)\s*$", prose, flags=re.MULTILINE | re.IGNORECASE))
 
 def has_agent_brief(text):
     return bool(re.search(r"^## Agent Brief\s*$", text, flags=re.MULTILINE | re.IGNORECASE))
@@ -130,6 +136,18 @@ def main():
                     "message": f"Hot_Context has {source_file_count} source_files. Keep only hot-path anchors; move detailed routing to focused pages."
                 })
 
+        if file.name == "Index.md" and wc > MAX_INDEX_WORDS:
+            result["suggestions"].append({
+                "file": rel,
+                "message": f"Index exceeds {MAX_INDEX_WORDS} words ({wc}). Keep task routing concise."
+            })
+
+        if file.name == "Log.md" and wc > MAX_LOG_WORDS:
+            result["suggestions"].append({
+                "file": rel,
+                "message": f"History router exceeds {MAX_LOG_WORDS} words ({wc}). Move detail to owning records and Git."
+            })
+
         if (
             wc > MAX_PAGE_WORDS
             and "archive" not in rel
@@ -142,10 +160,10 @@ def main():
                 "message": f"Long active {page_type} page has no Agent Brief ({wc} words). Add a 150-250 word routing brief before pruning."
             })
 
-        if wc > HUGE_PAGE_WORDS and "archive" not in rel and page_type == "log":
+        if has_generic_history(text):
             result["suggestions"].append({
                 "file": rel,
-                "message": f"Large log page ({wc} words). Consider rolling old entries into archive/history only if current routing stays clear."
+                "message": "Generic page history found. Integrate current truth into the body and use Git or a dated evidence owner for chronology."
             })
 
         if last_verified and (today - last_verified).days > STALE_DAYS:

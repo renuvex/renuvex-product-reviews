@@ -90,7 +90,3 @@ After:
 - [[Widget_Performance]]
 - [[Bug_Index]]
 - [[ADR_0007_Photo_Strip_Cap_And_Rotation]]
-
-## Change Log
-- 2026-05-11: Fixed P2. Added responsive `srcset`, native lazy loading, async decoding, and explicit dimensions across photo strip, review layouts, and lightbox thumbnails.
-- 2026-05-11: Page created after P1 + M3 closed Cloudinary transformation width issues and left P2 as the next performance follow-up.

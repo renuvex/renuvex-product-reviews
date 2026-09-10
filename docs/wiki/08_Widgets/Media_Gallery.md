@@ -115,9 +115,3 @@ The public filter is adaptive, but it is no longer tied to the video-upload togg
 - [src/lib/widgets/catalog.ts](src/lib/widgets/catalog.ts)
 - [src/lib/widget-settings.ts](src/lib/widget-settings.ts)
 - [scripts/migrate-widget-settings-media-gallery-keys.mjs](scripts/migrate-widget-settings-media-gallery-keys.mjs)
-
-## Change Log
-- 2026-06-28: Removed visible video duration badges from media-gallery thumbnails and lightbox rail thumbnails while keeping duration metadata available for future surfaces.
-- 2026-06-28: Media-gallery lightbox rail now stays hidden after active video playback starts until end/new media, and reserves mobile rail touch gestures so horizontal rail interaction does not change reviews.
-- 2026-06-28: Added the media-gallery lightbox thumbnail rail. When the lightbox is opened from `Müşteri Görselleri`, the bottom rail mirrors the gallery's review-level representatives: one first trusted image/video per media-backed review, with video posters/play badges supported. Review-card lightbox opens keep the older current-review media thumbnail scope.
-- 2026-06-25: Renamed the active storefront surface from photo strip to media gallery. The old photo-strip behavior remains as the underlying historical decision, while active settings, DOM classes, CSS variables, source files, and docs now use media-gallery terminology.

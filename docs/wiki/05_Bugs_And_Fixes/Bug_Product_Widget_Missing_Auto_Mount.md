@@ -22,7 +22,7 @@ related:
 2026-05-11
 
 ## Status
-Fixed on 2026-05-11. **Superseded 2026-05-25:** the auto-mount / self-mount behavior described here was intentionally removed in favor of an **opt-in** review mount — the review section now renders only where the merchant places `<div data-renuvex-widget="reviews"></div>` (no auto-create, no `main`/`body` fallback). The PDP rating badge is now decoupled and auto-places on the product title independently (gated by the badge widget toggle). See [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]] and [[Log]].
+Fixed on 2026-05-11. **Superseded 2026-05-25:** the auto-mount / self-mount behavior described here was intentionally removed in favor of an **opt-in** review mount — the review section now renders only where the merchant places `<div data-renuvex-widget="reviews"></div>` (no auto-create, no `main`/`body` fallback). The PDP rating badge is now decoupled and auto-places on the product title independently (gated by the badge widget toggle). See [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]] and [[Product_Review_Widget]].
 
 ## Area
 Storefront widget, product detail page, review block, product rating badge
@@ -66,7 +66,3 @@ This keeps existing merchant-provided anchors compatible while making the PDP re
 - [[Product_Rating_Badge]]
 - [[Widget_Files_Map]]
 - [[Bug_Index]]
-
-## Change Log
-- 2026-05-25: Marked the self-mounting behavior as superseded by the opt-in review mount contract and independent PDP badge injection.
-- 2026-05-11: Fixed by adding self-mounting fallback anchor creation in [render.js](src/widget/reviews-section/render.js).

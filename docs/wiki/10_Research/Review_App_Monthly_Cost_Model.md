@@ -1,9 +1,9 @@
 ---
 type: research
 project: renuvex-product-reviews
-status: active
+status: archived
 created: 2026-06-30
-updated: 2026-06-30
+updated: 2026-09-10
 last_verified: 2026-06-30
 confidence: medium
 tags:
@@ -45,10 +45,10 @@ The model assumes the current target architecture:
 - Upstash QStash for durable media-provider jobs and the low-volume maintenance scheduler.
 - Mux for video.
 - AWS SES for email.
-- AWS S3 plus CloudFront as the future image-storage/CDN candidate in this
-  model; Cloudinary remains the current implemented image provider until a
-  separate migration is approved. See [[Review_Image_CDN_Cost_Model]] for the
-  focused AWS-vs-Cloudflare image CDN/storage comparison.
+- At the snapshot date, AWS S3 plus CloudFront was a future image-storage/CDN
+  candidate and Cloudinary was still implemented. That statement is historical:
+  the current image provider is AWS under
+  [[ADR_0034_AWS_Review_Image_Migration]].
 - Sentry for error/trace observability with controlled sampling.
 
 ## Official Source Slugs

@@ -3,7 +3,9 @@ type: api
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-01
+updated: 2026-09-10
+last_verified: 2026-08-01
+confidence: medium
 tags:
   - api
   - design
@@ -13,6 +15,11 @@ related:
   - "[[Auth_And_Installation_Flow]]"
   - "[[Security_And_Rate_Limits]]"
   - "[[ADR_0006_Trusted_Review_Image_URL_Policy]]"
+source_files:
+  - "src/app/api"
+  - "src/lib/auth-helpers.ts"
+  - "src/lib/cors.ts"
+  - "src/lib/public-rate-limit.ts"
 ---
 
 # API Design
@@ -55,7 +62,10 @@ not an API family; its settings and fixtures are in-memory.
 Upstash Redis `INCR` + `EXPIRE` pattern. Detail: [[Security_And_Rate_Limits]].
 
 ### Caching
-Read-heavy public endpoints set `Cache-Control: s-maxage=60, stale-while-revalidate=300`. Detail: [[Caching_And_Performance]].
+Caching is endpoint-specific. Eligible public settings, ratings, and review reads
+use bounded shared-cache headers. Identity discovery through
+`/api/public/ratings-by-slug`, write/upload routes, health beacons, and error
+responses remain `no-store`. Detail: [[Caching_And_Performance]].
 
 ## Route inventory
 See [[Backend_API_Map]] for the full list with descriptions.
@@ -67,9 +77,6 @@ See [[Backend_API_Map]] for the full list with descriptions.
 
 ## Error handling
 Public and admin routes return route-specific, fixed error codes. Unexpected failures pass through the fixed-code server reporter, which emits no raw exception, credential, SQL text, or connection detail to responses, console output, or Sentry. Don't add dynamic `error.message` responses or raw-exception logging.
-
-## Change Log
-- **2026-07-28** — Replaced the JWT-only route convention with the exact active-installation/token principal boundary and fixed-code failure reporting.
 
 ## Open patterns
 - **No request-id correlation header.** Useful to add when debugging cross-service incidents.
@@ -93,8 +100,3 @@ Public and admin routes return route-specific, fixed error codes. Unexpected fai
 - [[Caching_And_Performance]]
 - [[Security_And_Rate_Limits]]
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
-
-## Change Log
-- 2026-07-29: Replaced the generic public CORS convention with explicit
-  anonymous, beacon, and same-origin route policies.
-- 2026-05-10: Documented trusted review image validation as part of the public review POST contract. Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].

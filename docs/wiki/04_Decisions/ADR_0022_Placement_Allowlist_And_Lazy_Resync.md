@@ -3,7 +3,7 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-27
-updated: 2026-08-10
+updated: 2026-09-10
 last_verified: 2026-08-10
 confidence: high
 tags:
@@ -41,6 +41,15 @@ source_files:
 ---
 
 # ADR 0022: Placement Allowlist and Storefront-Driven Theme Resync
+
+## Agent Brief
+
+This ADR establishes fail-closed automatic placement, bounded Ozy selectors,
+lazy theme-state resync, and rejection of ambiguous product-like regions. The
+later strict attestation/Product ID contract in
+[[ADR_0038_Runtime_Attested_Storefront_Placement]] narrows identity and revalidation
+further. Do not broaden selectors or enable an unknown adapter to recover badge
+coverage; add a verified adapter with dedicated acceptance evidence.
 
 ## Status
 Accepted (2026-05-27); automatic-placement authorization superseded on
@@ -183,7 +192,7 @@ Tuning playbook when one of the signals fires:
 1. Add `STOREFRONT_THEME_LAZY_RESYNC_MS` env var support (one line, defaults preserved).
 2. Adjust the constant or the env value; redeploy.
 3. If `dashboard_open` is the culprit, add the same `lastCheckedAt > N` short-circuit to `src/app/api/admin/storefront-theme/sync/route.ts` (~5 lines).
-4. Record the change + reasoning in [[Log]].
+4. Record the change and reasoning in the owning ADR, bug, or acceptance record.
 
 Without one of these signals, tuning is premature — there is no production traffic to optimize against and no telemetry baseline to compare to.
 

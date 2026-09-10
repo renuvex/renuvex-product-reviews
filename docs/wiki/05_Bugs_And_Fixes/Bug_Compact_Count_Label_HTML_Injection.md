@@ -62,7 +62,3 @@ The compact trigger needs trusted SVG markup for the rating stars and caret, so 
 - Merchant-editable text must be normalized with `settingText(...)` when it has a default fallback, then written with `textContent` or equivalent escaping.
 - If a layout still needs `innerHTML` for trusted icon markup, keep merchant text out of the HTML string and set it on a separate DOM node.
 - Keep the compact count-label and merchant-text fallback regressions in `tests/widget-runtime-smoke.spec.ts`.
-
-## Change Log
-- 2026-06-06: Fixed compact summary count label rendering so merchant-editable labels are text-only, matching the other summary layouts.
-- 2026-06-06: Centralized merchant-text fallback normalization through `settingText(...)` so whitespace-only labels do not render as blank storefront copy.

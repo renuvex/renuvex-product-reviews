@@ -1,9 +1,9 @@
 ---
 type: research
 project: renuvex-product-reviews
-status: active
+status: archived
 created: 2026-06-21
-updated: 2026-06-21
+updated: 2026-09-10
 last_verified: 2026-06-21
 confidence: medium
 tags:
@@ -36,7 +36,9 @@ source_files:
 # Competitor Pricing And Plans
 
 ## Purpose
-This is the single canonical competitor comparison page for Renuvex Product Reviews. Keep pricing, packaging, feature parity, and Renuvex positioning here instead of spreading comparison matrices across multiple wiki pages.
+This is the June 21, 2026 competitor comparison snapshot for Renuvex Product
+Reviews. It preserves the evidence used at that time; it is not a current price
+or packaging source. Recheck official pages before making a present-day claim.
 
 Individual competitor pages should hold competitor-specific notes:
 - [[Loox]]

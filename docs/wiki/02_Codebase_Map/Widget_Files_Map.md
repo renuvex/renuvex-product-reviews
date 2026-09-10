@@ -3,7 +3,7 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-08-10
+updated: 2026-09-10
 last_verified: 2026-08-10
 confidence: high
 source_files:
@@ -76,6 +76,15 @@ related:
 ---
 
 # Widget Files Map
+
+## Agent Brief
+
+Use this page only to locate storefront runtime ownership. Start with
+`classic-loader.js` for the stable loader, `loader.js` and `core/*` for
+lifecycle/context, the named surface folder for rendering, and
+`themes/ozy/adapter.js` for verified automatic placement. Build output is the
+loader plus manifest-selected ESM runtime/chunks; never hand-edit artifacts or
+delete retained hashes without checking `scripts/build-widget.mjs`.
 
 ## Summary
 Storefront widget source under `src/widget/*`. Plain JavaScript (.js), built by esbuild as a classic compatibility loader at [public/widget.js](public/widget.js) plus an ESM runtime/chunks under [public/widget-runtime/](public/widget-runtime/). Modular: a `core/` runtime, lazy-loaded `rating-badge/`, `structured-data/`, `reviews-section/`, and `listing-badges/` surfaces, swappable `review-layouts` and `summary-layouts`, and `themes/` for theme-specific fallback selectors/adapters. `reviews-section/render.js` is the top-level render orchestrator; its builders (theme CSS vars, size presets, non-list states, media gallery, request race-token) and its render-rerunning interaction handlers (retry/filter/sort, via `render/handlers.js` `createReviewHandlers({render})` — render injected so there is no circular import) live under `reviews-section/render/*.js`. Load-more stays inline in render.js because it inserts DOM incrementally rather than re-running render. `reviews-section/styles.js` remains the `CLASSIC_CSS` aggregator; shared review-section CSS ownership lives under `reviews-section/styles/*.js`. Layout-specific CSS lives in `review-layouts/*/styles.js` and `summary-layouts/*/styles.js` (card/classic defaults included). Neither belongs inside a theme adapter folder.
@@ -258,24 +267,3 @@ Runtime theme selection is not a per-theme bundle split. The live widget receive
 - [[Widget_Customization]]
 - [[ADR_0002_Widget_Injection_Strategy]]
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
-
-## Change Log
-- 2026-07-01: Settings reads now use the read-origin split after lazy theme sync moved to a separate POST route. `config.js` exposes `ASSET_BASE`, `API_BASE`, and `READ_API_BASE`; Worker delivery remains fail-closed except for allowlisted settings/ratings/reviews reads.
-- 2026-06-11: Moved review-section non-list state CSS into [reviews-section/styles/states.js](src/widget/reviews-section/styles/states.js). [reviews-section/styles.js](src/widget/reviews-section/styles.js) remains the `CLASSIC_CSS` aggregator; [reviews-section/styles/review-primitives.js](src/widget/reviews-section/styles/review-primitives.js) no longer owns empty/error state selectors.
-- 2026-06-02: Clarified shared filter action semantics: touch/pen filter options activate on `pointerdown` with the same-gesture shield, while desktop mouse options activate on normal `click` so filters can reopen immediately after sort-triggered summary renders.
-- 2026-06-01: Hardened summary shared primitives: [summary-layouts/shared/popover-registry.js](src/widget/summary-layouts/shared/popover-registry.js) now exposes a handle lifecycle contract, [summary-layouts/shared/bar-chart.js](src/widget/summary-layouts/shared/bar-chart.js) exposes keyboard/ARIA toggle semantics, and [reviews-section/styles/summary-controls.js](src/widget/reviews-section/styles/summary-controls.js) owns bar focus/count resilience.
-- 2026-06-01: Added same-gesture press-through shielding to [summary-layouts/shared/popover-registry.js](src/widget/summary-layouts/shared/popover-registry.js) and [shared/base-reset.js](src/widget/shared/base-reset.js): touch/pen filter option activation keeps normal future `:active` feedback but temporarily blocks controls exposed under the dismissed menu.
-- 2026-06-01: Split shared review-section CSS ownership into [reviews-section/styles/](src/widget/reviews-section/styles/) modules while keeping [reviews-section/styles.js](src/widget/reviews-section/styles.js) as the `CLASSIC_CSS` aggregator and preserving injection order.
-- 2026-05-31: Added [review-layouts/card/styles.js](src/widget/review-layouts/card/styles.js) so card/default review CSS ownership matches list/gallery while shared review primitives remain in [reviews-section/styles.js](src/widget/reviews-section/styles.js).
-- 2026-05-31: Added [summary-layouts/classic/styles.js](src/widget/summary-layouts/classic/styles.js) so classic/default summary CSS ownership matches the other summary layout folders while shared review CSS remains in [reviews-section/styles.js](src/widget/reviews-section/styles.js).
-- 2026-05-28: Renamed the broad PDP implementation folder to [reviews-section/](src/widget/reviews-section/) and moved the shared PDP title finder to [core/product-title.js](src/widget/core/product-title.js). Public widget mount/API contracts stayed unchanged.
-- 2026-05-27: Added [reviews-section/reviews-api.js](src/widget/reviews-section/reviews-api.js) to make the reviews-section folder boundary explicit: `bootstrap.js` owns review mount orchestration, `reviews-api.js` owns review/media-gallery data access, and `render.js` owns review-section UI interactions.
-- 2026-05-24: Added [icons/star-sprite.js](src/widget/icons/star-sprite.js) — read-only rating stars render via a single injected SVG `<symbol>` sprite referenced by `<use>` instead of inlining `<path>` per star. Renderers (`partialStarsHTML`, `starsHTML`, `renderStarRow`) call `ensureStarSprite` + emit `starUseSvg`; `ICONS` strings stay the single source (admin preview + sprite both derive from them). Related: [[ADR_0019_Icon_Sprite_Rendering]].
-- 2026-08-10: ADR 0038 replaced the production listing fallback chain with strict proof-carrying placement, a canonical context epoch, and a single observer coordinator. The former `core/link-scope.js`, `listing-badges/dom.js`, and `listing-badges/collect.js` paths were removed; preview keeps its explicitly isolated fixture helper.
-- 2026-05-18: Added the former `core/link-scope.js` so listing badges and the MutationObserver shared scoped link discovery; ADR 0038 later replaced that production path.
-- 2026-05-17: Listing badge files now use canonical ikas product ids from Storefront Events for rating fetches; slug remains DOM fallback only. Related: [[ADR_0015_Canonical_Product_Identity]].
-- 2026-05-17: Phase 2 module split implemented and verified. `public/widget.js` is the classic loader, `public/widget-runtime/*` contains ESM runtime/chunks, and lazy boundaries live in `core/lazy-modules.js`.
-- 2026-05-12: Split the storefront icon registry into [review-icons.js](src/widget/icons/review-icons.js), [filter-icons.js](src/widget/icons/filter-icons.js), and [icons/index.js](src/widget/icons/index.js). [icons.js](src/widget/icons.js) now remains as a compatibility re-export.
-- 2026-05-10: Documented the trusted review image helpers in [helpers.js](src/widget/core/helpers.js). Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].
-- 2026-05-05: Removed the legacy inline/page review form from the widget source map. Review submission is now modal-only via [review-form-modal/](src/widget/reviews-section/review-form-modal/). Related source: [render.js](src/widget/reviews-section/render.js), [write-action.js](src/widget/summary-layouts/shared/write-action.js).
-- 2026-05-10: Corrected `review-modal.js` from "multi-step review modal" to photo review detail lightbox and linked [[Product_Review_Lightbox]]. Related source: [review-modal.js](src/widget/reviews-section/review-modal.js).

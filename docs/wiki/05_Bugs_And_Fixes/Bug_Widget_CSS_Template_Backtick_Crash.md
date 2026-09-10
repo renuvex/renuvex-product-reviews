@@ -86,7 +86,3 @@ The source now contains only the template literal opener and closer backticks fo
 - [[Product_Review_Widget]]
 - [[Product_Rating_Badge]]
 - [[Bug_Index]]
-
-## Change Log
-- 2026-05-11: Fixed the deployed widget crash caused by raw backticks inside the CSS template literal.
-- 2026-05-11: Added live verification notes after user confirmed the storefront review area and product-title badge render correctly in browser.

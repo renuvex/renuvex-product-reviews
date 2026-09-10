@@ -1,9 +1,9 @@
 ---
 type: architecture
 project: renuvex-product-reviews
-status: active
+status: archived
 created: 2026-06-08
-updated: 2026-06-08
+updated: 2026-09-10
 last_verified: 2026-06-08
 confidence: high
 tags:
@@ -19,6 +19,14 @@ source_files: []
 ---
 
 # Legacy Review Media Reconciliation
+
+## Agent Brief
+
+This is the preserved June 2026 Cloudinary-to-tenant reconciliation record. The
+one-off package commands and scripts no longer exist, Cloudinary is no longer a
+production review-image provider, and this page must not be used as a current
+runbook. Use [[ADR_0034_AWS_Review_Image_Migration]] and current media source for
+the active AWS contract.
 
 ## Summary
 Legacy review image rows must not be normalized by simply trusting old `Review.images` URLs. The accepted media model is tenant-scoped:
@@ -55,6 +63,10 @@ Result:
 Apply result: `copiedAssets=10`, `missingSourceAssets=30`, `droppedMissingLegacyUrls=30`, `reviewsWithDroppedLegacyUrls=21`, `summaryRowsRepaired=1`. Missing-source drops were allowed only because this was the test store and the missing Cloudinary assets could not be copied.
 
 ## Commands
+The following commands document the historical operation only; they are no
+longer defined by the repository and must not be executed or recreated without
+a new, source-verified migration plan.
+
 Audit:
 
 ```bash
@@ -98,7 +110,3 @@ Legacy global assets are not deleted in this phase. Deletion should be a later c
 - `tests/unit/review-media-reconciliation.test.ts` pins URL classification, placeholder credential rejection, deterministic target public IDs, and audit summary behavior.
 - `pnpm reviews:media:reconcile --cloudName=dtn7jhhuy --dryRun` must skip global legacy rows without `--allowLegacyGlobal`.
 - After reconciliation, `pnpm reviews:media:reconcile --cloudName=dtn7jhhuy --allowLegacyGlobal --dryRun` should report `plannedCopies=0`.
-
-## Change Log
-- 2026-06-08: Applied test-store reconciliation. Copied 10 available legacy assets, dropped 30 missing legacy source references with `--dropMissingLegacy`, and verified zero remaining global legacy URLs.
-- 2026-06-08: Added audit/reconciliation scripts and documented the initial legacy media classification.

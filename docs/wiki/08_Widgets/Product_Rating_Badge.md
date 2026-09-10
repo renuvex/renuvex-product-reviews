@@ -5,6 +5,7 @@ status: active
 created: 2026-05-05
 updated: 2026-09-10
 last_verified: 2026-09-10
+confidence: high
 tags:
   - widget
   - badge
@@ -18,6 +19,12 @@ related:
   - "[[ADR_0019_Icon_Sprite_Rendering]]"
   - "[[ADR_0024_Badge_Review_Surface_Separation]]"
   - "[[ADR_0038_Runtime_Attested_Storefront_Placement]]"
+source_files:
+  - "src/lib/widgets/catalog.ts"
+  - "src/widget/rating-badge/index.js"
+  - "src/widget/rating-badge/inject.js"
+  - "src/widget/placement/capability.js"
+  - "src/widget/core/badge.js"
 ---
 
 # Product Rating Badge
@@ -84,22 +91,3 @@ and passes it into `injectRatingBadge`; the star color is applied through the
 - [[Listing_Rating_Widget]]
 - [[Widget_Customization]]
 - [[Bug_Product_Widget_Missing_Auto_Mount]]
-
-## Change Log
-- 2026-09-10: PR #40 and approved Worker rollout completed. Fresh desktop and
-  `412x915` Canary 1 both showed one exact PDP title slot and badge carrying
-  Product ID `37fb6e3d-6085-4ac1-b0eb-7aaa63ada934` with `4.0/93`, and zero
-  forbidden placement or Renuvex widget error.
-- 2026-09-09: Added the final Product ID equality guard and matching Product ID
-  attributes on the PDP owned slot and visible badge. Missing/mismatched
-  identity now fails closed before mutation.
-- 2026-07-30: `alignment`, `showValue`, and `showCount` became active on PDP and
-  listing renderers. Badge preview moved to the shared iframe scene registry
-  with production PDP/listing injectors, and token insertion order was fixed
-  so the configured size wins on first render.
-- 2026-05-29: JSON-LD moved out of the badge into `structured-data/`; badge cleanup now owns only visual badge DOM.
-- 2026-05-27: [[ADR_0024_Badge_Review_Surface_Separation]] split the PDP badge into its own product surface and lazy chunk. It now fetches summary data through `/api/public/ratings`.
-- 2026-05-25: PDP title badge was decoupled from the review-section mount. It injects before the opt-in `<div data-renuvex-widget="reviews"></div>` check and remains controlled by the `badge` widget toggle.
-- 2026-05-24: Stars now render via the shared SVG `<symbol>` sprite (`<use>`); the PDP badge dropped `role="figure"`, the static `static id`, and the inline `justify-content` for a link role + sr-only `aria-labelledby` + `data-renuvex-align`. See [[ADR_0019_Icon_Sprite_Rendering]].
-- 2026-05-19: Star icon + color removed from the `badge` widget; they are now single-sourced from the `reviews` widget (`reviewIcon`/`reviewStarColor`). Fixed the icon-parse bug - the PDP badge no longer passes an unparsed `type:style` value to `getIconStyle`, so non-`star` icons (heart, leaf, crown, ...) render correctly. See [[ADR_0016_Rating_Visual_System]].
-- 2026-05-11: Documented that PDP badge visibility depends on the review render path and is protected by the self-mounting review anchor fallback. Related bug: [[Bug_Product_Widget_Missing_Auto_Mount]].

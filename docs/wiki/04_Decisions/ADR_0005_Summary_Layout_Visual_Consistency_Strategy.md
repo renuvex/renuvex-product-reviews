@@ -32,6 +32,3 @@ Widget summary layouts (Classic, Split, Compact) were using inconsistent vertica
 - **Positive**: Perfectly aligned buttons across all layouts. More consistent "ferah" brand identity. Better tablet experience. No more layout jumping when toggling settings.
 - **Negative**: Increased vertical height of the summary section on mobile (more scrolling required).
 - **Neutral**: Requires keeping media queries in sync across `styles.js` files.
-
-## Change Log
-- 2026-05-07: Initial decision and implementation across all summary layouts.
